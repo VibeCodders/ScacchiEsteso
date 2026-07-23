@@ -18,6 +18,10 @@
 1. Immunità Regale: Il Re può essere eliminato solo tramite attacchi in mischia (il classico movimento nella sua casella). Non può essere bersaglio dell'abilità "Scoccare" dell'Arciere, non subisce i danni collaterali del Colosso e non viene trapassato dalla lancia del Lanciere se si trova dietro un bersaglio valido. Questo previene vittorie improvvise e anticlimatiche.
 2. Scacco Passivo: Se un'abilità o un pezzo spinge o costringe il Re avversario in una posizione di Scacco o verso un danno ambientale (es. l'Ariete), quella mossa non è consentita, esattamente come negli scacchi tradizionali non puoi muovere esponendo il tuo Re.
 
+### Chiarezza sulle Azioni
+
+1. Regola dell'Azione Unica: Ogni turno, il giocatore può scegliere se effettuare un Movimento (con o senza cattura standard) OPPURE utilizzare un'Abilità Speciale (come Scoccare, Rianimare, Scambiare). Le due cose non sono cumulabili nello stesso turno per lo stesso pezzo, salvo eccezioni esplicite (come il Berserker).
+
 ### Tabella dei Pezzi
 
 Sigla | Descrizione | Costo | Regole |
