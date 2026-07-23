@@ -3,6 +3,7 @@
 | Sigla | Descrizione | Punti | Regole |
 |-------|-------------|-------|--------|
 | RE | Re | 0 | Muove di una casella in qualsiasi direzione. Cattura in mischia. |
+| PG | Paggio | 1 | Si muove di una casella in orizzontale o verticale. Cattura in orizzontale o verticale. |
 | FG | Fante | 2 | Si muove in avanti di una casella. Cattura diagonalmente in avanti. Non ha la mossa iniziale di due caselle. |
 | PE | Pedone | 4 | Muove in avanti di una casella (due alla prima mossa); cattura diagonalmente. |
 | CR | Corriere | 6 | Si muove in orizzontale o verticale per un massimo di due caselle. Cattura normalmente. |
