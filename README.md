@@ -2,7 +2,7 @@
 
 ## 1. Costi e limitazioni dell'esercito
 
-- **Budget punti disponibili:** 78, da spendere integralmente.
+- **Budget punti disponibili:** 156, da spendere integralmente.
 - **Pezzi per tipo:** massimo 5 pezzi identici.
 - **Pedoni:** massimo 8.
 - **Re:** obbligatoriamente 1 (costo gratuito, incluso nel conteggio dei pezzi ma non nel budget).
@@ -51,7 +51,7 @@
 1. Quando un Pedone raggiunge l'ultima traversa avversaria, la promozione avviene immediatamente.
 2. Il Pedone può trasformarsi in:
    - un pezzo alleato precedentemente eliminato (recuperato dal "cimitero"), oppure
-   - un pezzo base con costo non superiore a 10 punti (Pedone, Alfiere, Cavallo o Spettro).
+   - un pezzo base con costo non superiore a 20 punti (Pedone, Alfiere, Cavallo o Spettro).
 3. Se nessuna opzione valida è disponibile, il Pedone rimane tale.
 
 ## 6. En Passant
