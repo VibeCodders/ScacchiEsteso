@@ -10,6 +10,8 @@
 5. Punti iniziali da consumare: 78.
 6. Unità minime totali: 10.
 7. Unità massime totali: 16.
+8. Zone di Schieramento: I giocatori possono posizionare i propri pezzi solo nelle prime 2 traverse del proprio lato della scacchiera.
+9. Draft Alternato: Lo schieramento non è segreto. I giocatori tirano una moneta: chi vince decide se schierare per primo o per secondo. I giocatori si alternano posizionando un pezzo alla volta sulla scacchiera fino a esaurimento della propria armata. Questo aggiunge un enorme livello di strategia pre-partita.
 
 ### Tabella dei Pezzi
 
