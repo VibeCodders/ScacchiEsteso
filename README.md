@@ -5,8 +5,7 @@
 3. In fase di selezione, bisogna consumare tutti i punti, non si può iniziare una partita con dei punti rimanenti.
 
 
-
-### Pezzi
+### Pezzi 
 
 | Numero | Sigla | Descrizione | Costo | Regole |
 | --- | --- | --- | --- | --- |
@@ -21,3 +20,6 @@
 | 9 | AT | Ariete | 5 | Muove di 1 o 2 caselle in orizzontale o verticale; non cattura i pezzi avversari, ma li spinge indietro di una casella |
 | 10 | LA | Lanciere | 4 | Muove come la Torre per un massimo di 3 caselle; quando cattura, la sua lancia trapassa il bersaglio eliminando in automatico anche l'eventuale pezzo situato nella casella immediatamente dietro di esso sulla linea di attacco |
 | 11 | MI | Mistico | 6 | Muove di 1 o 2 caselle in diagonale; al posto di eseguire un normale movimento o attacco, può usare il turno per scambiare istantaneamente la propria posizione con quella di un qualsiasi alleato (Re escluso) |
+| 12 | AR | Arciere | 5 | Muove di 1 o 2 caselle in qualsiasi direzione. Oltre alla normale cattura, può usare il turno per "scoccare": elimina un nemico a esattamente 3 o 4 caselle di distanza in orizzontale, verticale o diagonale senza muoversi, purché la traiettoria sia libera. |
+| 13 | GL | Golem | 7 | Muove di 1 sola casella in qualsiasi direzione. Possiede una corazza naturale: non può essere catturato da pezzi avversari che hanno un costo di schieramento pari o inferiore a 3 (es. Pedoni, Cavalli, Alfieri). |
+| 14 | NE | Necromante | 6 | Muove di 1 o 2 caselle in diagonale. Al posto di muovere o catturare, può sacrificare il proprio turno per rianimare un Pedone alleato precedentemente eliminato, schierandolo su una casella vuota immediatamente adiacente. |
