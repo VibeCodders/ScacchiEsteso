@@ -22,6 +22,22 @@
 
 1. Regola dell'Azione Unica: Ogni turno, il giocatore può scegliere se effettuare un Movimento (con o senza cattura standard) OPPURE utilizzare un'Abilità Speciale (come Scoccare, Rianimare, Scambiare). Le due cose non sono cumulabili nello stesso turno per lo stesso pezzo, salvo eccezioni esplicite (come il Berserker).
 
+### Adattamento delle Regole Classiche
+
+1. Quando un Pedone raggiunge l'ultima traversa avversaria, può essere promosso solo a un pezzo alleato precedentemente eliminato (recuperandolo dal "cimitero"), oppure a un pezzo base il cui costo non superi i 10 punti. Se non ci sono pezzi validi, il Pedone rimane tale.
+2. Mantenere l'En Passant valido solo tra Pedoni, per evitare interazioni strane con l'Ariete che spinge i pezzi.
+
+### Risoluzione dei Conflitti e Linea di Tiro
+
+1. Priorità del Silenzio. Le abilità di negazione (Inquisitore) hanno sempre la precedenza sulle abilità di potenziamento/protezione (Paladino). Il Paladino perde la sua Egida se si trova adiacente all'Inquisitore.
+2. Un attacco a distanza non può attraversare caselle occupate da altri pezzi (alleati o nemici), a meno che il pezzo attaccante non possieda l'abilità di ignorarli (come lo Spettro per il movimento).
+3. Nessun pezzo può dichiarare un attacco o una cattura diretta verso un pezzo alleato per innescare effetti ad area. L'innesco deve sempre avvenire tramite la cattura di un nemico.
+
+### Dinamiche di Gioco Anti-Stallo
+
+1. Se per 20 turni consecutivi non viene effettuata nessuna cattura e nessun Pedone viene mosso, la partita termina. Invece della patta classica, vince chi ha il maggior numero di punti schierati ancora presenti sulla scacchiera.
+2. Il Re è considerato di "Stazza Massima" e non può mai essere spostato forzatamente da abilità nemiche (come l'Ariete) o alleate (come il Mistico), garantendo che la sua posizione sia unicamente responsabilità del giocatore.
+
 ### Tabella dei Pezzi
 
 Sigla | Descrizione | Costo | Regole |
