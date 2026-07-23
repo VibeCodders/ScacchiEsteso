@@ -1,39 +1,50 @@
-
 ## Scacchi Esteso
 
-### Limiti di Schieramento
+### Schieramento
 
-1. Max **5 pezzi** per ogni tipo.
-2. Max 8 pedoni.
-3. Esattamente **1 Re**, obbligatoriamente.
-4. In fase di selezione, bisogna consumare **tutti i punti**; non si può iniziare una partita con dei punti rimanenti.
-5. Punti iniziali da consumare: 78.
-6. Unità minime totali: 10.
-7. Unità massime totali: 16.
-8. Zone di Schieramento: I giocatori possono posizionare i propri pezzi solo nelle prime 2 traverse del proprio lato della scacchiera.
-9. Draft Alternato: Lo schieramento non è segreto. I giocatori tirano una moneta: chi vince decide se schierare per primo o per secondo. I giocatori si alternano posizionando un pezzo alla volta sulla scacchiera fino a esaurimento della propria armata. Questo aggiunge un enorme livello di strategia pre-partita.
+1. Punti iniziali: **78**, da spendere completamente.
+2. Massimo **5 pezzi** per ogni tipo.
+3. Massimo **8 Pedoni**.
+4. Obbligatoriamente **1 Re**.
+5. Minimo **10 pezzi**, massimo **16 pezzi**.
+6. Zona di schieramento: solo le prime **2 traverse** del proprio lato della scacchiera.
+7. Draft alternato: tirata di moneta per decidere chi schiera per primo. I giocatori si alternano posizionando **un pezzo alla volta** fino a esaurimento dell'armata. Schieramento non segreto.
 
-### Condizioni di Scacco e Vittoria
+### Scacco e Condizioni di Vittoria
 
-1. Immunità Regale: Il Re può essere eliminato solo tramite attacchi in mischia (il classico movimento nella sua casella). Non può essere bersaglio dell'abilità "Scoccare" dell'Arciere, non subisce i danni collaterali del Colosso e non viene trapassato dalla lancia del Lanciere se si trova dietro un bersaglio valido. Questo previene vittorie improvvise e anticlimatiche.
-2. Scacco Passivo: Se un'abilità o un pezzo spinge o costringe il Re avversario in una posizione di Scacco o verso un danno ambientale (es. l'Ariete), quella mossa non è consentita, esattamente come negli scacchi tradizionali non puoi muovere esponendo il tuo Re.
+1. **Scacco**: il Re non può rimanere sotto attacco. Se messo sotto scacco, il giocatore deve uscire dalla minaccia muovendo il Re, intercettando o catturando la fonte di attacco.
+2. **Scacco Passivo**: non è consentita nessuna mossa che esponga il proprio Re a scacco o a danni ambientali. Inoltre, non è consentito usare abilità o pezzi (es. Ariete) che spingano il Re avversario in uno scacco o verso un danno ambientale, per evitare vittorie anticlimatiche.
+3. **Eliminazione del Re**: il Re può essere catturato **solo in mischia**. Non è soggetto a:
+   - attacchi a distanza (es. Scoccare dell'Arciere)
+   - danni collaterali (es. Colosso)
+   - trapassatura della lancia del Lanciere se dietro di lui c'è un bersaglio valido
 
-### Chiarezza sulle Azioni
+### Azioni nel Turno
 
-1. Regola dell'Azione Unica: Ogni turno, il giocatore può scegliere se effettuare un Movimento (con o senza cattura standard) OPPURE utilizzare un'Abilità Speciale (come Scoccare, Rianimare, Scambiare). Le due cose non sono cumulabili nello stesso turno per lo stesso pezzo, salvo eccezioni esplicite (come il Berserker).
+1. **Regola dell'Azione Unica**: ogni turno, il giocatore può effettuare **una sola** delle seguenti azioni:
+   - Muovere un pezzo (con o senza cattura standard)
+   - Utilizzare l'abilità speciale di un pezzo (es. Scoccare, Rianimare, Scambiare)
+2. **Berserker (eccezione)**: dopo aver effettuato con successo una cattura in mischia, il Berserker ottiene un **secondo movimento extra immediato**, senza possibilità di effettuare una seconda cattura nello stesso turno.
 
-### Adattamento delle Regole Classiche
+### Promozione dei Pedoni
 
-1. Quando un Pedone raggiunge l'ultima traversa avversaria, può essere promosso solo a un pezzo alleato precedentemente eliminato (recuperandolo dal "cimitero"), oppure a un pezzo base il cui costo non superi i 10 punti. Se non ci sono pezzi validi, il Pedone rimane tale.
-2. Mantenere l'En Passant valido solo tra Pedoni, per evitare interazioni strane con l'Ariete che spinge i pezzi.
+1. Quando un Pedone raggiunge l'ultima traversa avversaria, può essere promosso a:
+   - un pezzo alleato precedentemente eliminato (recuperato dal "cimitero"), oppure
+   - un pezzo base il cui costo non superi **10 punti** (Pedone, Alfiere, Cavallo o Spettro).
+2. Se non sono disponibili pezzi validi, il Pedone rimane tale.
 
-### Risoluzione dei Conflitti e Linea di Tiro
+### En Passant
 
-1. Priorità del Silenzio. Le abilità di negazione (Inquisitore) hanno sempre la precedenza sulle abilità di potenziamento/protezione (Paladino). Il Paladino perde la sua Egida se si trova adiacente all'Inquisitore.
-2. Un attacco a distanza non può attraversare caselle occupate da altri pezzi (alleati o nemici), a meno che il pezzo attaccante non possieda l'abilità di ignorarli (come lo Spettro per il movimento).
-3. Nessun pezzo può dichiarare un attacco o una cattura diretta verso un pezzo alleato per innescare effetti ad area. L'innesco deve sempre avvenire tramite la cattura di un nemico.
+1. L'En Passant è valido **solo tra Pedoni**.
+2. Non è consentito effettuare En Passant per sfruttare o aggirare l'effetto di spinta dell'Ariete.
 
-### Dinamiche di Gioco Anti-Stallo
+### Linea di Tiro e Priorità delle Abilità
 
-1. Se per 20 turni consecutivi non viene effettuata nessuna cattura e nessun Pedone viene mosso, la partita termina. Invece della patta classica, vince chi ha il maggior numero di punti schierati ancora presenti sulla scacchiera.
-2. Il Re è considerato di "Stazza Massima" e non può mai essere spostato forzatamente da abilità nemiche (come l'Ariete) o alleate (come il Mistico), garantendo che la sua posizione sia unicamente responsabilità del giocatore.
+1. **Interposizione**: un attacco a distanza non può attraversare caselle occupate da altri pezzi (alleati o nemici), a meno che il pezzo attaccante non possa ignorare l'interposizione (es. Spettro).
+2. **Innesco amico vietato**: nessun pezzo può attaccare o catturare deliberatamente un pezzo alleato per innescare effetti ad area. L'innesco deve sempre avvenire tramite la cattura di un nemico.
+3. **Priorità del Silenzio**: l'aura di negazione dell'Inquisitore prevale sull'Egida del Paladino. Se un pezzo avversario si trova nell'aura dell'Inquisitore, perde le abilità speciali, inclusa l'Egida se si tratta di un Paladino, e non può usare attacchi a distanza.
+
+### Dinamiche Anti-Stallo
+
+1. **Limite di turni**: se per 20 turni consecutivi non viene effettuata nessuna cattura e nessun Pedone viene mosso, la partita termina. Vince chi ha il maggior numero di punti schierati ancora presenti sulla scacchiera.
+2. **Stazza Massima del Re**: il Re non può mai essere spostato forzatamente da abilità nemiche (es. Ariete) o alleate (es. Mistico). La sua posizione è gestita esclusivamente dal giocatore.
