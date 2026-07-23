@@ -8,3 +8,6 @@
 | 4 | AL | Alfiere | 3 | Muove in diagonale per un numero qualsiasi di caselle |
 | 5 | CA | Cavallo | 3 | Muove a forma di "L": due caselle in una direzione e una in direzione perpendicolare |
 | 6 | PE | Pedone | 1 | Muove in avanti di una casella (due alla prima mossa), può catturare diagonalmente |
+| 7 | CM | Camaleonte | 6 | Sulle caselle chiare muove come un Alfiere, sulle caselle scure muove come una Torre |
+| 8 | SP | Spettro | 4 | Può attraversare qualsiasi pezzo muovendo di esattamente tre caselle in linea retta; cattura solo sulla casella di arrivo |
+| 9 | AT | Ariete | 5 | Muove di 1 o 2 caselle in orizzontale o verticale; non cattura i pezzi avversari, ma li spinge indietro di una casella |
