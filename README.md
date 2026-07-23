@@ -5,10 +5,11 @@
 3. In fase di selezione, bisogna consumare tutti i punti, non si può iniziare una partita con dei punti rimanenti.
 
 
+
 ### Pezzi
 
 | Numero | Sigla | Descrizione | Costo | Regole |
-| :---: | :---: | :--- | :---: | :---: |
+| --- | --- | --- | --- | --- |
 | 1 | RE | Re | 0 | Muove di una casella in qualsiasi direzione |
 | 2 | RA | Regina | 15 | Muove in qualsiasi direzione per un numero qualsiasi di caselle |
 | 3 | TO | Torre | 5 | Muove in orizzontale o verticale per un numero qualsiasi di caselle |
@@ -18,3 +19,5 @@
 | 7 | CM | Camaleonte | 6 | Sulle caselle chiare muove come un Alfiere, sulle caselle scure muove come una Torre |
 | 8 | SP | Spettro | 4 | Può attraversare qualsiasi pezzo muovendo di esattamente tre caselle in linea retta; cattura solo sulla casella di arrivo |
 | 9 | AT | Ariete | 5 | Muove di 1 o 2 caselle in orizzontale o verticale; non cattura i pezzi avversari, ma li spinge indietro di una casella |
+| 10 | LA | Lanciere | 4 | Muove come la Torre per un massimo di 3 caselle; quando cattura, la sua lancia trapassa il bersaglio eliminando in automatico anche l'eventuale pezzo situato nella casella immediatamente dietro di esso sulla linea di attacco |
+| 11 | MI | Mistico | 6 | Muove di 1 o 2 caselle in diagonale; al posto di eseguire un normale movimento o attacco, può usare il turno per scambiare istantaneamente la propria posizione con quella di un qualsiasi alleato (Re escluso) |
