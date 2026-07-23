@@ -8,6 +8,8 @@
 3. Esattamente **1 Re**, obbligatoriamente.
 4. In fase di selezione, bisogna consumare **tutti i punti**; non si può iniziare una partita con dei punti rimanenti.
 5. Punti iniziali da consumare: 78.
+6. Unità minime totali: 10.
+7. Unità massime totali: 16.
 
 ### Tabella dei Pezzi
 
