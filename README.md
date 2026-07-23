@@ -1,3 +1,10 @@
+### Limiti
+
+1. Max 7 pezzi per ogni tipo
+2. Esattamente 1 re, obbligatoriamente
+3. In fase di selezione, bisogna consumare tutti i punti, non si può iniziare una partita con dei punti rimanenti.
+
+
 ### Pezzi
 
 | Numero | Sigla | Descrizione | Costo | Regole |
