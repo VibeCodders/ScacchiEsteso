@@ -3,7 +3,9 @@
 | Sigla | Descrizione | Punti | Regole |
 |-------|-------------|-------|--------|
 | RE | Re | 0 | Muove di una casella in qualsiasi direzione. Cattura in mischia. |
+| FG | Fante | 1 | Si muove in avanti di una casella. Cattura diagonalmente in avanti. Non ha la mossa iniziale di due caselle. |
 | PE | Pedone | 2 | Muove in avanti di una casella (due alla prima mossa); cattura diagonalmente. |
+| CR | Corriere | 3 | Si muove in orizzontale o verticale per un massimo di due caselle. Cattura normalmente. |
 | AL | Alfiere | 5 | Muove in diagonale per un numero illimitato di caselle. |
 | CA | Cavallo | 6 | Salta a forma di "L": due caselle in una direzione e una in quella perpendicolare. Ignora le interposizioni. |
 | SP | Spettro | 7 | Si muove di esattamente 3 caselle in linea retta in qualsiasi direzione. Ignora le interposizioni. Cattura solo sulla casella di arrivo. |
