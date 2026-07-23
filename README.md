@@ -9,7 +9,7 @@
 
 | Numero | Sigla | Descrizione | Costo | Regole |
 | --- | --- | --- | --- | --- |
-| 1 | RE | Re | 0 | Muove di una casella in qualsiasi direzione |
+| 1 | RE | Re | 🆓 | Muove di una casella in qualsiasi direzione |
 | 2 | RA | Regina | 15 | Muove in qualsiasi direzione per un numero qualsiasi di caselle |
 | 3 | TO | Torre | 5 | Muove in orizzontale o verticale per un numero qualsiasi di caselle |
 | 4 | AL | Alfiere | 3 | Muove in diagonale per un numero qualsiasi di caselle |
