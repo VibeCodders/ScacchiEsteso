@@ -4,7 +4,7 @@
 ### Limiti di Schieramento
 
 1. Max **5 pezzi** per ogni tipo.
-2. Max 7 pedoni.
+2. Max 8 pedoni.
 3. Esattamente **1 Re**, obbligatoriamente.
 4. In fase di selezione, bisogna consumare **tutti i punti**; non si può iniziare una partita con dei punti rimanenti.
 5. Punti iniziali da consumare: 78.
