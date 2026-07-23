@@ -13,6 +13,11 @@
 8. Zone di Schieramento: I giocatori possono posizionare i propri pezzi solo nelle prime 2 traverse del proprio lato della scacchiera.
 9. Draft Alternato: Lo schieramento non è segreto. I giocatori tirano una moneta: chi vince decide se schierare per primo o per secondo. I giocatori si alternano posizionando un pezzo alla volta sulla scacchiera fino a esaurimento della propria armata. Questo aggiunge un enorme livello di strategia pre-partita.
 
+### Condizioni di Scacco e Vittoria
+
+1. Immunità Regale: Il Re può essere eliminato solo tramite attacchi in mischia (il classico movimento nella sua casella). Non può essere bersaglio dell'abilità "Scoccare" dell'Arciere, non subisce i danni collaterali del Colosso e non viene trapassato dalla lancia del Lanciere se si trova dietro un bersaglio valido. Questo previene vittorie improvvise e anticlimatiche.
+2. Scacco Passivo: Se un'abilità o un pezzo spinge o costringe il Re avversario in una posizione di Scacco o verso un danno ambientale (es. l'Ariete), quella mossa non è consentita, esattamente come negli scacchi tradizionali non puoi muovere esponendo il tuo Re.
+
 ### Tabella dei Pezzi
 
 Sigla | Descrizione | Costo | Regole |
