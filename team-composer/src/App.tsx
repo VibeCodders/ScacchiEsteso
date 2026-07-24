@@ -8,7 +8,7 @@ function getMaxIdentical(sigla: string): number {
 }
 
 function App() {
-  const [team, setTeam] = useState<Map<string, number>>(new Map());
+  const [team, setTeam] = useState<Map<string, number>>(new Map([[KING_SIGLA, 1]]));
   const [filter, setFilter] = useState<string>('all');
 
   const addPiece = useCallback((piece: Piece) => {
@@ -23,6 +23,7 @@ function App() {
   }, []);
 
   const removePiece = useCallback((sigla: string) => {
+    if (sigla === KING_SIGLA) return;
     setTeam((prev) => {
       const next = new Map(prev);
       const current = next.get(sigla) ?? 0;
@@ -36,6 +37,7 @@ function App() {
   }, []);
 
   const removeAll = useCallback((sigla: string) => {
+    if (sigla === KING_SIGLA) return;
     setTeam((prev) => {
       const next = new Map(prev);
       next.delete(sigla);
@@ -44,7 +46,7 @@ function App() {
   }, []);
 
   const resetTeam = useCallback(() => {
-    setTeam(new Map());
+    setTeam(new Map([[KING_SIGLA, 1]]));
   }, []);
 
   const teamMembers = useMemo(() => {
@@ -216,25 +218,28 @@ function App() {
           <h2>🎯 Team Attuale</h2>
 
           {teamMembers.length === 0 ? (
-            <div className="empty-state">Nessun pezzo aggiunto.<br />Clicca su un pezzo nel roster per comporre il team.</div>
+            <div className="empty-state">Il Re è obbligatorio e viene sempre incluso nel team.<br />Aggiungi altri pezzi per completare il team.</div>
           ) : (
             <>
               <div className="team-list">
-                {teamMembers.map(({ piece, count }) => (
-                  <div key={piece.sigla} className="team-member">
-                    <div className="member-info">
-                      <span className="member-sigla">{piece.sigla}</span>
-                      <span className="member-name">{piece.descrizione}</span>
-                      <span className="member-cost">{piece.punti}pt × {count} = {piece.punti * count}</span>
+{teamMembers.map(({ piece, count }) => {
+                  const isKing = piece.sigla === KING_SIGLA;
+                  return (
+                    <div key={piece.sigla} className={`team-member ${isKing ? 'king-member' : ''}`}>
+                      <div className="member-info">
+                        <span className="member-sigla">{piece.sigla}</span>
+                        <span className="member-name">{piece.descrizione}</span>
+                        <span className="member-cost">{piece.punti}pt × {count} = {piece.punti * count}</span>
+                      </div>
+                      <div className="member-count">
+                        {!isKing && <button className="count-btn" onClick={() => removePiece(piece.sigla)} aria-label={`Rimuovi un ${piece.descrizione}`}>−</button>}
+                        <span className="count-num">{count}</span>
+                        {!isKing && <button className="count-btn" onClick={() => addPiece(piece)} aria-label={`Aggiungi un ${piece.descrizione}`} disabled={count >= getMaxIdentical(piece.sigla)}>+</button>}
+                        {!isKing && <button className="remove-btn" onClick={() => removeAll(piece.sigla)} aria-label={`Rimuovi tutti i ${piece.descrizione}`}>✕</button>}
+                      </div>
                     </div>
-                    <div className="member-count">
-                      <button className="count-btn" onClick={() => removePiece(piece.sigla)} aria-label={`Rimuovi un ${piece.descrizione}`}>−</button>
-                      <span className="count-num">{count}</span>
-                      <button className="count-btn" onClick={() => addPiece(piece)} aria-label={`Aggiungi un ${piece.descrizione}`} disabled={count >= getMaxIdentical(piece.sigla)}>+</button>
-                    </div>
-                    <button className="remove-btn" onClick={() => removeAll(piece.sigla)} aria-label={`Rimuovi tutti i ${piece.descrizione}`}>✕</button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div className="summary">

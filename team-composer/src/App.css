@@ -198,6 +198,11 @@
   padding: 8px 12px;
 }
 
+.team-member.king-member {
+  border-color: #fbbf24;
+  background: #1a1f0a;
+}
+
 .team-member .member-info {
   display: flex;
   align-items: center;
