@@ -1,7 +1,11 @@
 import { useState, useCallback, useMemo } from 'react';
-import { pieces, BUDGET, MAX_PIECES_TOTAL, MIN_PIECES_TOTAL, MAX_IDENTICAL, MAX_PAWNS, KING_SIGLA } from './data/pieces';
+import { pieces, BUDGET, MAX_PIECES_TOTAL, MIN_PIECES_TOTAL, MAX_IDENTICAL, MAX_PAWNS, KING_SIGLA, PAWN_SIGLE } from './data/pieces';
 import type { Piece, ValidationResult, TeamMember } from './types';
 import './App.css';
+
+function getMaxIdentical(sigla: string): number {
+  return PAWN_SIGLE.includes(sigla as 'PG' | 'FG' | 'PE') ? MAX_PAWNS : MAX_IDENTICAL;
+}
 
 function App() {
   const [team, setTeam] = useState<Map<string, number>>(new Map());
@@ -12,7 +16,7 @@ function App() {
     setTeam((prev) => {
       const next = new Map(prev);
       const current = next.get(piece.sigla) ?? 0;
-      if (current >= MAX_IDENTICAL) return prev;
+      if (current >= getMaxIdentical(piece.sigla)) return prev;
       next.set(piece.sigla, current + 1);
       return next;
     });
@@ -85,8 +89,8 @@ function App() {
 
   const maxIdenticalViolated = useMemo(() => {
     let violated = false;
-    team.forEach((count) => {
-      if (count > MAX_IDENTICAL) violated = true;
+    team.forEach((count, sigla) => {
+      if (count > getMaxIdentical(sigla)) violated = true;
     });
     return violated;
   }, [team]);
@@ -110,8 +114,8 @@ function App() {
 
     const maxFiveOk = !maxIdenticalViolated;
     const maxFiveMsg = maxFiveOk
-      ? 'Nessun pezzo supera il limite di 5'
-      : 'Alcuni pezzi superano il limite di 5';
+      ? 'Nessun pezzo supera il proprio limite'
+      : 'Alcuni pezzi superano il proprio limite';
 
     const maxPawnsOk = !maxPawnsViolated;
     const pawnsMsg = maxPawnsOk
@@ -176,7 +180,8 @@ function App() {
           <div className="piece-grid">
             {filteredPieces.map((piece: Piece) => {
               const currentCount = team.get(piece.sigla) ?? 0;
-              const isMaxed = currentCount >= MAX_IDENTICAL;
+const maxForPiece = getMaxIdentical(piece.sigla);
+               const isMaxed = currentCount >= maxForPiece;
               const isKing = piece.sigla === KING_SIGLA;
               return (
                 <div
@@ -196,7 +201,7 @@ function App() {
                   <span className="regole">{piece.regole}</span>
                   {currentCount > 0 && (
                     <span style={{ fontSize: '0.75rem', color: '#60a5fa' }}>
-                      Nel team: {currentCount}/{MAX_IDENTICAL}
+                      Nel team: {currentCount}/{maxForPiece}
                     </span>
                   )}
                   {isMaxed && <span style={{ fontSize: '0.75rem', color: '#f87171' }}>Limite raggiunto</span>}
@@ -225,7 +230,7 @@ function App() {
                     <div className="member-count">
                       <button className="count-btn" onClick={() => removePiece(piece.sigla)} aria-label={`Rimuovi un ${piece.descrizione}`}>−</button>
                       <span className="count-num">{count}</span>
-                      <button className="count-btn" onClick={() => addPiece(piece)} aria-label={`Aggiungi un ${piece.descrizione}`} disabled={count >= MAX_IDENTICAL}>+</button>
+                      <button className="count-btn" onClick={() => addPiece(piece)} aria-label={`Aggiungi un ${piece.descrizione}`} disabled={count >= getMaxIdentical(piece.sigla)}>+</button>
                     </div>
                     <button className="remove-btn" onClick={() => removeAll(piece.sigla)} aria-label={`Rimuovi tutti i ${piece.descrizione}`}>✕</button>
                   </div>
