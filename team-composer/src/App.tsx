@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import pieces, { BUDGET, MAX_PIECES_TOTAL, MIN_PIECES_TOTAL, MAX_IDENTICAL, MAX_PAWNS, KING_SIGLA, PAWN_SIGLE } from './data/pieces';
+import { pieces, BUDGET, MAX_PIECES_TOTAL, MIN_PIECES_TOTAL, MAX_IDENTICAL, MAX_PAWNS, KING_SIGLA } from './data/pieces';
 import type { Piece, ValidationResult, TeamMember } from './types';
 import './App.css';
 
@@ -63,7 +63,7 @@ function App() {
   const totalPawns = useMemo(() => {
     let total = 0;
     team.forEach((count, sigla) => {
-      if (PAWN_SIGLE.includes(sigla)) total += count;
+      if (sigla === 'PG' || sigla === 'FG' || sigla === 'PE') total += count;
     });
     return total;
   }, [team]);
@@ -186,7 +186,7 @@ function App() {
                   role="button"
                   tabIndex={0}
                   aria-label={`Aggiungi ${piece.descrizione}`}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); !isMaxed && !isKing && addPiece(piece); } }}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (!isMaxed && !isKing) addPiece(piece); } }}
                 >
                   <div className="piece-header">
                     <span className="sigla">{piece.sigla}</span>

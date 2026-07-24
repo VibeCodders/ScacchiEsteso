@@ -1,6 +1,208 @@
-import piecesData from './pezzi.json';
 import type { Piece } from '../types';
 
-const piecesRaw = piecesData as Piece[];
-export const pieces = piecesRaw;
-export { BUDGET, MAX_PIECES_TOTAL, MIN_PIECES_TOTAL, MAX_IDENTICAL, MAX_PAWNS, KING_SIGLA, PAWN_SIGLE } from './constants';
+export const pieces: Piece[] = [
+  {
+    sigla: 'RE',
+    descrizione: 'Re',
+    punti: 0,
+    classico: true,
+    regole: 'Muove di una casella in qualsiasi direzione. Cattura in mischia.',
+  },
+  {
+    sigla: 'PG',
+    descrizione: 'Paggio',
+    punti: 2,
+    classico: false,
+    regole: 'Si muove di una casella in orizzontale o verticale. Cattura in orizzontale o verticale.',
+  },
+  {
+    sigla: 'FG',
+    descrizione: 'Fante',
+    punti: 3,
+    classico: false,
+    regole: 'Si muove in avanti di una casella. Cattura diagonalmente in avanti.',
+  },
+  {
+    sigla: 'PE',
+    descrizione: 'Pedone',
+    punti: 4,
+    classico: true,
+    regole: 'Muove in avanti di una casella (due alla prima mossa); cattura diagonalmente.',
+  },
+  {
+    sigla: 'CR',
+    descrizione: 'Corriere',
+    punti: 6,
+    classico: false,
+    regole: 'Si muove in orizzontale o verticale per un massimo di due caselle. Cattura normalmente.',
+  },
+  {
+    sigla: 'RI',
+    descrizione: 'Ricognitore',
+    punti: 8,
+    classico: false,
+    regole: 'Si muove in diagonale per un massimo di due caselle. Cattura normalmente.',
+  },
+  {
+    sigla: 'AL',
+    descrizione: 'Alfiere',
+    punti: 10,
+    classico: true,
+    regole: 'Muove in diagonale per un numero illimitato di caselle.',
+  },
+  {
+    sigla: 'CA',
+    descrizione: 'Cavallo',
+    punti: 12,
+    classico: true,
+    regole: 'Salta a forma di "L": due caselle in una direzione e una in quella perpendicolare. Ignora le interposizioni.',
+  },
+  {
+    sigla: 'SP',
+    descrizione: 'Spettro',
+    punti: 15,
+    classico: false,
+    regole: 'Si muove di massimo 2 caselle in diagonale. Ignora le interposizioni. Cattura sulla casella di arrivo.',
+  },
+  {
+    sigla: 'AT',
+    descrizione: 'Ariete',
+    punti: 20,
+    classico: false,
+    regole: 'Si muove di 1, 2 o 3 caselle in orizzontale o verticale. Cattura normalmente. Al posto della cattura, può spingere il pezzo avversario di una casella lungo la stessa linea di attacco, all\'indietro. Se la spinta è impossibile (casella occupata o fuori dalla scacchiera), effettua la cattura normalmente.',
+  },
+  {
+    sigla: 'CM',
+    descrizione: 'Camaleonte',
+    punti: 22,
+    classico: false,
+    regole: 'Si muove come Alfiere per un massimo di 4 caselle sulle caselle chiare e come Torre per un massimo di 3 caselle sulle caselle scure.',
+  },
+  {
+    sigla: 'LA',
+    descrizione: 'Lanciere',
+    punti: 26,
+    classico: false,
+    regole: 'Si muove come la Torre per un massimo di 2 caselle. Quando effettua una cattura, la lancia trapassa il bersaglio e colpisce anche il pezzo immediatamente dietro sulla stessa linea di attacco. Se dietro il bersaglio non c\'è un pezzo o la casella è oltre il bordo, l\'effetto non si applica.',
+  },
+  {
+    sigla: 'BE',
+    descrizione: 'Berserker',
+    punti: 26,
+    classico: false,
+    regole: 'Si muove di massimo 2 caselle in qualsiasi direzione. Furia bellica: dopo una cattura in mischia riuscita, ottiene un secondo movimento extra immediato, senza possibilità di cattura durante quel movimento aggiuntivo.',
+  },
+  {
+    sigla: 'NE',
+    descrizione: 'Necromante',
+    punti: 30,
+    classico: false,
+    regole: 'Si muove in diagonale per un massimo di 3 caselle. In alternativa al movimento, può rianimare un Pedone alleato precedentemente eliminato, schierandolo su una casella vuota immediatamente adiacente.',
+  },
+  {
+    sigla: 'IQ',
+    descrizione: 'Inquisitore',
+    punti: 30,
+    classico: false,
+    regole: 'Si muove in orizzontale o verticale per massimo 3 caselle. Silenzio: tutti i pezzi nemici nelle 8 caselle adiacenti perdono la possibilità di effettuare attacchi a distanza in orizzontale o verticale. L\'effetto cessa immediatamente quando il pezzo nemico lascia l\'aura.',
+  },
+  {
+    sigla: 'GL',
+    descrizione: 'Golem',
+    punti: 32,
+    classico: false,
+    regole: 'Si muove di una o due caselle in qualsiasi direzione. Armatura naturale: non può essere catturato da pezzi avversari con costo di schieramento pari o inferiore a 14.',
+  },
+  {
+    sigla: 'MI',
+    descrizione: 'Mistico',
+    punti: 32,
+    classico: false,
+    regole: 'Si muove di 1 o 2 caselle in qualsiasi direzione. In alternativa al movimento, può scambiare istantaneamente la propria posizione con quella di un qualsiasi alleato adiacente, eccetto il Re.',
+  },
+  {
+    sigla: 'AR',
+    descrizione: 'Arciere',
+    punti: 34,
+    classico: false,
+    regole: 'Si muove di 1 o 2 caselle in qualsiasi direzione. Oltre alla cattura normale, può usare il turno per "scoccare": elimina un nemico posto a esattamente 3 o 4 caselle in orizzontale, verticale o diagonale purché la traiettoria sia libera, senza effettuare alcuno spostamento.',
+  },
+  {
+    sigla: 'FL',
+    descrizione: 'Falange',
+    punti: 36,
+    classico: false,
+    regole: 'Si muove di 1 o 2 caselle in orizzontale o verticale. Oltre al movimento, può catturare normalmente a 1 casella. Quando si avvicina a meno di 3 caselle da un pezzo nemico, può effettuare un "picchiere" che cattura il pezzo bersaglio a condizione che la casella dietro di esso sia vuota, senza effettuare spostamento. Se dietro il bersaglio c\'è un pezzo nemico, entrambi i pezzi vengono distrutti.',
+  },
+  {
+    sigla: 'PA',
+    descrizione: 'Paladino',
+    punti: 36,
+    classico: false,
+    regole: 'Si muove come il Cavallo oppure di 1 casella in qualsiasi direzione. Egida: i pezzi alleati nelle 8 caselle adiacenti sono protetti da attacchi a distanza. I nemici possono attaccarli solo con catture in mischia.',
+  },
+  {
+    sigla: 'CO',
+    descrizione: 'Colosso',
+    punti: 44,
+    classico: false,
+    regole: 'Si muove di massimo 2 caselle in qualsiasi direzione. Danno ad area: quando cattura in mischia, distrugge automaticamente tutti i pezzi (alleati e nemici) che si trovano nelle quattro caselle ortogonalmente adiacenti alla propria casella di arrivo.',
+  },
+  {
+    sigla: 'PR',
+    descrizione: 'Principe',
+    punti: 44,
+    classico: false,
+    regole: 'Si muove come la Regina per massimo 4 caselle. Eredità: quando cattura un pezzo, ottiene un movimento aggiuntivo senza cattura durante lo stesso turno.',
+  },
+  {
+    sigla: 'SV',
+    descrizione: 'Sovrano',
+    punti: 46,
+    classico: false,
+    regole: 'Si muove come la Regina per massimo 2 caselle. Impatto: quando cattura in mischia, tutti i pezzi nemici nelle 4 caselle ortogonalmente adiacenti alla casella di arrivo vengono distrutti automaticamente.',
+  },
+  {
+    sigla: 'RA',
+    descrizione: 'Regina',
+    punti: 48,
+    classico: true,
+    regole: 'Si muove in qualsiasi direzione per un numero illimitato di caselle.',
+  },
+  {
+    sigla: 'IM',
+    descrizione: 'Imperatore',
+    punti: 58,
+    classico: false,
+    regole: 'Si muove come la Regina per un numero illimitato di caselle. Maestà: quando effettua una cattura in mischia, tutti i pezzi nemici nelle 4 caselle ortogonalmente adiacenti alla casella di arrivo perdono la possibilità di muoversi per il turno avversario.',
+  },
+  {
+    sigla: 'TI',
+    descrizione: 'Titano',
+    punti: 72,
+    classico: false,
+    regole: 'Si muove come la Regina in qualsiasi direzione per un numero illimitato di caselle. Armatura divina: non può essere catturato da pezzi avversari con costo di schieramento inferiore a 36. Impatto cosmico: quando effettua una cattura in mischia, tutti i pezzi nemici nelle quattro caselle ortogonalmente adiacenti alla casella di arrivo vengono distrutti automaticamente, ma il Titano non può muoversi nel turno successivo.',
+  },
+  {
+    sigla: 'DI',
+    descrizione: 'Divinità',
+    punti: 90,
+    classico: false,
+    regole: 'Si muove come la Regina in qualsiasi direzione per un numero illimitato di caselle. Armatura suprema: non può essere catturato da pezzi avversari con costo di schieramento inferiore a 48. Esplosione divina: quando effettua una cattura in mischia, tutti i pezzi nemici nelle quattro caselle ortogonalmente adiacenti alla casella di arrivo vengono distrutti automaticamente, ma il Divinità non può muoversi nel turno successivo.',
+  },
+  {
+    sigla: 'SU',
+    descrizione: 'Supremo',
+    punti: 125,
+    classico: false,
+    regole: 'Si muove come la Regina in qualsiasi direzione per un numero illimitato di caselle. Onnipresenza: una volta per partita, può materializzarsi su qualsiasi casella vuota della scacchiera. Onnipotenza: quando effettua una cattura in mischia, distrugge tutti i pezzi nemici nelle quattro caselle ortogonalmente adiacenti alla casella di arrivo, ma non può muoversi nel turno successivo. Armatura assoluta: non può essere catturato da pezzi avversari con costo di schieramento inferiore a 60.',
+  },
+];
+
+export const BUDGET = 156;
+export const MAX_PIECES_TOTAL = 16;
+export const MIN_PIECES_TOTAL = 10;
+export const MAX_IDENTICAL = 5;
+export const MAX_PAWNS = 8;
+export const KING_SIGLA = 'RE';
+export const PAWN_SIGLE = ['PG', 'FG', 'PE'] as const;
