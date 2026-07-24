@@ -180,8 +180,8 @@ function App() {
           <div className="piece-grid">
             {filteredPieces.map((piece: Piece) => {
               const currentCount = team.get(piece.sigla) ?? 0;
-const maxForPiece = getMaxIdentical(piece.sigla);
-               const isMaxed = currentCount >= maxForPiece;
+              const maxForPiece = getMaxIdentical(piece.sigla);
+              const isMaxed = currentCount >= maxForPiece;
               const isKing = piece.sigla === KING_SIGLA;
               return (
                 <div
