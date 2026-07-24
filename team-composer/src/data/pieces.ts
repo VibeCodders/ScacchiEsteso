@@ -199,7 +199,7 @@ export const pieces: Piece[] = [
   },
 ];
 
-export const BUDGET = 156;
+export const BUDGET = 124;
 export const MAX_PIECES_TOTAL = 16;
 export const MIN_PIECES_TOTAL = 10;
 export const MAX_IDENTICAL = 5;

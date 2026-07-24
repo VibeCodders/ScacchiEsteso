@@ -161,7 +161,7 @@ function App() {
       <header className="header">
         <div>
           <h1>⚔️ Composizione Team</h1>
-          <p className="subtitle">Scacchi Esteso — Budget 156 punti</p>
+          <p className="subtitle">Scacchi Esteso — Budget 124 punti</p>
         </div>
         <div className="budget-badge">
           <span className="label">Budget:</span>
