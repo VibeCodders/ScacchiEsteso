@@ -1,6 +1,7 @@
-import piecesData from '../../PEZZI.json';
+import piecesData from './pezzi.json';
+import type { Piece } from '../types';
 
-export const pieces: Piece[] = piecesData;
+export const pieces: Piece[] = piecesData as Piece[];
 
 export const BUDGET = 156;
 export const MAX_PIECES_TOTAL = 16;

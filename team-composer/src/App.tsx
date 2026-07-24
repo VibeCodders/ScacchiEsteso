@@ -1,122 +1,299 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useState, useCallback, useMemo } from 'react';
+import pieces, { BUDGET, MAX_PIECES_TOTAL, MIN_PIECES_TOTAL, MAX_IDENTICAL, MAX_PAWNS, KING_SIGLA, PAWN_SIGLE } from './data/pieces';
+import type { Piece, ValidationResult, TeamMember } from './types';
+import './App.css';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [team, setTeam] = useState<Map<string, number>>(new Map());
+  const [filter, setFilter] = useState<string>('all');
+
+  const addPiece = useCallback((piece: Piece) => {
+    if (piece.sigla === KING_SIGLA) return;
+    setTeam((prev) => {
+      const next = new Map(prev);
+      const current = next.get(piece.sigla) ?? 0;
+      if (current >= MAX_IDENTICAL) return prev;
+      next.set(piece.sigla, current + 1);
+      return next;
+    });
+  }, []);
+
+  const removePiece = useCallback((sigla: string) => {
+    setTeam((prev) => {
+      const next = new Map(prev);
+      const current = next.get(sigla) ?? 0;
+      if (current <= 1) {
+        next.delete(sigla);
+      } else {
+        next.set(sigla, current - 1);
+      }
+      return next;
+    });
+  }, []);
+
+  const removeAll = useCallback((sigla: string) => {
+    setTeam((prev) => {
+      const next = new Map(prev);
+      next.delete(sigla);
+      return next;
+    });
+  }, []);
+
+  const resetTeam = useCallback(() => {
+    setTeam(new Map());
+  }, []);
+
+  const teamMembers = useMemo(() => {
+    const members: TeamMember[] = [];
+    team.forEach((count, sigla) => {
+      const piece = pieces.find((p: Piece) => p.sigla === sigla);
+      if (piece) {
+        members.push({ piece, count });
+      }
+    });
+    return members;
+  }, [team]);
+
+  const totalPieces = useMemo(() => {
+    let total = 0;
+    team.forEach((count) => { total += count; });
+    return total;
+  }, [team]);
+
+  const totalPawns = useMemo(() => {
+    let total = 0;
+    team.forEach((count, sigla) => {
+      if (PAWN_SIGLE.includes(sigla)) total += count;
+    });
+    return total;
+  }, [team]);
+
+  const budgetSpent = useMemo(() => {
+    let spent = 0;
+    team.forEach((count, sigla) => {
+      const piece = pieces.find((p: Piece) => p.sigla === sigla);
+      if (piece) spent += piece.punti * count;
+    });
+    return spent;
+  }, [team]);
+
+  const budgetRemaining = BUDGET - budgetSpent;
+  const budgetExact = budgetSpent === BUDGET;
+
+  const kingCount = team.get(KING_SIGLA) ?? 0;
+  const hasKing = kingCount === 1;
+
+  const maxIdenticalViolated = useMemo(() => {
+    let violated = false;
+    team.forEach((count) => {
+      if (count > MAX_IDENTICAL) violated = true;
+    });
+    return violated;
+  }, [team]);
+
+  const maxPawnsViolated = totalPawns > MAX_PAWNS;
+
+  const validation = useMemo((): ValidationResult => {
+    const budgetOk = budgetSpent === BUDGET;
+    const budgetMsg = budgetOk
+      ? `Budget esatto: ${budgetSpent}/${BUDGET}`
+      : budgetSpent > BUDGET
+        ? `Budget superato: ${budgetSpent}/${BUDGET} (+${budgetSpent - BUDGET})`
+        : `Budget: ${budgetSpent}/${BUDGET} (${budgetRemaining} rimanenti)`;
+
+    const totalPiecesOk = totalPieces >= MIN_PIECES_TOTAL && totalPieces <= MAX_PIECES_TOTAL;
+    const totalPiecesMsg = totalPiecesOk
+      ? `Pezzi totali: ${totalPieces} (${MIN_PIECES_TOTAL}–${MAX_PIECES_TOTAL})`
+      : totalPieces < MIN_PIECES_TOTAL
+        ? `Pezzi insufficienti: ${totalPieces}/${MIN_PIECES_TOTAL} min`
+        : `Pezzi in eccesso: ${totalPieces}/${MAX_PIECES_TOTAL} max`;
+
+    const maxFiveOk = !maxIdenticalViolated;
+    const maxFiveMsg = maxFiveOk
+      ? 'Nessun pezzo supera il limite di 5'
+      : 'Alcuni pezzi superano il limite di 5';
+
+    const maxPawnsOk = !maxPawnsViolated;
+    const pawnsMsg = maxPawnsOk
+      ? `Pedoni: ${totalPawns}/${MAX_PAWNS} max`
+      : `Pedoni in eccesso: ${totalPawns}/${MAX_PAWNS}`;
+
+    const hasKingOk = hasKing;
+    const kingMsg = hasKingOk ? 'Re presente (1 richiesto)' : 'Re mancante (obbligatorio 1)';
+
+    const kingCountOk = kingCount === 1;
+    const kingCountMsg = kingCountOk
+      ? 'Esattamente 1 Re'
+      : kingCount === 0
+        ? 'Nessun Re presente'
+        : `Troppi Re: ${kingCount} (1 obbligatorio)`;
+
+    const overall = budgetOk && totalPiecesOk && maxFiveOk && maxPawnsOk && hasKingOk && kingCountOk;
+
+    return {
+      budget: { valid: budgetSpent <= BUDGET && budgetExact, message: budgetMsg, level: budgetSpent > BUDGET ? 'error' : budgetExact ? 'success' : 'warning' },
+      totalPieces: { valid: totalPiecesOk, message: totalPiecesMsg, level: totalPiecesOk ? 'success' : 'error' },
+      maxFive: { valid: maxFiveOk, message: maxFiveMsg, level: maxFiveOk ? 'success' : 'error' },
+      maxPawns: { valid: maxPawnsOk, message: pawnsMsg, level: maxPawnsOk ? 'success' : 'error' },
+      hasKing: { valid: hasKingOk, message: kingMsg, level: hasKingOk ? 'success' : 'error' },
+      kingCount: { valid: kingCountOk, message: kingCountMsg, level: kingCountOk ? 'success' : 'error' },
+      overall,
+    };
+  }, [budgetSpent, budgetRemaining, budgetExact, totalPieces, totalPawns, maxIdenticalViolated, maxPawnsViolated, hasKing, kingCount]);
+
+  const filteredPieces = filter === 'all' ? pieces : pieces.filter((p: Piece) => p.classico === (filter === 'classico'));
+
+  const getCostClass = (cost: number) => {
+    if (cost === 0) return 'cost-free';
+    if (cost <= 10) return 'cost-low';
+    if (cost <= 25) return 'cost-med';
+    return 'cost-high';
+  };
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
+    <div className="app">
+      <header className="header">
         <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
+          <h1>⚔️ Composizione Team</h1>
+          <p className="subtitle">Scacchi Esteso — Budget 156 punti</p>
         </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+        <div className="budget-badge">
+          <span className="label">Budget:</span>
+          <span className={`value ${budgetSpent > BUDGET ? 'err' : budgetExact ? 'ok' : budgetSpent > BUDGET * 0.9 ? 'warn' : ''}`}>
+            {budgetSpent}/{BUDGET}
+          </span>
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      </header>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      <div className="main">
+        <div className="panel">
+          <h2>📦 Roster Pezzi</h2>
+          <div className="piece-filter">
+            <button className={`filter-btn ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')}>Tutti</button>
+            <button className={`filter-btn ${filter === 'classico' ? 'active' : ''}`} onClick={() => setFilter('classico')}>Classici</button>
+            <button className={`filter-btn ${filter === 'speciale' ? 'active' : ''}`} onClick={() => setFilter('speciale')}>Speciali</button>
+          </div>
+          <div className="piece-grid">
+            {filteredPieces.map((piece: Piece) => {
+              const currentCount = team.get(piece.sigla) ?? 0;
+              const isMaxed = currentCount >= MAX_IDENTICAL;
+              const isKing = piece.sigla === KING_SIGLA;
+              return (
+                <div
+                  key={piece.sigla}
+                  className={`piece-card ${currentCount > 0 ? 'selected' : ''}`}
+                  onClick={() => !isMaxed && !isKing && addPiece(piece)}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Aggiungi ${piece.descrizione}`}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); !isMaxed && !isKing && addPiece(piece); } }}
+                >
+                  <div className="piece-header">
+                    <span className="sigla">{piece.sigla}</span>
+                    <span className={`cost ${getCostClass(piece.punti)}`}>{piece.punti} pt</span>
+                  </div>
+                  <span className="desc">{piece.descrizione}</span>
+                  <span className="regole">{piece.regole}</span>
+                  {currentCount > 0 && (
+                    <span style={{ fontSize: '0.75rem', color: '#60a5fa' }}>
+                      Nel team: {currentCount}/{MAX_IDENTICAL}
+                    </span>
+                  )}
+                  {isMaxed && <span style={{ fontSize: '0.75rem', color: '#f87171' }}>Limite raggiunto</span>}
+                  {isKing && <span style={{ fontSize: '0.75rem', color: '#fbbf24' }}>Gratuito — obbligatorio</span>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="panel composer-panel">
+          <h2>🎯 Team Attuale</h2>
+
+          {teamMembers.length === 0 ? (
+            <div className="empty-state">Nessun pezzo aggiunto.<br />Clicca su un pezzo nel roster per comporre il team.</div>
+          ) : (
+            <>
+              <div className="team-list">
+                {teamMembers.map(({ piece, count }) => (
+                  <div key={piece.sigla} className="team-member">
+                    <div className="member-info">
+                      <span className="member-sigla">{piece.sigla}</span>
+                      <span className="member-name">{piece.descrizione}</span>
+                      <span className="member-cost">{piece.punti}pt × {count} = {piece.punti * count}</span>
+                    </div>
+                    <div className="member-count">
+                      <button className="count-btn" onClick={() => removePiece(piece.sigla)} aria-label={`Rimuovi un ${piece.descrizione}`}>−</button>
+                      <span className="count-num">{count}</span>
+                      <button className="count-btn" onClick={() => addPiece(piece)} aria-label={`Aggiungi un ${piece.descrizione}`} disabled={count >= MAX_IDENTICAL}>+</button>
+                    </div>
+                    <button className="remove-btn" onClick={() => removeAll(piece.sigla)} aria-label={`Rimuovi tutti i ${piece.descrizione}`}>✕</button>
+                  </div>
+                ))}
+              </div>
+
+              <div className="summary">
+                <div className="summary-row">
+                  <span className="label">Pezzi totali</span>
+                  <span className={`value ${totalPieces >= MIN_PIECES_TOTAL && totalPieces <= MAX_PIECES_TOTAL ? 'ok' : 'err'}`}>{totalPieces} ({MIN_PIECES_TOTAL}–{MAX_PIECES_TOTAL})</span>
+                </div>
+                <div className="summary-row">
+                  <span className="label">Pedoni</span>
+                  <span className={`value ${totalPawns <= MAX_PAWNS ? 'ok' : 'err'}`}>{totalPawns}/{MAX_PAWNS}</span>
+                </div>
+                <div className="summary-row">
+                  <span className="label">Re</span>
+                  <span className={`value ${hasKing ? 'ok' : 'err'}`}>{hasKing ? '✓ Presente' : '✗ Mancante'}</span>
+                </div>
+                <div className="summary-row">
+                  <span className="label">Budget speso</span>
+                  <span className={`value ${budgetSpent > BUDGET ? 'err' : budgetExact ? 'ok' : 'warn'}`}>{budgetSpent}/{BUDGET}</span>
+                </div>
+                <div className="summary-row">
+                  <span className="label">Budget residuo</span>
+                  <span className={`value ${budgetRemaining < 0 ? 'err' : budgetRemaining === 0 ? 'ok' : 'warn'}`}>{budgetRemaining}</span>
+                </div>
+              </div>
+
+              <div className="validation">
+                <div className={`validation-item ${validation.budget.level}`}>
+                  <span className="icon">{validation.budget.valid ? '✓' : '✗'}</span>
+                  <span>{validation.budget.message}</span>
+                </div>
+                <div className={`validation-item ${validation.totalPieces.level}`}>
+                  <span className="icon">{validation.totalPieces.valid ? '✓' : '✗'}</span>
+                  <span>{validation.totalPieces.message}</span>
+                </div>
+                <div className={`validation-item ${validation.maxFive.level}`}>
+                  <span className="icon">{validation.maxFive.valid ? '✓' : '✗'}</span>
+                  <span>{validation.maxFive.message}</span>
+                </div>
+                <div className={`validation-item ${validation.maxPawns.level}`}>
+                  <span className="icon">{validation.maxPawns.valid ? '✓' : '✗'}</span>
+                  <span>{validation.maxPawns.message}</span>
+                </div>
+                <div className={`validation-item ${validation.hasKing.level}`}>
+                  <span className="icon">{validation.hasKing.valid ? '✓' : '✗'}</span>
+                  <span>{validation.hasKing.message}</span>
+                </div>
+                <div className={`validation-item ${validation.kingCount.level}`}>
+                  <span className="icon">{validation.kingCount.valid ? '✓' : '✗'}</span>
+                  <span>{validation.kingCount.message}</span>
+                </div>
+              </div>
+
+              <div className="actions">
+                <button className="btn-reset" onClick={resetTeam}>Reset Team</button>
+                <button className="btn-save" disabled={!validation.overall}>
+                  {validation.overall ? '✓ Team Completo' : '✗ Vincoli non rispettati'}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default App
