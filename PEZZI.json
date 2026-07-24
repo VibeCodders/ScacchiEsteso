@@ -56,6 +56,13 @@
     "regole": "Salta a forma di \"L\": due caselle in una direzione e una in quella perpendicolare. Ignora le interposizioni."
   },
   {
+    "sigla": "TO",
+    "descrizione": "Torre",
+    "punti": 15,
+    "classico": true,
+    "regole": "Si muove in orizzontale o verticale per un numero illimitato di caselle."
+  },
+  {
     "sigla": "SP",
     "descrizione": "Spettro",
     "punti": 15,

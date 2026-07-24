@@ -2,7 +2,7 @@
 
 ## 1. Costi e limitazioni dell'esercito
 
-- **Budget punti disponibili:** 124, da spendere integralmente.
+- **Budget punti disponibili:** 154, da spendere integralmente.
 - **Pezzi per tipo:** massimo 5 pezzi identici.
 - **Pedoni:** massimo 8.
 - **Re:** obbligatoriamente 1 (costo gratuito, incluso nel conteggio dei pezzi ma non nel budget).

@@ -58,6 +58,13 @@ export const pieces: Piece[] = [
     regole: 'Salta a forma di "L": due caselle in una direzione e una in quella perpendicolare. Ignora le interposizioni.',
   },
   {
+    sigla: 'TO',
+    descrizione: 'Torre',
+    punti: 15,
+    classico: true,
+    regole: 'Si muove in orizzontale o verticale per un numero illimitato di caselle.',
+  },
+  {
     sigla: 'SP',
     descrizione: 'Spettro',
     punti: 15,
@@ -199,7 +206,7 @@ export const pieces: Piece[] = [
   },
 ];
 
-export const BUDGET = 124;
+export const BUDGET = 154;
 export const MAX_PIECES_TOTAL = 16;
 export const MIN_PIECES_TOTAL = 10;
 export const MAX_IDENTICAL = 5;
