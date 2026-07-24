@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { pieces, BUDGET, MAX_PIECES_TOTAL, MIN_PIECES_TOTAL, MAX_IDENTICAL, MAX_PAWNS, KING_SIGLA, PAWN_SIGLE } from './data/pieces';
+import { autoFillTeam, improveTeam } from './data/optimizer';
 import type { Piece, ValidationResult, TeamMember } from './types';
 import './App.css';
 
@@ -7,9 +8,46 @@ function getMaxIdentical(sigla: string): number {
   return PAWN_SIGLE.includes(sigla as 'PG' | 'FG' | 'PE') ? MAX_PAWNS : MAX_IDENTICAL;
 }
 
+type ToastType = 'info' | 'success' | 'warning' | 'error';
+
+interface Toast {
+  message: string;
+  type: ToastType;
+  id: number;
+}
+
 function App() {
   const [team, setTeam] = useState<Map<string, number>>(new Map([[KING_SIGLA, 1]]));
   const [filter, setFilter] = useState<string>('all');
+  const [toasts, setToasts] = useState<Toast[]>([]);
+
+  const addToast = useCallback((message: string, type: ToastType) => {
+    const id = Date.now();
+    setToasts((prev) => [...prev, { message, type, id }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 4000);
+  }, []);
+
+  const handleAutoFill = useCallback(() => {
+    const result = autoFillTeam(team);
+    if (result.changed) {
+      setTeam(result.team);
+      addToast(result.message, 'success');
+    } else {
+      addToast(result.message, 'info');
+    }
+  }, [team, addToast]);
+
+  const handleImprove = useCallback(() => {
+    const result = improveTeam(team);
+    if (result.changed) {
+      setTeam(result.team);
+      addToast(result.message, 'success');
+    } else {
+      addToast(result.message, 'info');
+    }
+  }, [team, addToast]);
 
   const addPiece = useCallback((piece: Piece) => {
     if (piece.sigla === KING_SIGLA) return;
@@ -294,6 +332,8 @@ function App() {
 
               <div className="actions">
                 <button className="btn-reset" onClick={resetTeam}>Reset Team</button>
+                <button className="btn-auto" onClick={handleAutoFill}>Completa</button>
+                <button className="btn-improve" onClick={handleImprove}>Migliora</button>
                 <button className="btn-save" disabled={!validation.overall}>
                   {validation.overall ? '✓ Team Completo' : '✗ Vincoli non rispettati'}
                 </button>
@@ -302,6 +342,15 @@ function App() {
           )}
         </div>
       </div>
+      {toasts.length > 0 && (
+        <div className="toast-container">
+          {toasts.map((toast) => (
+            <div key={toast.id} className={`toast toast-${toast.type}`}>
+              {toast.message}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
