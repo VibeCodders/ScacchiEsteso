@@ -1,21 +1,51 @@
 export type Direction = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
 
+export type MovementType = 'step' | 'slide' | 'leap' | 'speciale';
+export type CaptureMode = 'melee' | 'leap' | 'ranged' | 'none' | 'area';
+export type ColorRestriction = 'chiare' | 'scure' | 'nessuna' | 'forward' | 'backward';
+export type LeapPattern = 'L' | 'grasshopper' | 'custom';
+export type ActionModalita = 'alternativa' | 'aggiuntiva' | 'passiva' | 'sul_cattura';
+
 export interface Move {
   directions: Direction[];
+  minSteps: number;
   maxSteps: number;
   capture: boolean;
+  captureMode: CaptureMode;
+  movementType: MovementType;
   jump?: boolean;
+  colorRestriction?: ColorRestriction;
+  leapPattern?: LeapPattern;
+  jumpOver?: boolean;
+  jumpOverCount?: number;
+  landBeyond?: boolean;
+  multiJump?: boolean;
   primaMossaDoppia?: boolean;
   note?: string;
+}
+
+export interface AlternativeAction {
+  type: string;
+  modalita: ActionModalita;
+  params: Record<string, unknown>;
 }
 
 export interface Piece {
   sigla: string;
   descrizione: string;
   punti: number;
+  costoMinimo?: number;
+  costoMassimo?: number;
   classico: boolean;
   regole: string;
   moves: Move[];
+  movimentoTipo?: MovementType;
+  promotable?: boolean;
+  promotionTypes?: string[];
+  promotionRank?: number;
+  resistance: number;
+  immunityTypes: string[];
+  alternativeActions: AlternativeAction[];
   saltaInterposizioni?: boolean;
   catturaSoloInMischia?: boolean;
   catturaADistanza?: boolean;

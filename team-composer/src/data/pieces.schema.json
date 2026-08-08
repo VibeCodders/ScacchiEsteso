@@ -1,0 +1,242 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Pieces Schema",
+  "description": "Schema for team-composer/src/data/pieces.json",
+  "type": "array",
+  "items": {
+    "$ref": "#/$defs/piece"
+  },
+  "$defs": {
+    "direction": {
+      "type": "string",
+      "enum": ["n", "s", "e", "w", "ne", "nw", "se", "sw"]
+    },
+    "movementType": {
+      "type": "string",
+      "enum": ["step", "slide", "leap", "speciale"]
+    },
+    "captureMode": {
+      "type": "string",
+      "enum": ["melee", "leap", "ranged", "none", "area"]
+    },
+    "colorRestriction": {
+      "type": "string",
+      "enum": ["chiare", "scure", "nessuna", "forward", "backward"]
+    },
+    "leapPattern": {
+      "type": "string",
+      "enum": ["L", "grasshopper", "custom"]
+    },
+    "actionModalita": {
+      "type": "string",
+      "enum": ["alternativa", "aggiuntiva", "passiva", "sul_cattura"]
+    },
+    "move": {
+      "type": "object",
+      "required": ["directions", "minSteps", "maxSteps", "capture", "captureMode", "movementType"],
+      "properties": {
+        "directions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/direction" },
+          "minItems": 1
+        },
+        "minSteps": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "maxSteps": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "capture": {
+          "type": "boolean"
+        },
+        "captureMode": {
+          "$ref": "#/$defs/captureMode"
+        },
+        "movementType": {
+          "$ref": "#/$defs/movementType"
+        },
+        "jump": {
+          "type": "boolean"
+        },
+        "colorRestriction": {
+          "$ref": "#/$defs/colorRestriction"
+        },
+        "leapPattern": {
+          "$ref": "#/$defs/leapPattern"
+        },
+        "jumpOver": {
+          "type": "boolean"
+        },
+        "jumpOverCount": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "landBeyond": {
+          "type": "boolean"
+        },
+        "multiJump": {
+          "type": "boolean"
+        },
+        "primaMossaDoppia": {
+          "type": "boolean"
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "alternativeAction": {
+      "type": "object",
+      "required": ["type", "modalita", "params"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "modalita": {
+          "$ref": "#/$defs/actionModalita"
+        },
+        "params": {
+          "type": "object",
+          "required": [],
+          "properties": {
+            "target": { "type": "string" },
+            "raggio": { "type": "integer", "minimum": 0 },
+            "distanze": {
+              "type": "array",
+              "items": { "type": "integer", "minimum": 0 },
+              "minItems": 1
+            },
+            "effetto": { "type": "string" },
+            "condizioni": {
+              "type": "array",
+              "items": { "type": "string" },
+              "minItems": 0
+            },
+            "esclusi": {
+              "type": "array",
+              "items": { "type": "string" },
+              "minItems": 0
+            },
+            "senzaCattura": { "type": "boolean" },
+            "includeAlleati": { "type": "boolean" },
+            "senzaSpostamento": { "type": "boolean" },
+            "direzioni": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/direction" },
+              "minItems": 0
+            },
+            "traiettoriaLibera": { "type": "boolean" },
+            "fallback": { "type": "string" }
+          },
+          "additionalProperties": { "type": ["string", "number", "boolean", "array", "object"] }
+        }
+      },
+      "additionalProperties": false
+    },
+    "piece": {
+      "type": "object",
+      "required": ["sigla", "descrizione", "punti", "classico", "regole", "moves", "resistance", "immunityTypes", "alternativeActions"],
+      "properties": {
+        "sigla": {
+          "type": "string",
+          "pattern": "^[A-Z]{1,3}$"
+        },
+        "descrizione": {
+          "type": "string",
+          "minLength": 1
+        },
+        "punti": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "costoMinimo": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "costoMassimo": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "classico": {
+          "type": "boolean"
+        },
+        "regole": {
+          "type": "string",
+          "minLength": 1
+        },
+        "moves": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/move" }
+        },
+        "movimentoTipo": {
+          "$ref": "#/$defs/movementType"
+        },
+        "promotable": {
+          "type": "boolean"
+        },
+        "promotionTypes": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1
+        },
+        "promotionRank": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "resistance": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "immunityTypes": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "alternativeActions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/alternativeAction" }
+        },
+        "saltaInterposizioni": {
+          "type": "boolean"
+        },
+        "catturaSoloInMischia": {
+          "type": "boolean"
+        },
+        "catturaADistanza": {
+          "type": "boolean"
+        },
+        "secondoMovimentoPostCattura": {
+          "type": "boolean"
+        },
+        "dannoAdArea": {
+          "type": "boolean"
+        },
+        "rianimaPedoni": {
+          "type": "boolean"
+        },
+        "silenzioAttacchiADistanza": {
+          "type": "boolean"
+        },
+        "armatura": {
+          "type": "boolean"
+        },
+        "scambiaPosizioneConAlleato": {
+          "type": "boolean"
+        },
+        "scocca": {
+          "type": "boolean"
+        },
+        "egida": {
+          "type": "boolean"
+        },
+        "noteCondizionali": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
