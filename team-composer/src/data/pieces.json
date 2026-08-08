@@ -4,167 +4,253 @@
     "descrizione": "Re",
     "punti": 0,
     "classico": true,
-    "regole": "Muove di una casella in qualsiasi direzione. Cattura in mischia."
+    "regole": "Muove di una casella in qualsiasi direzione. Cattura in mischia.",
+    "moves": [
+      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "maxSteps": 1, "capture": true }
+    ]
   },
   {
     "sigla": "PG",
     "descrizione": "Paggio",
     "punti": 2,
     "classico": false,
-    "regole": "Si muove di una casella in verticale. Non cattura."
+    "regole": "Si muove di una casella in verticale. Non cattura.",
+    "moves": [
+      { "directions": ["n", "s"], "maxSteps": 1, "capture": false }
+    ]
   },
   {
     "sigla": "FG",
     "descrizione": "Fante",
     "punti": 3,
     "classico": false,
-    "regole": "Si muove in avanti di una casella. Cattura verticalmente in avanti."
+    "regole": "Si muove in avanti di una casella. Cattura verticalmente in avanti.",
+    "moves": [
+      { "directions": ["n"], "maxSteps": 1, "capture": false, "note": "Cattura verticalmente in avanti" }
+    ]
   },
   {
     "sigla": "PE",
     "descrizione": "Pedone",
     "punti": 4,
     "classico": true,
-    "regole": "Muove in avanti di una casella (due alla prima mossa); cattura diagonalmente."
+    "regole": "Muove in avanti di una casella (due alla prima mossa); cattura diagonalmente.",
+    "moves": [
+      { "directions": ["n"], "maxSteps": 2, "capture": false, "primaMossaDoppia": true },
+      { "directions": ["n"], "maxSteps": 1, "capture": false },
+      { "directions": ["ne", "nw"], "maxSteps": 1, "capture": true }
+    ]
   },
   {
     "sigla": "CR",
     "descrizione": "Corriere",
     "punti": 6,
     "classico": false,
-    "regole": "Si muove in orizzontale o verticale per un massimo di due caselle. Cattura normalmente."
+    "regole": "Si muove in orizzontale o verticale per un massimo di due caselle. Cattura normalmente.",
+    "moves": [
+      { "directions": ["n", "s", "e", "w"], "maxSteps": 2, "capture": true }
+    ]
   },
   {
     "sigla": "RI",
     "descrizione": "Ricognitore",
     "punti": 8,
     "classico": false,
-    "regole": "Si muove in diagonale per un massimo di due caselle. Cattura normalmente."
+    "regole": "Si muove in diagonale per un massimo di due caselle. Cattura normalmente.",
+    "moves": [
+      { "directions": ["ne", "nw", "se", "sw"], "maxSteps": 2, "capture": true }
+    ]
   },
   {
     "sigla": "AL",
     "descrizione": "Alfiere",
     "punti": 10,
     "classico": true,
-    "regole": "Muove in diagonale per un numero illimitato di caselle."
+    "regole": "Muove in diagonale per un numero illimitato di caselle.",
+    "moves": [
+      { "directions": ["ne", "nw", "se", "sw"], "maxSteps": 99, "capture": true }
+    ]
   },
   {
     "sigla": "CA",
     "descrizione": "Cavallo",
     "punti": 12,
     "classico": true,
-    "regole": "Salta a forma di \"L\": due caselle in una direzione e una in quella perpendicolare. Ignora le interposizioni."
+    "regole": "Salta a forma di \"L\": due caselle in una direzione e una in quella perpendicolare. Ignora le interposizioni.",
+    "moves": [
+      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "maxSteps": 0, "jump": true, "note": "Salto a L" }
+    ],
+    "saltaInterposizioni": true
   },
   {
     "sigla": "TO",
     "descrizione": "Torre",
     "punti": 15,
     "classico": true,
-    "regole": "Si muove in orizzontale o verticale per un numero illimitato di caselle."
+    "regole": "Si muove in orizzontale o verticale per un numero illimitato di caselle.",
+    "moves": [
+      { "directions": ["n", "s", "e", "w"], "maxSteps": 99, "capture": true }
+    ]
   },
   {
     "sigla": "SP",
     "descrizione": "Spettro",
     "punti": 15,
     "classico": false,
-    "regole": "Si muove di massimo 2 caselle in diagonale. Ignora le interposizioni. Cattura sulla casella di arrivo."
+    "regole": "Si muove di massimo 2 caselle in diagonale. Ignora le interposizioni. Cattura sulla casella di arrivo.",
+    "moves": [
+      { "directions": ["ne", "nw", "se", "sw"], "maxSteps": 2, "capture": true, "jump": true }
+    ],
+    "saltaInterposizioni": true
   },
   {
-    "sigla": "CA",
+    "sigla": "CT",
     "descrizione": "Catapulta",
     "punti": 18,
     "classico": false,
-    "regole": "Si muovi di 1 o 2 caselle in orizzontale. Ignora le interposizioni. Cattura sulla casella di arrivo."
+    "regole": "Si muovi di 1 o 2 caselle in orizzontale. Ignora le interposizioni. Cattura sulla casella di arrivo.",
+    "moves": [
+      { "directions": ["e", "w"], "maxSteps": 2, "capture": true, "jump": true }
+    ],
+    "saltaInterposizioni": true
   },
   {
     "sigla": "CM",
     "descrizione": "Camaleonte",
     "punti": 22,
     "classico": false,
-    "regole": "Si muove come Alfiere per un massimo di 4 caselle sulle caselle chiare e come Torre per un massimo di 3 caselle sulle caselle scure. Può anche muoversi di 1 casella in qualsiasi direzione."
+    "regole": "Si muove come Alfiere per un massimo di 4 caselle sulle caselle chiare e come Torre per un massimo di 3 caselle sulle caselle scure. Può anche muoversi di 1 casella in qualsiasi direzione.",
+    "moves": [
+      { "directions": ["ne", "nw", "se", "sw"], "maxSteps": 4, "capture": true },
+      { "directions": ["n", "s", "e", "w"], "maxSteps": 3, "capture": true },
+      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "maxSteps": 1, "capture": true }
+    ],
+    "noteCondizionali": "Si muove come Alfiere per un massimo di 4 caselle sulle caselle chiare e come Torre per un massimo di 3 caselle sulle caselle scure. Può anche muoversi di 1 casella in qualsiasi direzione."
   },
   {
     "sigla": "BE",
     "descrizione": "Berserker",
     "punti": 26,
     "classico": false,
-    "regole": "Si muove di massimo 2 caselle in qualsiasi direzione. Furia bellica: dopo una cattura in mischia riuscita, ottiene un secondo movimento extra immediato, senza possibilità di cattura durante quel movimento aggiuntivo."
+    "regole": "Si muove di massimo 2 caselle in qualsiasi direzione. Furia bellica: dopo una cattura in mischia riuscita, ottiene un secondo movimento extra immediato, senza possibilità di cattura durante quel movimento aggiuntivo.",
+    "moves": [
+      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "maxSteps": 2, "capture": true }
+    ],
+    "secondoMovimentoPostCattura": true
   },
   {
     "sigla": "NE",
     "descrizione": "Necromante",
     "punti": 30,
     "classico": false,
-    "regole": "Si muove in diagonale per un massimo di 3 caselle. In alternativa al movimento, può rianimare un Pedone alleato precedentemente eliminato, schierandolo su una casella vuota immediatamente adiacente."
+    "regole": "Si muove in diagonale per un massimo di 3 caselle. In alternativa al movimento, può rianimare un Pedone alleato precedentemente eliminato, schierandolo su una casella vuota immediatamente adiacente.",
+    "moves": [
+      { "directions": ["ne", "nw", "se", "sw"], "maxSteps": 3, "capture": true }
+    ],
+    "rianimaPedoni": true
   },
   {
     "sigla": "IQ",
     "descrizione": "Inquisitore",
     "punti": 30,
     "classico": false,
-    "regole": "Si muove in orizzontale o verticale per massimo 3 caselle. Silenzio: tutti i pezzi nemici nelle 8 caselle adiacenti perdono la possibilità di effettuare attacchi a distanza in orizzontale o verticale. L'effetto cessa immediatamente quando il pezzo nemico lascia l'aura."
+    "regole": "Si muove in orizzontale o verticale per massimo 3 caselle. Silenzio: tutti i pezzi nemici nelle 8 caselle adiacenti perdono la possibilità di effettuare attacchi a distanza in orizzontale o verticale. L'effetto cessa immediatamente quando il pezzo nemico lascia l'aura.",
+    "moves": [
+      { "directions": ["n", "s", "e", "w"], "maxSteps": 3, "capture": true }
+    ],
+    "silenzioAttacchiADistanza": true
   },
   {
     "sigla": "GL",
     "descrizione": "Golem",
     "punti": 32,
     "classico": false,
-    "regole": "Si muove di una o due caselle in qualsiasi direzione. Armatura naturale: non può essere catturato da pezzi avversari con costo di schieramento pari o inferiore a 14."
+    "regole": "Si muove di una o due caselle in qualsiasi direzione. Armatura naturale: non può essere catturato da pezzi avversari con costo di schieramento pari o inferiore a 14.",
+    "moves": [
+      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "maxSteps": 2, "capture": true }
+    ],
+    "armatura": true
   },
   {
     "sigla": "MI",
     "descrizione": "Mistico",
     "punti": 32,
     "classico": false,
-    "regole": "Si muove di 1 o 2 caselle in qualsiasi direzione. In alternativa al movimento, può scambiare istantaneamente la propria posizione con quella di un qualsiasi alleato adiacente, eccetto il Re."
+    "regole": "Si muove di 1 o 2 caselle in qualsiasi direzione. In alternativa al movimento, può scambiare istantaneamente la propria posizione con quella di un qualsiasi alleato adiacente, eccetto il Re.",
+    "moves": [
+      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "maxSteps": 2, "capture": true }
+    ],
+    "scambiaPosizioneConAlleato": true
   },
   {
     "sigla": "AR",
     "descrizione": "Arciere",
     "punti": 34,
     "classico": false,
-    "regole": "Si muove di 1 o 2 caselle in qualsiasi direzione. Oltre alla cattura normale, può usare il turno per \"scoccare\": elimina un nemico posto a esattamente 3 o 4 caselle in orizzontale, verticale o diagonale purché la traiettoria sia libera, senza effettuare alcuno spostamento."
+    "regole": "Si muove di 1 o 2 caselle in qualsiasi direzione. Oltre alla cattura normale, può usare il turno per \"scoccare\": elimina un nemico posto a esattamente 3 o 4 caselle in orizzontale, verticale o diagonale purché la traiettoria sia libera, senza effettuare alcuno spostamento.",
+    "moves": [
+      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "maxSteps": 2, "capture": true }
+    ],
+    "scocca": true
   },
   {
     "sigla": "PA",
     "descrizione": "Paladino",
     "punti": 36,
     "classico": false,
-    "regole": "Si muove come il Cavallo oppure di 1 casella in qualsiasi direzione. Egida: i pezzi alleati nelle 8 caselle adiacenti sono protetti da attacchi a distanza. I nemici possono attaccarli solo con catture in mischia."
+    "regole": "Si muove come il Cavallo oppure di 1 casella in qualsiasi direzione. Egida: i pezzi alleati nelle 8 caselle adiacenti sono protetti da attacchi a distanza. I nemici possono attaccarli solo con catture in mischia.",
+    "moves": [
+      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "maxSteps": 1, "capture": true },
+      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "maxSteps": 0, "jump": true, "note": "Salto a L" }
+    ],
+    "egida": true
   },
   {
     "sigla": "CO",
     "descrizione": "Colosso",
     "punti": 44,
     "classico": false,
-    "regole": "Si muove di massimo 2 caselle in qualsiasi direzione. Danno ad area: quando cattura in mischia, distrugge automaticamente tutti i pezzi (alleati e nemici) che si trovano nelle quattro caselle ortogonalmente adiacenti alla propria casella di arrivo."
+    "regole": "Si muove di massimo 2 caselle in qualsiasi direzione. Danno ad area: quando cattura in mischia, distrugge automaticamente tutti i pezzi (alleati e nemici) che si trovano nelle quattro caselle ortogonalmente adiacenti alla propria casella di arrivo.",
+    "moves": [
+      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "maxSteps": 2, "capture": true }
+    ],
+    "dannoAdArea": true
   },
   {
     "sigla": "RA",
     "descrizione": "Regina",
     "punti": 48,
     "classico": true,
-    "regole": "Si muove in qualsiasi direzione per un numero illimitato di caselle."
+    "regole": "Si muove in qualsiasi direzione per un numero illimitato di caselle.",
+    "moves": [
+      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "maxSteps": 99, "capture": true }
+    ]
   },
   {
     "sigla": "DA",
     "descrizione": "Pedone di Dama",
     "punti": 18,
     "classico": false,
-    "regole": "Come la pedina di Dama."
+    "regole": "Come la pedina di Dama.",
+    "moves": [],
+    "noteCondizionali": "Come pedina di Dama."
   },
   {
     "sigla": "CV",
     "descrizione": "Cavalletta",
     "punti": 20,
     "classico": false,
-    "regole": "Vedi Grasshopper su https://en.wikipedia.org/wiki/Grasshopper_(chess_variant)"
+    "regole": "Vedi Grasshopper su https://en.wikipedia.org/wiki/Grasshopper_(chess_variant)",
+    "moves": [],
+    "noteCondizionali": "Vedi Grasshopper su https://en.wikipedia.org/wiki/Grasshopper_(chess_variant)"
   },
   {
     "sigla": "OR",
     "descrizione": "Orfano",
     "punti": 25,
     "classico": false,
-    "regole": "Ha tutti i poteri, per quel turno, di chi lo tiene in scacco. Se nessuno lo ha in scacco, può muoversi di 1 cella in qualsiasi direzione"
+    "regole": "Ha tutti i poteri, per quel turno, di chi lo tiene in scacco. Se nessuno lo ha in scacco, può muoversi di 1 cella in qualsiasi direzione",
+    "moves": [],
+    "noteCondizionali": "Ha tutti i poteri, per quel turno, di chi lo tiene in scacco. Se nessuno lo ha in scacco, può muoversi di 1 cella in qualsiasi direzione."
   }
 ]

@@ -1,9 +1,33 @@
+export type Direction = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
+
+export interface Move {
+  directions: Direction[];
+  maxSteps: number;
+  capture: boolean;
+  jump?: boolean;
+  primaMossaDoppia?: boolean;
+  note?: string;
+}
+
 export interface Piece {
   sigla: string;
   descrizione: string;
   punti: number;
   classico: boolean;
   regole: string;
+  moves: Move[];
+  saltaInterposizioni?: boolean;
+  catturaSoloInMischia?: boolean;
+  catturaADistanza?: boolean;
+  secondoMovimentoPostCattura?: boolean;
+  dannoAdArea?: boolean;
+  rianimaPedoni?: boolean;
+  silenzioAttacchiADistanza?: boolean;
+  armatura?: boolean;
+  scambiaPosizioneConAlleato?: boolean;
+  scocca?: boolean;
+  egida?: boolean;
+  noteCondizionali?: string;
 }
 
 export interface TeamMember {

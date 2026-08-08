@@ -1,7 +1,7 @@
 import piecesRaw from './pieces.json';
 import type { Piece } from '../types';
 
-export const pieces: Piece[] = piecesRaw;
+export const pieces: Piece[] = piecesRaw as Piece[];
 
 export const BUDGET = 154;
 export const MAX_PIECES_TOTAL = 16;

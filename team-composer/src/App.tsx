@@ -194,6 +194,44 @@ function App() {
     return 'cost-high';
   };
 
+  const flagLabels: Record<string, string> = {
+    saltaInterposizioni: 'Salta interposizioni',
+    catturaSoloInMischia: 'Solo mischia',
+    catturaADistanza: 'A distanza',
+    secondoMovimentoPostCattura: '2° mov. post-cattura',
+    dannoAdArea: 'Danno area',
+    rianimaPedoni: 'Rianima pedoni',
+    silenzioAttacchiADistanza: 'Silenzio',
+    armatura: 'Armatura',
+    scambiaPosizioneConAlleato: 'Scambia pos.',
+    scocca: 'Scocca',
+    egida: 'Egida',
+  };
+
+  const activeFlags = (piece: Piece) => {
+    const flags: string[] = [];
+    for (const [key, label] of Object.entries(flagLabels)) {
+      if (piece[key as keyof Piece]) flags.push(label);
+    }
+    return flags;
+  };
+
+  const renderMoves = (piece: Piece) => {
+    if (!piece.moves || piece.moves.length === 0) return null;
+    return (
+      <div className="moves-info">
+        {piece.moves.map((move, idx) => (
+          <span key={idx} className="move-item">
+            <span className="move-dir">{move.directions.join(',')}</span>
+            <span className="move-step">{move.maxSteps === 99 ? '∞' : move.maxSteps}</span>
+            {move.capture && <span className="move-capture">✦</span>}
+            {move.jump && <span className="move-jump">⭮</span>}
+          </span>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div className="app">
       <header className="header">
@@ -239,6 +277,18 @@ function App() {
                   </div>
                   <span className="desc">{piece.descrizione}</span>
                   <span className="regole">{piece.regole}</span>
+                  {renderMoves(piece)}
+                  {(() => {
+                    const flags = activeFlags(piece);
+                    return flags.length > 0 ? (
+                      <div className="flags">
+                        {flags.map((f) => (
+                          <span key={f} className="flag-badge">{f}</span>
+                        ))}
+                      </div>
+                    ) : null;
+                  })()}
+                  {piece.noteCondizionali && <div className="note-cond">{piece.noteCondizionali}</div>}
                   {currentCount > 0 && (
                     <span style={{ fontSize: '0.75rem', color: '#60a5fa' }}>
                       Nel team: {currentCount}/{maxForPiece}
