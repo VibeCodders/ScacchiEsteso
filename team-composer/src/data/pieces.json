@@ -70,6 +70,13 @@
     "regole": "Si muove di massimo 2 caselle in diagonale. Ignora le interposizioni. Cattura sulla casella di arrivo."
   },
   {
+    "sigla": "CA",
+    "descrizione": "Catapulta",
+    "punti": 18,
+    "classico": false,
+    "regole": "Si muovi di 1 o 2 caselle in orizzontale. Ignora le interposizioni. Cattura sulla casella di arrivo."
+  },
+  {
     "sigla": "CM",
     "descrizione": "Camaleonte",
     "punti": 22,
@@ -138,5 +145,26 @@
     "punti": 48,
     "classico": true,
     "regole": "Si muove in qualsiasi direzione per un numero illimitato di caselle."
+  },
+  {
+    "sigla": "DA",
+    "descrizione": "Pedone di Dama",
+    "punti": 18,
+    "classico": false,
+    "regole": "Come la pedina di Dama."
+  },
+  {
+    "sigla": "CV",
+    "descrizione": "Cavalletta",
+    "punti": 20,
+    "classico": false,
+    "regole": "Vedi Grasshopper su https://en.wikipedia.org/wiki/Grasshopper_(chess_variant)"
+  },
+  {
+    "sigla": "OR",
+    "descrizione": "Orfano",
+    "punti": 25,
+    "classico": false,
+    "regole": "Ha tutti i poteri, per quel turno, di chi lo tiene in scacco. Se nessuno lo ha in scacco, può muoversi di 1 cella in qualsiasi direzione"
   }
 ]
