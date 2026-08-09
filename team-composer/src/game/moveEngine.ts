@@ -280,6 +280,19 @@ export function applyMove(board: BoardState, move: GeneratedMove): BoardState {
   return movePiece(withCaptureResolved, move.from, move.to);
 }
 
+/**
+ * A piece with `armatura` (currently only the Golem) can't be captured by an attacker whose own
+ * point cost is at or below `armaturaMaxCosto` — too weak to dent its natural armor.
+ */
+function isCaptureBlockedByArmor(board: BoardState, attackerDef: Piece, move: GeneratedMove): boolean {
+  if (!move.isCapture || !move.capturedCoord) return false;
+  const defender = getPieceAt(board, move.capturedCoord);
+  if (!defender) return false;
+  const defenderDef = getPieceDef(defender.sigla);
+  if (!defenderDef.armatura || defenderDef.armaturaMaxCosto === undefined) return false;
+  return attackerDef.punti <= defenderDef.armaturaMaxCosto;
+}
+
 /** All pseudo-legal moves for the piece at `from` — no notion of check yet (see check.ts). */
 export function generatePseudoLegalMoves(board: BoardState, from: Coord): GeneratedMove[] {
   const piece = getPieceAt(board, from);
@@ -293,6 +306,7 @@ export function generatePseudoLegalMoves(board: BoardState, from: Coord): Genera
       const key = `${move.to}|${move.capturedCoord ?? ''}|${move.isCapture}`;
       if (seen.has(key)) continue;
       seen.add(key);
+      if (isCaptureBlockedByArmor(board, pieceDef, move)) continue;
       moves.push(move);
     }
   }

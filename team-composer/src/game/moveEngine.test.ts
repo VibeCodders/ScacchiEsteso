@@ -266,6 +266,40 @@ describe('Damone (DM) — like DA but omnidirectional (obtained only via promoti
   });
 });
 
+describe('Golem (GL) — armatura blocks capture by weak attackers', () => {
+  it('cannot be captured by an attacker at or below the 14pt armor threshold', () => {
+    let board = place(createEmptyBoard(), 'd4', 'CA', 'A'); // Cavallo, 12pt
+    board = place(board, 'e6', 'GL', 'B'); // reachable by the knight's L-pattern
+    const moves = generatePseudoLegalMoves(board, 'd4');
+    expect(moves.find((m) => m.to === 'e6')).toBeUndefined();
+  });
+
+  it('can be captured by an attacker above the 14pt armor threshold', () => {
+    let board = place(createEmptyBoard(), 'd4', 'TO', 'A'); // Torre, 15pt
+    board = place(board, 'd8', 'GL', 'B');
+    const moves = generatePseudoLegalMoves(board, 'd4');
+    const capture = moves.find((m) => m.to === 'd8');
+    expect(capture?.isCapture).toBe(true);
+  });
+
+  it('still blocks a weak slide attacker\'s path (can approach but not capture or pass through)', () => {
+    let board = place(createEmptyBoard(), 'a1', 'AL', 'A'); // Alfiere, 10pt — below the threshold
+    board = place(board, 'd4', 'GL', 'B'); // 3 squares along the same diagonal
+    const moves = generatePseudoLegalMoves(board, 'a1');
+    expect(moves.map((m) => m.to).sort()).toEqual(['b2', 'c3']); // can approach...
+    expect(moves.find((m) => m.to === 'd4')).toBeUndefined(); // ...but not capture...
+    expect(moves.map((m) => m.to)).not.toContain('e5'); // ...or slide past
+  });
+
+  it('a strong attacker sliding toward the Golem captures it and stops there (does not slide past)', () => {
+    let board = place(createEmptyBoard(), 'd1', 'TO', 'A'); // Torre, 15pt — above the threshold
+    board = place(board, 'd4', 'GL', 'B');
+    const moves = generatePseudoLegalMoves(board, 'd1');
+    expect(moves.find((m) => m.to === 'd4')?.isCapture).toBe(true);
+    expect(moves.map((m) => m.to)).not.toContain('d5');
+  });
+});
+
 describe('Remaining pieces — destination count from d4 on an empty board', () => {
   it.each([
     ['PG', 2], // Paggio: 1-step, n/s only, no capture
