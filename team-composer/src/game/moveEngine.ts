@@ -1,6 +1,17 @@
 import { pieces as PIECE_DEFS } from '../data/pieces';
 import type { CaptureMode, Direction, Move, Piece } from '../types';
-import { FILES, getPieceAt, movePiece, removePieceAt, type BoardState, type Coord, type Owner, type PieceInstance } from './board';
+import {
+  coordToFileRank,
+  fileRankToCoord,
+  getPieceAt,
+  movePiece,
+  removePieceAt,
+  type BoardState,
+  type Coord,
+  type Owner,
+  type PieceInstance,
+} from './board';
+import { castRay } from './lineOfSight';
 
 const PIECE_BY_SIGLA = new Map(PIECE_DEFS.map((p) => [p.sigla, p]));
 
@@ -58,15 +69,6 @@ const KNIGHT_OFFSETS: Vector[] = [
   { df: -1, dr: -2 }, { df: -2, dr: -1 }, { df: -2, dr: 1 }, { df: -1, dr: 2 },
 ];
 
-export function coordToFileRank(coord: Coord): { file: number; rank: number } {
-  return { file: FILES.indexOf(coord[0] as (typeof FILES)[number]), rank: Number(coord[1]) };
-}
-
-export function fileRankToCoord(file: number, rank: number): Coord | null {
-  if (file < 0 || file > 7 || rank < 1 || rank > 8) return null;
-  return `${FILES[file]}${rank}`;
-}
-
 /** Matches Board.tsx's square coloring: a1 is dark, h1 is light, as in standard chess. */
 function squareColorOf(coord: Coord): 'chiara' | 'scura' {
   const { file, rank } = coordToFileRank(coord);
@@ -90,27 +92,33 @@ function generateStepOrSlideMoves(
   captureOnly: boolean,
 ): GeneratedMove[] {
   const results: GeneratedMove[] = [];
-  const { file: fromFile, rank: fromRank } = coordToFileRank(from);
 
   for (const relDir of moveEntry.directions) {
     const vector = ABSOLUTE_DIRECTION_VECTORS[toAbsoluteDirection(relDir, owner)];
+    const ray = castRay(board, from, vector, effectiveMaxSteps);
 
-    for (let dist = 1; dist <= effectiveMaxSteps; dist++) {
-      const to = fileRankToCoord(fromFile + vector.df * dist, fromRank + vector.dr * dist);
-      if (!to) break; // off board — further distances in this direction are too
-
-      const occupant = getPieceAt(board, to);
-      if (!occupant) {
-        if (dist >= moveEntry.minSteps && !captureOnly) {
+    if (!captureOnly) {
+      ray.emptySquares.forEach((to, idx) => {
+        const dist = idx + 1;
+        if (dist >= moveEntry.minSteps) {
           results.push({ from, to, isCapture: false, captureMode: moveEntry.captureMode, movementType: moveEntry.movementType });
         }
-        continue;
-      }
+      });
+    }
 
-      if (occupant.owner !== owner && moveEntry.capture && dist >= moveEntry.minSteps) {
-        results.push({ from, to, isCapture: true, capturedCoord: to, captureMode: moveEntry.captureMode, movementType: moveEntry.movementType });
+    if (ray.blockedBy) {
+      const dist = ray.emptySquares.length + 1;
+      const occupant = getPieceAt(board, ray.blockedBy);
+      if (occupant && occupant.owner !== owner && moveEntry.capture && dist >= moveEntry.minSteps) {
+        results.push({
+          from,
+          to: ray.blockedBy,
+          isCapture: true,
+          capturedCoord: ray.blockedBy,
+          captureMode: moveEntry.captureMode,
+          movementType: moveEntry.movementType,
+        });
       }
-      break; // any piece (friend or foe) blocks further travel along this direction
     }
   }
 

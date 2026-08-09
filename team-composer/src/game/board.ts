@@ -91,3 +91,13 @@ export function displayPositionToCoord(row: number, col: number): Coord {
   const rank = 8 - row;
   return `${FILES[col]}${rank}`;
 }
+
+/** File (0-7) and rank (1-8) for coordinate arithmetic — the "logical" counterpart to the display row/col above. */
+export function coordToFileRank(coord: Coord): { file: number; rank: number } {
+  return { file: FILES.indexOf(coord[0] as (typeof FILES)[number]), rank: Number(coord[1]) };
+}
+
+export function fileRankToCoord(file: number, rank: number): Coord | null {
+  if (file < 0 || file > 7 || rank < 1 || rank > 8) return null;
+  return `${FILES[file]}${rank}`;
+}

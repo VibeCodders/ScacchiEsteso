@@ -1,6 +1,5 @@
 import type { Piece } from '../types';
-import { coordToFileRank } from './moveEngine';
-import type { Coord, Owner } from './board';
+import { coordToFileRank, type Coord, type Owner } from './board';
 
 /**
  * `promotionRank` in pieces.json is owner-relative (always the far rank from that owner's own

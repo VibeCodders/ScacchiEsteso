@@ -1,5 +1,5 @@
-import { createPieceInstance, getPieceAt, setPieceAt, type BoardState, type Coord, type Owner, type PieceInstance } from './board';
-import { applyMove, coordToFileRank, fileRankToCoord, getPieceDef, type GeneratedMove } from './moveEngine';
+import { createPieceInstance, coordToFileRank, fileRankToCoord, getPieceAt, setPieceAt, type BoardState, type Coord, type Owner, type PieceInstance } from './board';
+import { applyMove, getPieceDef, type GeneratedMove } from './moveEngine';
 import { getLegalMoves, isCheckmate, isKingInCheck, isStalemate } from './check';
 import { getPromotionOptions, isPromotionMove } from './promotion';
 
