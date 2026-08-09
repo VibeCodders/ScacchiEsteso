@@ -73,6 +73,17 @@ describe('DeploymentScreen', () => {
     expect(screen.getByText(/Schieramento completo/i)).toBeInTheDocument();
   });
 
+  it('lets the current placer drag a roster piece onto an own-rank square', () => {
+    renderDeployment(new Map([[KING_SIGLA, 1], ['PE', 1]]), new Map([[KING_SIGLA, 1]]));
+    fireEvent.click(screen.getByText('Tira la moneta'));
+
+    fireEvent.dragStart(screen.getByText('PE').closest('[draggable]')!, { dataTransfer: { setData: () => {} } });
+    fireEvent.drop(document.querySelector('[data-coord="b2"]')!, { dataTransfer: { getData: () => '' } });
+
+    expect(document.querySelector('[data-coord="b2"]')?.querySelector('svg')).not.toBeNull();
+    expect(screen.getByText(/Schieramento completo/i)).toBeInTheDocument();
+  });
+
   it('shows an error and does not place the piece when clicking outside the deployment zone', () => {
     renderDeployment(new Map([[KING_SIGLA, 1], ['PE', 1]]), new Map([[KING_SIGLA, 1]]));
     fireEvent.click(screen.getByText('Tira la moneta'));

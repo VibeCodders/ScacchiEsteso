@@ -72,6 +72,15 @@ function GameScreen() {
     setSelected(null);
   };
 
+  const handleDragStart = (coord: Coord) => {
+    if (gameOver) return;
+    const pieceHere = gameState.board.get(coord);
+    if (pieceHere && pieceHere.owner === gameState.turn) {
+      setSelected(coord);
+      setError(null);
+    }
+  };
+
   const handleContinueToResult = () => {
     if (gameState.status === 'checkmate' || gameState.status === 'stalemate') {
       setMatchResult({ status: gameState.status, winner: gameState.winner });
@@ -99,6 +108,8 @@ function GameScreen() {
             onSquareClick={handleSquareClick}
             highlightedSquares={legalDestinations}
             selectedSquare={selected}
+            onPieceDragStart={gameOver ? undefined : handleDragStart}
+            onSquareDrop={gameOver ? undefined : handleSquareClick}
           />
           <button className="btn-improve" onClick={() => setOrientation((o) => (o === 'A' ? 'B' : 'A'))}>
             🔄 Gira scacchiera (vista: {ownerLabel(orientation, mode)})

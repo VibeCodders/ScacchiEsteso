@@ -9,9 +9,25 @@ export interface BoardProps {
   onSquareClick?: (coord: string) => void;
   highlightedSquares?: string[];
   selectedSquare?: string | null;
+  /** Fired when the user starts dragging a piece that occupies a square on this board. */
+  onPieceDragStart?: (coord: string) => void;
+  /**
+   * Fired when something is dropped on a square — either a piece dragged from elsewhere on this
+   * board, or an external draggable (e.g. a roster card in DeploymentScreen). The board doesn't
+   * care which; the caller already tracks what's "held" (mirroring its click-selection state).
+   */
+  onSquareDrop?: (coord: string) => void;
 }
 
-function Board({ pieces, orientation, onSquareClick, highlightedSquares = [], selectedSquare = null }: BoardProps) {
+function Board({
+  pieces,
+  orientation,
+  onSquareClick,
+  highlightedSquares = [],
+  selectedSquare = null,
+  onPieceDragStart,
+  onSquareDrop,
+}: BoardProps) {
   const highlighted = new Set(highlightedSquares);
 
   return (
@@ -36,14 +52,22 @@ function Board({ pieces, orientation, onSquareClick, highlightedSquares = [], se
               ].filter(Boolean).join(' ')}
               data-coord={coord}
               onClick={() => onSquareClick?.(coord)}
+              onDragOver={onSquareDrop ? (e) => e.preventDefault() : undefined}
+              onDrop={onSquareDrop ? (e) => { e.preventDefault(); onSquareDrop(coord); } : undefined}
               aria-label={`Casella ${coord}${piece ? `, ${piece.sigla} (${piece.owner === 'A' ? 'Giocatore 1' : 'Giocatore 2'})` : ''}`}
             >
               <span className="board-square-content">
                 {piece && (
-                  <PieceIcon
-                    sigla={piece.sigla}
-                    className={`board-piece board-piece-${piece.owner === 'A' ? 'light' : 'dark'}`}
-                  />
+                  <span
+                    draggable={Boolean(onPieceDragStart)}
+                    onDragStart={onPieceDragStart ? (e) => { e.dataTransfer.setData('text/plain', coord); onPieceDragStart(coord); } : undefined}
+                    style={onPieceDragStart ? { cursor: 'grab' } : undefined}
+                  >
+                    <PieceIcon
+                      sigla={piece.sigla}
+                      className={`board-piece board-piece-${piece.owner === 'A' ? 'light' : 'dark'}`}
+                    />
+                  </span>
                 )}
                 {col === 0 && <span className="board-rank-label">{8 - row}</span>}
                 {row === 7 && <span className="board-file-label">{FILES[col]}</span>}

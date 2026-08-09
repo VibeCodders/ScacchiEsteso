@@ -71,3 +71,36 @@ describe('Board rendering', () => {
     });
   });
 });
+
+describe('Board drag & drop', () => {
+  it('fires onPieceDragStart with the coordinate of the dragged piece', () => {
+    const onPieceDragStart = vi.fn();
+    const board = setPieceAt(createEmptyBoard(), 'e4', createPieceInstance('RE', 'A'));
+    render(<Board pieces={board} orientation="A" onPieceDragStart={onPieceDragStart} />);
+
+    const wrapper = document.querySelector('[data-coord="e4"] span[draggable]')!;
+    fireEvent.dragStart(wrapper, { dataTransfer: { setData: vi.fn() } });
+    expect(onPieceDragStart).toHaveBeenCalledWith('e4');
+  });
+
+  it('fires onSquareDrop with the coordinate of the target square', () => {
+    const onSquareDrop = vi.fn();
+    render(<Board pieces={createEmptyBoard()} orientation="A" onSquareDrop={onSquareDrop} />);
+
+    fireEvent.drop(document.querySelector('[data-coord="d5"]')!, { dataTransfer: { getData: () => '' } });
+    expect(onSquareDrop).toHaveBeenCalledWith('d5');
+  });
+
+  it('a piece is not draggable when onPieceDragStart is not provided', () => {
+    const board = setPieceAt(createEmptyBoard(), 'e4', createPieceInstance('RE', 'A'));
+    render(<Board pieces={board} orientation="A" />);
+
+    const wrapper = document.querySelector('[data-coord="e4"] span[draggable]')!;
+    expect(wrapper.getAttribute('draggable')).toBe('false');
+  });
+
+  it('does not throw when a square is dropped on without an onSquareDrop handler', () => {
+    render(<Board pieces={createEmptyBoard()} orientation="A" />);
+    expect(() => fireEvent.drop(document.querySelector('[data-coord="d5"]')!)).not.toThrow();
+  });
+});

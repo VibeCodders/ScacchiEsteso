@@ -72,6 +72,33 @@ describe('GameScreen — playable match', () => {
     expect(document.querySelector('[data-coord="d8"]')?.querySelector('svg')).not.toBeNull();
   });
 
+  it('moves a piece via drag and drop, just like click-to-move', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'TO', 'A');
+    renderGame(board);
+
+    const draggedPiece = document.querySelector('[data-coord="d4"] span[draggable]')!;
+    fireEvent.dragStart(draggedPiece, { dataTransfer: { setData: () => {} } });
+    expect(document.querySelector('[data-coord="d8"]')).toHaveClass('board-square-highlighted');
+
+    fireEvent.drop(document.querySelector('[data-coord="d8"]')!, { dataTransfer: { getData: () => '' } });
+    expect(document.querySelector('[data-coord="d4"]')?.querySelector('svg')).toBeNull();
+    expect(document.querySelector('[data-coord="d8"]')?.querySelector('svg')).not.toBeNull();
+    expect(screen.getByText(/Turno: Giocatore 2/i)).toBeInTheDocument();
+  });
+
+  it('does not let dragging start from an opponent\'s piece', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd7', 'PE', 'B');
+    renderGame(board);
+
+    const draggedPiece = document.querySelector('[data-coord="d7"] span[draggable]')!;
+    fireEvent.dragStart(draggedPiece, { dataTransfer: { setData: () => {} } });
+    expect(document.querySelector('[data-coord="d7"]')).not.toHaveClass('board-square-selected');
+  });
+
   it('switches turn and auto-rotates the board after a move', () => {
     let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
     board = place(board, 'e8', KING_SIGLA, 'B');

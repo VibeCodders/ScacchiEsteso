@@ -101,6 +101,7 @@ function DeploymentScreen() {
             pieces={deployment.board}
             orientation={orientation}
             onSquareClick={handleSquareClick}
+            onSquareDrop={handleSquareClick}
             highlightedSquares={emptyOwnRankSquares}
           />
           <button className="btn-improve" onClick={() => setOrientation((o) => (o === 'A' ? 'B' : 'A'))}>
@@ -118,7 +119,7 @@ function DeploymentScreen() {
           ) : (
             <>
               <h2>Turno: {currentPlacerLabel}</h2>
-              <p>Seleziona un pezzo, poi clicca una casella libera nelle tue 2 traverse.</p>
+              <p>Seleziona (o trascina) un pezzo, poi indica una casella libera nelle tue 2 traverse.</p>
               <div className="piece-grid" style={{ gridTemplateColumns: '1fr' }}>
                 {[...currentRoster.entries()].map(([sigla, count]) => {
                   const pieceDef = pieces.find((p) => p.sigla === sigla);
@@ -128,8 +129,11 @@ function DeploymentScreen() {
                       className={`piece-card ${selectedSigla === sigla ? 'selected' : ''}`}
                       role="button"
                       tabIndex={0}
+                      draggable
+                      onDragStart={(e) => { e.dataTransfer.setData('text/plain', sigla); setSelectedSigla(sigla); }}
                       onClick={() => setSelectedSigla(sigla)}
                       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedSigla(sigla); } }}
+                      style={{ cursor: 'grab' }}
                     >
                       <div className="piece-header">
                         <span className="sigla">{sigla}</span>
