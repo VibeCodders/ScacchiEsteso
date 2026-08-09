@@ -5,7 +5,6 @@
   "type": "object",
   "required": [
     "budget",
-    "minPiecesTotal",
     "maxPiecesTotal",
     "kingSigla",
     "maxIdenticalDefault",
@@ -14,10 +13,6 @@
   ],
   "properties": {
     "budget": {
-      "type": "integer",
-      "minimum": 0
-    },
-    "minPiecesTotal": {
       "type": "integer",
       "minimum": 0
     },

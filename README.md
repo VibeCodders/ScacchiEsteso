@@ -2,11 +2,12 @@
 
 ## 1. Costi e limitazioni dell'esercito
 
-- **Budget punti disponibili:** 154, da spendere integralmente.
+- **Budget punti disponibili:** 154, come tetto massimo — è consentito spendere meno del budget
+  disponibile: schierare un esercito più leggero è una scelta legittima, non un errore.
 - **Pezzi per tipo:** massimo 5 pezzi identici.
 - **Pedoni:** massimo 8.
 - **Re:** obbligatoriamente 1 (costo gratuito, incluso nel conteggio dei pezzi ma non nel budget).
-- **Totale pezzi:** compreso tra 4 e 16.
+- **Totale pezzi:** massimo 16.
 
 ## 2. Schieramento
 

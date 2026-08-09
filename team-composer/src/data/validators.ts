@@ -36,21 +36,17 @@ export function computeTotalPieces(team: Map<string, number>): number {
 export function computeValidation(team: Map<string, number>, pieces: Piece[], rules: Rules): ValidationResult {
   const budgetSpent = computeBudgetSpent(team, pieces);
   const budgetRemaining = rules.budget - budgetSpent;
-  const budgetExact = budgetSpent === rules.budget;
+  const budgetOk = budgetSpent <= rules.budget;
 
-  const budgetMsg = budgetExact
-    ? `Budget esatto: ${budgetSpent}/${rules.budget}`
-    : budgetSpent > rules.budget
-      ? `Budget superato: ${budgetSpent}/${rules.budget} (+${budgetSpent - rules.budget})`
-      : `Budget: ${budgetSpent}/${rules.budget} (${budgetRemaining} rimanenti)`;
+  const budgetMsg = budgetSpent > rules.budget
+    ? `Budget superato: ${budgetSpent}/${rules.budget} (+${budgetSpent - rules.budget})`
+    : `Budget: ${budgetSpent}/${rules.budget} (${budgetRemaining} rimanenti)`;
 
   const totalPieces = computeTotalPieces(team);
-  const totalPiecesOk = totalPieces >= rules.minPiecesTotal && totalPieces <= rules.maxPiecesTotal;
+  const totalPiecesOk = totalPieces <= rules.maxPiecesTotal;
   const totalPiecesMsg = totalPiecesOk
-    ? `Pezzi totali: ${totalPieces} (${rules.minPiecesTotal}–${rules.maxPiecesTotal})`
-    : totalPieces < rules.minPiecesTotal
-      ? `Pezzi insufficienti: ${totalPieces}/${rules.minPiecesTotal} min`
-      : `Pezzi in eccesso: ${totalPieces}/${rules.maxPiecesTotal} max`;
+    ? `Pezzi totali: ${totalPieces} (max ${rules.maxPiecesTotal})`
+    : `Pezzi in eccesso: ${totalPieces}/${rules.maxPiecesTotal} max`;
 
   let maxIdenticalViolated = false;
   team.forEach((count, sigla) => {
@@ -79,10 +75,10 @@ export function computeValidation(team: Map<string, number>, pieces: Piece[], ru
       ? 'Nessun Re presente'
       : `Troppi Re: ${kingCount} (1 obbligatorio)`;
 
-  const overall = budgetExact && totalPiecesOk && maxFiveOk && maxPawnsOk && hasKingOk && kingCountOk;
+  const overall = budgetOk && totalPiecesOk && maxFiveOk && maxPawnsOk && hasKingOk && kingCountOk;
 
   return {
-    budget: { valid: budgetSpent <= rules.budget && budgetExact, message: budgetMsg, level: budgetSpent > rules.budget ? 'error' : budgetExact ? 'success' : 'warning' },
+    budget: { valid: budgetOk, message: budgetMsg, level: budgetOk ? 'success' : 'error' },
     totalPieces: { valid: totalPiecesOk, message: totalPiecesMsg, level: totalPiecesOk ? 'success' : 'error' },
     maxFive: { valid: maxFiveOk, message: maxFiveMsg, level: maxFiveOk ? 'success' : 'error' },
     maxPawns: { valid: maxPawnsOk, message: pawnsMsg, level: maxPawnsOk ? 'success' : 'error' },

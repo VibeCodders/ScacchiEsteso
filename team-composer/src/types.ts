@@ -80,7 +80,6 @@ export interface BudgetResult {
 
 export interface Rules {
   budget: number;
-  minPiecesTotal: number;
   maxPiecesTotal: number;
   kingSigla: string;
   maxIdenticalDefault: number;

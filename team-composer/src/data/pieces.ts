@@ -7,5 +7,4 @@ export const rules: Rules = rulesRaw as Rules;
 
 export const BUDGET = rules.budget;
 export const MAX_PIECES_TOTAL = rules.maxPiecesTotal;
-export const MIN_PIECES_TOTAL = rules.minPiecesTotal;
 export const KING_SIGLA = rules.kingSigla;

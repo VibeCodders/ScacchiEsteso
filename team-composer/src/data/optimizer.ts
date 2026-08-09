@@ -33,13 +33,12 @@ export function autoFillTeam(currentTeam: Map<string, number>): OptimizerResult 
   const currentCost = calcCost(team);
   const currentTotal = calcTotalPieces(team);
   const remainingBudget = rules.budget - currentCost;
-  const slotsNeeded = Math.max(0, rules.minPiecesTotal - currentTotal);
 
   if (remainingBudget <= 0) {
     return { team, changed: false, message: 'Budget esaurito, non è possibile aggiungere pezzi.' };
   }
 
-  if (slotsNeeded <= 0 && currentTotal >= rules.maxPiecesTotal) {
+  if (currentTotal >= rules.maxPiecesTotal) {
     return { team, changed: false, message: 'Team già completo (numero massimo di pezzi raggiunto).' };
   }
 
@@ -47,7 +46,7 @@ export function autoFillTeam(currentTeam: Map<string, number>): OptimizerResult 
   let budgetLeft = remainingBudget;
   const maxPawns = rules.maxCountByCategory.pedone ?? rules.maxIdenticalDefault;
 
-  for (let i = 0; i < slotsNeeded; i++) {
+  while (calcTotalPieces(team) < rules.maxPiecesTotal) {
     let bestPiece: Piece | null = null;
     let bestScore = -Infinity;
 
@@ -58,21 +57,16 @@ export function autoFillTeam(currentTeam: Map<string, number>): OptimizerResult 
       if (piece.categoria === 'pedone' && calcTotalPawns(team) + 1 > maxPawns) continue;
       if (piece.punti > budgetLeft) continue;
 
-      const slotsAfter = slotsNeeded - i - 1;
       const budgetAfter = budgetLeft - piece.punti;
+      const minPieceCost = Math.min(...pieces
+        .filter((p: Piece) => p.sigla !== KING_SIGLA && p.punti <= budgetAfter && (team.get(p.sigla) ?? 0) < getMaxIdenticalFor(p.sigla) && !(p.categoria === 'pedone' && calcTotalPawns(team) + 1 > maxPawns))
+        .map((p: Piece) => p.punti));
 
       let score: number;
-      if (slotsAfter === 0) {
+      if (!Number.isFinite(minPieceCost) || minPieceCost > budgetAfter) {
         score = budgetLeft > 0 ? (piece.punti / budgetLeft) * 100 : 0;
       } else {
-        const minPieceCost = Math.min(...pieces
-          .filter((p: Piece) => p.sigla !== KING_SIGLA && p.punti <= budgetAfter && (team.get(p.sigla) ?? 0) < getMaxIdenticalFor(p.sigla) && !(p.categoria === 'pedone' && calcTotalPawns(team) + 1 > maxPawns))
-          .map((p: Piece) => p.punti));
-        if (minPieceCost > budgetAfter) {
-          score = piece.punti / budgetLeft;
-        } else {
-          score = (piece.punti / budgetLeft) * 0.7 + (minPieceCost / budgetAfter) * 0.3;
-        }
+        score = (piece.punti / budgetLeft) * 0.7 + (minPieceCost / budgetAfter) * 0.3;
       }
 
       if (score > bestScore) {

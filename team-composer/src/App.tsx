@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { pieces, rules, BUDGET, MAX_PIECES_TOTAL, MIN_PIECES_TOTAL, KING_SIGLA } from './data/pieces';
+import { pieces, rules, BUDGET, MAX_PIECES_TOTAL, KING_SIGLA } from './data/pieces';
 import { autoFillTeam, improveTeam } from './data/optimizer';
 import { getMaxIdenticalBySigla, countByCategory, computeValidation } from './data/validators';
 import type { Piece, TeamMember } from './types';
@@ -117,7 +117,7 @@ function App() {
   }, [team]);
 
   const budgetRemaining = BUDGET - budgetSpent;
-  const budgetExact = budgetSpent === BUDGET;
+  const budgetOk = budgetSpent <= BUDGET;
 
   const kingCount = team.get(KING_SIGLA) ?? 0;
   const hasKing = kingCount === 1;
@@ -180,7 +180,7 @@ function App() {
         </div>
         <div className="budget-badge">
           <span className="label">Budget:</span>
-          <span className={`value ${budgetSpent > BUDGET ? 'err' : budgetExact ? 'ok' : budgetSpent > BUDGET * 0.9 ? 'warn' : ''}`}>
+          <span className={`value ${budgetOk ? 'ok' : 'err'}`}>
             {budgetSpent}/{BUDGET}
           </span>
         </div>
@@ -272,7 +272,7 @@ function App() {
               <div className="summary">
                 <div className="summary-row">
                   <span className="label">Pezzi totali</span>
-                  <span className={`value ${totalPieces >= MIN_PIECES_TOTAL && totalPieces <= MAX_PIECES_TOTAL ? 'ok' : 'err'}`}>{totalPieces} ({MIN_PIECES_TOTAL}–{MAX_PIECES_TOTAL})</span>
+                  <span className={`value ${totalPieces <= MAX_PIECES_TOTAL ? 'ok' : 'err'}`}>{totalPieces} (max {MAX_PIECES_TOTAL})</span>
                 </div>
                 <div className="summary-row">
                   <span className="label">Pedoni</span>
@@ -284,7 +284,7 @@ function App() {
                 </div>
                 <div className="summary-row">
                   <span className="label">Budget speso</span>
-                  <span className={`value ${budgetSpent > BUDGET ? 'err' : budgetExact ? 'ok' : 'warn'}`}>{budgetSpent}/{BUDGET}</span>
+                  <span className={`value ${budgetOk ? 'ok' : 'err'}`}>{budgetSpent}/{BUDGET}</span>
                 </div>
                 <div className="summary-row">
                   <span className="label">Budget residuo</span>
