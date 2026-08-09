@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { emptyTeam, useGameSetup } from '../context/gameSetup';
+import { emptyTeam, playerLabel, useGameSetup } from '../context/gameSetup';
 import Board from '../components/Board';
 import {
   createDeploymentState,
@@ -19,7 +19,7 @@ function pickCoinToss(): Owner {
 
 function DeploymentScreen() {
   const navigate = useNavigate();
-  const { mode, teamA, teamB, setDeployedBoard } = useGameSetup();
+  const { mode, humanOwner, teamA, teamB, setDeployedBoard } = useGameSetup();
   const [coinToss, setCoinToss] = useState<Owner | null>(null);
   const [deployment, setDeployment] = useState<DeploymentState | null>(null);
   const [selectedSigla, setSelectedSigla] = useState<string | null>(null);
@@ -81,7 +81,7 @@ function DeploymentScreen() {
 
   const complete = isDeploymentComplete(deployment);
   const currentRoster = deployment.remaining[deployment.currentPlacer];
-  const currentPlacerLabel = deployment.currentPlacer === 'A' ? 'Giocatore 1' : (mode === 'pvc' ? 'PC' : 'Giocatore 2');
+  const currentPlacerLabel = playerLabel(deployment.currentPlacer, mode, humanOwner);
 
   return (
     <div className="app">
@@ -89,7 +89,7 @@ function DeploymentScreen() {
         <div>
           <h1>🏳️ Schieramento</h1>
           <p className="subtitle">
-            Ha vinto il tiro a sorte: {deployment.firstPlacer === 'A' ? 'Giocatore 1' : 'Giocatore 2'}.
+            Ha vinto il tiro a sorte: {playerLabel(deployment.firstPlacer, mode, humanOwner)}.
             {' '}Le posizioni sono visibili a entrambi (README §2.4).
           </p>
         </div>
@@ -105,7 +105,7 @@ function DeploymentScreen() {
             highlightedSquares={emptyOwnRankSquares}
           />
           <button className="btn-improve" onClick={() => setOrientation((o) => (o === 'A' ? 'B' : 'A'))}>
-            🔄 Gira scacchiera (vista: {orientation === 'A' ? 'Giocatore 1' : 'Giocatore 2'})
+            🔄 Gira scacchiera (vista: {playerLabel(orientation, mode, humanOwner)})
           </button>
         </div>
 

@@ -1,15 +1,11 @@
 import { useNavigate } from 'react-router-dom';
-import { useGameSetup } from '../context/gameSetup';
+import { playerLabel, useGameSetup } from '../context/gameSetup';
 import '../App.css';
-
-function ownerLabel(owner: 'A' | 'B', mode: 'pvp' | 'pvc' | null): string {
-  if (owner === 'A') return 'Giocatore 1';
-  return mode === 'pvc' ? 'PC' : 'Giocatore 2';
-}
 
 function GameOverScreen() {
   const navigate = useNavigate();
-  const { mode, matchResult, reset } = useGameSetup();
+  const { mode, humanOwner, matchResult, reset } = useGameSetup();
+  const ownerLabel = (owner: 'A' | 'B') => playerLabel(owner, mode, humanOwner);
 
   const backToHome = () => {
     reset();
@@ -23,11 +19,11 @@ function GameOverScreen() {
           <h1>🏁 Fine Partita</h1>
           {matchResult ? (
             <p className="subtitle">
-              {matchResult.status === 'checkmate' && `Scacco matto — vince ${ownerLabel(matchResult.winner!, mode)}`}
+              {matchResult.status === 'checkmate' && `Scacco matto — vince ${ownerLabel(matchResult.winner!)}`}
               {matchResult.status === 'stalemate' && 'Stallo — partita patta'}
               {matchResult.status === 'anti_stalemate' && (
                 matchResult.winner
-                  ? `Limite di 20 turni senza progressi — vince ${ownerLabel(matchResult.winner, mode)} per punteggio`
+                  ? `Limite di 20 turni senza progressi — vince ${ownerLabel(matchResult.winner)} per punteggio`
                   : 'Limite di 20 turni senza progressi — partita patta per punteggio pari'
               )}
             </p>

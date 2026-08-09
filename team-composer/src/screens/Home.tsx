@@ -1,10 +1,11 @@
 import { useNavigate } from 'react-router-dom';
 import { useGameSetup } from '../context/gameSetup';
+import type { Owner } from '../game/board';
 import '../App.css';
 
 function Home() {
   const navigate = useNavigate();
-  const { setMode, reset } = useGameSetup();
+  const { setMode, setHumanOwner, reset } = useGameSetup();
 
   const startPvp = () => {
     reset();
@@ -12,10 +13,11 @@ function Home() {
     navigate('/team/a');
   };
 
-  const startPvc = () => {
+  const startPvc = (owner: Owner) => {
     reset();
     setMode('pvc');
-    navigate('/team/a');
+    setHumanOwner(owner);
+    navigate(owner === 'A' ? '/team/a' : '/team/pc-choice');
   };
 
   return (
@@ -33,8 +35,11 @@ function Home() {
             <button className="btn-save" onClick={startPvp}>
               PvP locale (stesso dispositivo)
             </button>
-            <button className="btn-auto" onClick={startPvc}>
-              PvC (contro il PC)
+            <button className="btn-auto" onClick={() => startPvc('A')}>
+              PvC — gioco come Giocatore A (muovo per primo)
+            </button>
+            <button className="btn-auto" onClick={() => startPvc('B')}>
+              PvC — gioco come Giocatore B (muovo per secondo)
             </button>
           </div>
         </div>

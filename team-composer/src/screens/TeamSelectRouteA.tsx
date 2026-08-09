@@ -4,22 +4,25 @@ import { useGameSetup, type TeamMap } from '../context/gameSetup';
 
 function TeamSelectRouteA() {
   const navigate = useNavigate();
-  const { mode, teamA, setTeamA } = useGameSetup();
+  const { mode, humanOwner, teamA, setTeamA } = useGameSetup();
+  const isHuman = mode !== 'pvc' || humanOwner === 'A';
 
   const handleComplete = (team: TeamMap) => {
     setTeamA(team);
-    if (mode === 'pvc') {
-      navigate('/team/pc-choice');
-    } else {
+    if (mode !== 'pvc') {
       navigate('/team/b');
+    } else if (humanOwner === 'A') {
+      navigate('/team/pc-choice'); // the bot composes owner B next
+    } else {
+      navigate('/team/b'); // the bot (owner A) is done — the human composes owner B next
     }
   };
 
   return (
     <TeamSelectScreen
-      title="Composizione Team — Giocatore 1"
+      title={isHuman ? 'Composizione Team — Giocatore 1' : 'Composizione Team — PC (manuale)'}
       initialTeam={teamA ?? undefined}
-      completeButtonLabel="✓ Conferma Team Giocatore 1"
+      completeButtonLabel={isHuman ? '✓ Conferma Team Giocatore 1' : '✓ Conferma Team del PC'}
       onComplete={handleComplete}
     />
   );

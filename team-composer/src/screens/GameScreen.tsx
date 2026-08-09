@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useGameSetup } from '../context/gameSetup';
+import { playerLabel, useGameSetup } from '../context/gameSetup';
 import Board from '../components/Board';
 import { getPieceDef } from '../game/moveEngine';
 import { getPromotionOptions, isPromotionMove } from '../game/promotion';
@@ -9,14 +9,10 @@ import { canSwap, getSwapTargets } from '../game/swap';
 import { canRevive, getRevivalSquares, getRevivableSiglas } from '../game/necromancy';
 import { canMimic, getOrphanThreats } from '../game/orphan';
 import { createInitialGameState, applyTurn, applyScocca, applySwap, applyRevive, getLegalMovesForTurn, skipExtraMove, type GameState } from '../game/turnManager';
+import { chooseBotAction, applyBotAction } from '../game/bot';
 import { pieces } from '../data/pieces';
 import type { Coord, Owner } from '../game/board';
 import '../App.css';
-
-function ownerLabel(owner: Owner, mode: 'pvp' | 'pvc' | null): string {
-  if (owner === 'A') return 'Giocatore 1';
-  return mode === 'pvc' ? 'PC' : 'Giocatore 2';
-}
 
 function pieceDescription(sigla: string): string {
   return pieces.find((p) => p.sigla === sigla)?.descrizione ?? sigla;
@@ -41,7 +37,8 @@ interface PendingMimicChoice {
 
 function GameScreen() {
   const navigate = useNavigate();
-  const { mode, deployedBoard, setMatchResult } = useGameSetup();
+  const { mode, humanOwner, botDifficulty, deployedBoard, setMatchResult } = useGameSetup();
+  const ownerLabel = (owner: Owner) => playerLabel(owner, mode, humanOwner);
 
   const [gameState, setGameState] = useState<GameState | null>(() => (deployedBoard ? createInitialGameState(deployedBoard, 'A') : null));
   const [selected, setSelected] = useState<Coord | null>(null);
@@ -54,6 +51,26 @@ function GameScreen() {
   const [actionMode, setActionMode] = useState<'scocca' | 'swap' | 'revive' | null>(null);
 
   const effectiveSelected = gameState?.pendingExtraMove ?? selected;
+
+  const botOwner: Owner | null = mode === 'pvc' ? (humanOwner === 'A' ? 'B' : 'A') : null;
+  const isGameOver = (state: GameState) => state.status === 'checkmate' || state.status === 'stalemate' || state.status === 'anti_stalemate';
+  const isBotTurn = !!botOwner && !!gameState && gameState.turn === botOwner && !isGameOver(gameState);
+
+  useEffect(() => {
+    if (!isBotTurn || !gameState || !botOwner) return;
+    const action = chooseBotAction(gameState, botOwner, botDifficulty);
+    if (!action) return;
+    const result = applyBotAction(gameState, action);
+    if (result.ok) {
+      setGameState(result.state);
+      setOrientation(result.state.turn);
+      setSelected(null);
+      setActionMode(null);
+      setOrphanMimicSource(null);
+      setPendingMimicChoice(null);
+      setError(null);
+    }
+  }, [isBotTurn, gameState, botOwner, botDifficulty]);
 
   const legalDestinations = useMemo(() => {
     if (!gameState || !effectiveSelected) return [];
@@ -194,7 +211,7 @@ function GameScreen() {
   };
 
   const handleSquareClick = (coord: Coord) => {
-    if (gameOver || pendingPromotion || pendingRevival || pendingMimicChoice) return;
+    if (gameOver || isBotTurn || pendingPromotion || pendingRevival || pendingMimicChoice) return;
 
     if (gameState.pendingExtraMove) {
       if (legalDestinations.includes(coord)) {
@@ -238,7 +255,7 @@ function GameScreen() {
   };
 
   const handleDragStart = (coord: Coord) => {
-    if (gameOver || pendingPromotion || pendingRevival || pendingMimicChoice) return;
+    if (gameOver || isBotTurn || pendingPromotion || pendingRevival || pendingMimicChoice) return;
     if (gameState.pendingExtraMove) return; // the bonus square is already the effective selection
     const pieceHere = gameState.board.get(coord);
     if (pieceHere && pieceHere.owner === gameState.turn) {
@@ -271,8 +288,9 @@ function GameScreen() {
         <div>
           <h1>♟️ Partita</h1>
           <p className="subtitle">
-            Modalità: {mode === 'pvc' ? 'PvC' : 'PvP locale'} — Turno: {ownerLabel(gameState.turn, mode)}
+            Modalità: {mode === 'pvc' ? 'PvC' : 'PvP locale'} — Turno: {ownerLabel(gameState.turn)}
             {gameState.status === 'check' && ' — Scacco!'}
+            {isBotTurn && ' — 🤖 Il PC sta pensando...'}
           </p>
         </div>
       </header>
@@ -285,12 +303,12 @@ function GameScreen() {
             onSquareClick={handleSquareClick}
             highlightedSquares={legalDestinations}
             selectedSquare={effectiveSelected}
-            onPieceDragStart={gameOver || pendingPromotion || pendingRevival || pendingMimicChoice || gameState.pendingExtraMove || actionMode ? undefined : handleDragStart}
-            onSquareDrop={gameOver || pendingPromotion || pendingRevival || pendingMimicChoice || actionMode ? undefined : handleSquareClick}
+            onPieceDragStart={gameOver || isBotTurn || pendingPromotion || pendingRevival || pendingMimicChoice || gameState.pendingExtraMove || actionMode ? undefined : handleDragStart}
+            onSquareDrop={gameOver || isBotTurn || pendingPromotion || pendingRevival || pendingMimicChoice || actionMode ? undefined : handleSquareClick}
           />
           <div className="actions">
             <button className="btn-improve" onClick={() => setOrientation((o) => (o === 'A' ? 'B' : 'A'))}>
-              🔄 Gira scacchiera (vista: {ownerLabel(orientation, mode)})
+              🔄 Gira scacchiera (vista: {ownerLabel(orientation)})
             </button>
             {selected && !gameState.pendingExtraMove && canUseScocca(getPieceDef(gameState.board.get(selected)!.sigla)) && (
               <button className="btn-auto" onClick={() => setActionMode((m) => (m === 'scocca' ? null : 'scocca'))}>
@@ -317,7 +335,7 @@ function GameScreen() {
           )}
           {error && <p style={{ color: '#f87171' }}>{error}</p>}
 
-          {gameState.pendingExtraMove && !pendingPromotion && (
+          {gameState.pendingExtraMove && !pendingPromotion && !isBotTurn && (
             <div className="panel" style={{ textAlign: 'center' }}>
               <p>⚔️ Movimento extra Berserker disponibile (senza cattura).</p>
               <button className="btn-reset" onClick={handleSkipExtraMove}>Salta movimento extra</button>
@@ -408,11 +426,11 @@ function GameScreen() {
               }}
             >
               <h2>
-                {gameState.status === 'checkmate' && `🏆 Scacco matto! Vince ${ownerLabel(gameState.winner!, mode)}`}
+                {gameState.status === 'checkmate' && `🏆 Scacco matto! Vince ${ownerLabel(gameState.winner!)}`}
                 {gameState.status === 'stalemate' && '🤝 Stallo — Patta'}
                 {gameState.status === 'anti_stalemate' && (
                   gameState.winner
-                    ? `⏱️ Limite di 20 turni senza progressi — vince ${ownerLabel(gameState.winner, mode)} per punteggio`
+                    ? `⏱️ Limite di 20 turni senza progressi — vince ${ownerLabel(gameState.winner)} per punteggio`
                     : '⏱️ Limite di 20 turni senza progressi — Patta per punteggio pari'
                 )}
               </h2>
@@ -430,7 +448,7 @@ function GameScreen() {
               <ol>
                 {gameState.history.map((entry, idx) => (
                   <li key={idx}>
-                    {ownerLabel(entry.owner, mode)}: {entry.sigla} {entry.from} → {entry.to}
+                    {ownerLabel(entry.owner)}: {entry.sigla} {entry.from} → {entry.to}
                     {entry.isCapture && ` (cattura ${entry.capturedSigla})`}
                     {entry.promotedTo && ` → promosso a ${entry.promotedTo}`}
                     {entry.isExtraMove && ' (movimento extra)'}
@@ -445,8 +463,8 @@ function GameScreen() {
           </div>
 
           <h2>💀 Pezzi catturati</h2>
-          <p><strong>{ownerLabel('A', mode)}:</strong> {gameState.captured.A.map((p) => p.sigla).join(', ') || '—'}</p>
-          <p><strong>{ownerLabel('B', mode)}:</strong> {gameState.captured.B.map((p) => p.sigla).join(', ') || '—'}</p>
+          <p><strong>{ownerLabel('A')}:</strong> {gameState.captured.A.map((p) => p.sigla).join(', ') || '—'}</p>
+          <p><strong>{ownerLabel('B')}:</strong> {gameState.captured.B.map((p) => p.sigla).join(', ') || '—'}</p>
         </div>
       </div>
     </div>

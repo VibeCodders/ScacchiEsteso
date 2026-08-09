@@ -4,7 +4,8 @@ import { useGameSetup, type TeamMap } from '../context/gameSetup';
 
 function TeamSelectRouteB() {
   const navigate = useNavigate();
-  const { mode, teamB, setTeamB } = useGameSetup();
+  const { mode, humanOwner, teamB, setTeamB } = useGameSetup();
+  const isHuman = mode !== 'pvc' || humanOwner === 'B';
 
   const handleComplete = (team: TeamMap) => {
     setTeamB(team);
@@ -13,9 +14,9 @@ function TeamSelectRouteB() {
 
   return (
     <TeamSelectScreen
-      title={mode === 'pvc' ? 'Composizione Team — PC (manuale)' : 'Composizione Team — Giocatore 2'}
+      title={isHuman ? (mode === 'pvc' ? 'Composizione Team — Giocatore 1' : 'Composizione Team — Giocatore 2') : 'Composizione Team — PC (manuale)'}
       initialTeam={teamB ?? undefined}
-      completeButtonLabel={mode === 'pvc' ? '✓ Conferma Team del PC' : '✓ Conferma Team Giocatore 2'}
+      completeButtonLabel={isHuman ? '✓ Conferma Team' : '✓ Conferma Team del PC'}
       onComplete={handleComplete}
     />
   );

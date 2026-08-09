@@ -19,7 +19,8 @@ describe('routing skeleton', () => {
     renderApp('/');
     expect(screen.getByText(/Scegli come giocare/i)).toBeInTheDocument();
     expect(screen.getByText(/PvP locale/i)).toBeInTheDocument();
-    expect(screen.getByText(/PvC \(contro il PC\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/gioco come Giocatore A/i)).toBeInTheDocument();
+    expect(screen.getByText(/gioco come Giocatore B/i)).toBeInTheDocument();
   });
 
   it('choosing PvP navigates to the Team Select screen for Giocatore 1', () => {
@@ -35,10 +36,16 @@ describe('routing skeleton', () => {
     expect(screen.getByText(/Composizione Team — Giocatore 2/i)).toBeInTheDocument();
   });
 
-  it('completing the human team in PvC mode routes through the PC team choice screen', () => {
+  it('completing the human team in PvC (playing A) routes through the PC team choice screen', () => {
     renderApp('/');
-    fireEvent.click(screen.getByText(/PvC \(contro il PC\)/i));
+    fireEvent.click(screen.getByText(/gioco come Giocatore A/i));
     fireEvent.click(screen.getByText(/Conferma Team Giocatore 1/i));
+    expect(screen.getByText(/Come vuoi comporre l'esercito avversario/i)).toBeInTheDocument();
+  });
+
+  it('choosing to play as B in PvC routes straight to the PC team choice screen (PC composes first)', () => {
+    renderApp('/');
+    fireEvent.click(screen.getByText(/gioco come Giocatore B/i));
     expect(screen.getByText(/Come vuoi comporre l'esercito avversario/i)).toBeInTheDocument();
   });
 
@@ -59,11 +66,14 @@ describe('routing skeleton', () => {
 });
 
 describe('PC team choice screen options', () => {
-  it('offers manual, three presets, mirror and random options', () => {
+  it('offers a difficulty selector plus manual, three presets, mirror and random options', () => {
     renderApp('/');
-    fireEvent.click(screen.getByText(/PvC \(contro il PC\)/i));
+    fireEvent.click(screen.getByText(/gioco come Giocatore A/i));
     fireEvent.click(screen.getByText(/Conferma Team Giocatore 1/i));
 
+    expect(screen.getByText(/Facile/i)).toBeInTheDocument();
+    expect(screen.getByText(/Medio/i)).toBeInTheDocument();
+    expect(screen.getByText(/Difficile/i)).toBeInTheDocument();
     expect(screen.getByText(/Manuale — lo compongo io/i)).toBeInTheDocument();
     expect(screen.getByText(/Bilanciato/i)).toBeInTheDocument();
     expect(screen.getByText(/Aggressivo/i)).toBeInTheDocument();
@@ -72,18 +82,34 @@ describe('PC team choice screen options', () => {
     expect(screen.getByText(/Casuale — genera entro il budget/i)).toBeInTheDocument();
   });
 
-  it('choosing a preset skips straight to Deployment', () => {
+  it('choosing a preset skips straight to Deployment when the human already composed first (playing A)', () => {
     renderApp('/');
-    fireEvent.click(screen.getByText(/PvC \(contro il PC\)/i));
+    fireEvent.click(screen.getByText(/gioco come Giocatore A/i));
     fireEvent.click(screen.getByText(/Conferma Team Giocatore 1/i));
     fireEvent.click(screen.getByText(/Preset: Bilanciato/i));
 
     expect(screen.getByRole('heading', { name: /Schieramento/i })).toBeInTheDocument();
   });
 
-  it('choosing manual routes to the Team B select screen labeled for the PC', () => {
+  it('choosing manual routes to the Team A select screen labeled for the PC when the human plays B', () => {
     renderApp('/');
-    fireEvent.click(screen.getByText(/PvC \(contro il PC\)/i));
+    fireEvent.click(screen.getByText(/gioco come Giocatore B/i));
+    fireEvent.click(screen.getByText(/Manuale — lo compongo io/i));
+
+    expect(screen.getByText(/Composizione Team — PC \(manuale\)/i)).toBeInTheDocument();
+  });
+
+  it('choosing a preset when the PC composes first (human plays B) routes to the human\'s own team select screen next', () => {
+    renderApp('/');
+    fireEvent.click(screen.getByText(/gioco come Giocatore B/i));
+    fireEvent.click(screen.getByText(/Preset: Bilanciato/i));
+
+    expect(screen.getByText(/Composizione Team — Giocatore 1/i)).toBeInTheDocument();
+  });
+
+  it('choosing manual routes to the Team B select screen labeled for the PC when the human plays A', () => {
+    renderApp('/');
+    fireEvent.click(screen.getByText(/gioco come Giocatore A/i));
     fireEvent.click(screen.getByText(/Conferma Team Giocatore 1/i));
     fireEvent.click(screen.getByText(/Manuale — lo compongo io/i));
 

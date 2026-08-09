@@ -627,3 +627,71 @@ describe('GameScreen — anti-stalemate (20 turns without progress)', () => {
     expect(screen.getByText(/Limite di 20 turni senza progressi — vince Giocatore 1 per punteggio/i)).toBeInTheDocument();
   });
 });
+
+function BootstrapPvc({ board, humanOwner }: { board: BoardState; humanOwner: 'A' | 'B' }) {
+  const { setDeployedBoard, setMode, setHumanOwner, setBotDifficulty, deployedBoard } = useGameSetup();
+  useEffect(() => {
+    setMode('pvc');
+    setHumanOwner(humanOwner);
+    setBotDifficulty('easy'); // depth 1 — fast and deterministic-enough for a test
+    setDeployedBoard(board);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  if (!deployedBoard) return null;
+  return <GameScreen />;
+}
+
+function renderPvcGame(board: BoardState, humanOwner: 'A' | 'B') {
+  return render(
+    <MemoryRouter>
+      <GameSetupProvider>
+        <BootstrapPvc board={board} humanOwner={humanOwner} />
+      </GameSetupProvider>
+    </MemoryRouter>,
+  );
+}
+
+describe('GameScreen — PvC bot auto-play', () => {
+  it("plays the bot's turn automatically, with no click required, once the human (playing A) moves", () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'a1', 'TO', 'A');
+    board = place(board, 'h8', 'TO', 'B');
+    renderPvcGame(board, 'A');
+
+    expect(screen.getByText(/Turno: Giocatore 1/i)).toBeInTheDocument();
+    fireEvent.click(document.querySelector('[data-coord="a1"]')!);
+    fireEvent.click(document.querySelector('[data-coord="a4"]')!);
+
+    // it's now the PC's (owner B's) turn — the effect should have already resolved it back to A
+    // without any further interaction from the test. Two moves should now be in the history: the
+    // human's, plus the PC's automatic reply.
+    expect(screen.getByText(/Turno: Giocatore 1/i)).toBeInTheDocument();
+    expect(screen.getAllByRole('listitem')).toHaveLength(2);
+  });
+
+  it("plays the bot's turn automatically, with no click required, when the human plays B (the PC moves first)", () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'a1', 'TO', 'A');
+    board = place(board, 'h8', 'TO', 'B');
+    renderPvcGame(board, 'B');
+
+    // the PC (owner A) should have already played automatically on mount, before any human input.
+    expect(screen.getByText(/Turno: Giocatore 1/i)).toBeInTheDocument();
+    expect(screen.getAllByRole('listitem')).toHaveLength(1);
+  });
+
+  it('does not let the human move the PC\'s pieces during the PC\'s turn', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'a1', 'TO', 'A');
+    board = place(board, 'h8', 'TO', 'B');
+    renderPvcGame(board, 'B');
+
+    // it's owner A's (the PC's) turn only for the very first render, but even then clicking one
+    // of its pieces must not select it for the human — selection stays a no-op until it's B's turn.
+    fireEvent.click(document.querySelector('[data-coord="a1"]')!);
+    expect(document.querySelector('[data-coord="a1"]')).not.toHaveClass('board-square-selected');
+  });
+});

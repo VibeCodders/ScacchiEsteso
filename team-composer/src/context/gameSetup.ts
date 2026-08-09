@@ -2,8 +2,15 @@ import { createContext, useContext } from 'react';
 import { KING_SIGLA } from '../data/pieces';
 import type { BoardState, Owner } from '../game/board';
 import type { GameStatus } from '../game/turnManager';
+import type { BotDifficulty } from '../game/bot';
 
 export type GameMode = 'pvp' | 'pvc';
+
+/** Human-readable label for `owner`, aware of PvC's human-vs-bot assignment (`humanOwner`). */
+export function playerLabel(owner: Owner, mode: GameMode | null, humanOwner: Owner): string {
+  if (mode === 'pvc') return owner === humanOwner ? 'Giocatore 1' : 'PC';
+  return owner === 'A' ? 'Giocatore 1' : 'Giocatore 2';
+}
 
 export type TeamMap = Map<string, number>;
 
@@ -22,6 +29,9 @@ export interface GameSetupState {
   teamB: TeamMap | null;
   deployedBoard: BoardState | null;
   matchResult: MatchResult | null;
+  /** In PvC, which owner the human plays (the bot takes the opposite owner). Unused in PvP. */
+  humanOwner: Owner;
+  botDifficulty: BotDifficulty;
 }
 
 export interface GameSetupContextValue extends GameSetupState {
@@ -30,6 +40,8 @@ export interface GameSetupContextValue extends GameSetupState {
   setTeamB: (team: TeamMap) => void;
   setDeployedBoard: (board: BoardState) => void;
   setMatchResult: (result: MatchResult) => void;
+  setHumanOwner: (owner: Owner) => void;
+  setBotDifficulty: (difficulty: BotDifficulty) => void;
   reset: () => void;
 }
 
