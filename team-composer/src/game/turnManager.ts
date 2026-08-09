@@ -7,6 +7,7 @@ import { canSwap, getSwapTargets } from './swap';
 import { canRevive, getRevivalSquares, getRevivableSiglas } from './necromancy';
 import { getAreaDamageVictims, triggersAreaDamage } from './areaDamage';
 import { canMimic, getMimicMoves, getOrphanThreats } from './orphan';
+import { isSilenced } from './auras';
 import { ANTI_STALEMATE_TURN_LIMIT, resolveAntiStalemateWinner } from './antiStalemate';
 
 export type GameStatus = 'ongoing' | 'check' | 'checkmate' | 'stalemate' | 'anti_stalemate';
@@ -195,7 +196,7 @@ function resolveMove(state: GameState, piece: PieceInstance, move: GeneratedMove
 
   let areaDamageCoords: Coord[] | undefined;
   const pieceDef = getPieceDef(piece.sigla);
-  if (triggersAreaDamage(pieceDef, move)) {
+  if (triggersAreaDamage(pieceDef, move) && !isSilenced(nextBoard, move.to, piece.owner)) {
     const victims = getAreaDamageVictims(nextBoard, move.to);
     if (victims.length > 0) {
       areaDamageCoords = victims;
