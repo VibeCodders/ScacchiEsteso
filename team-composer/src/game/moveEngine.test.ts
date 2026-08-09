@@ -323,3 +323,45 @@ describe('generatePseudoLegalMoves — general behavior', () => {
     expect(generatePseudoLegalMoves(createEmptyBoard(), 'e4')).toEqual([]);
   });
 });
+
+describe('generatePseudoLegalMoves — custom board dimensions', () => {
+  it('a slide piece reaches the true edge of a wider-than-8 board, not the default 8×8 edge', () => {
+    const board = place(createEmptyBoard(), 'a4', 'TO');
+    const dims = { width: 12, height: 6 };
+    const moves = generatePseudoLegalMoves(board, 'a4', dims);
+    const destinations = moves.map((m) => m.to);
+
+    expect(destinations).toContain('l4'); // the 12th file — unreachable on a default 8-wide board
+    expect(destinations).not.toContain('m4'); // one past the edge
+  });
+
+  it('a slide piece stops at the true edge of a taller-than-8 board', () => {
+    const board = place(createEmptyBoard(), 'd1', 'TO');
+    const dims = { width: 8, height: 12 };
+    const destinations = generatePseudoLegalMoves(board, 'd1', dims).map((m) => m.to);
+
+    expect(destinations).toContain('d12');
+    expect(destinations).not.toContain('d13');
+  });
+
+  it('stays confined to a small 4×4 board (the minimum playable size)', () => {
+    const board = place(createEmptyBoard(), 'a1', 'RA'); // Regina — moves in every direction
+    const dims = { width: 4, height: 4 };
+    const destinations = generatePseudoLegalMoves(board, 'a1', dims).map((m) => m.to);
+
+    for (const coord of destinations) {
+      expect(['a', 'b', 'c', 'd']).toContain(coord[0]);
+      expect(Number(coord.slice(1))).toBeLessThanOrEqual(4);
+    }
+    expect(destinations).toContain('d4'); // reaches the far corner diagonally
+  });
+
+  it('a knight-pattern leap respects custom dimensions at the edge', () => {
+    const board = place(createEmptyBoard(), 'i5', 'CA'); // 9th file — only valid on a wide board
+    const dims = { width: 10, height: 8 };
+    const destinations = generatePseudoLegalMoves(board, 'i5', dims).map((m) => m.to);
+
+    expect(destinations).toContain('j7'); // within the 10-wide board
+    expect(destinations.every((c) => c[0] !== 'k')); // nothing beyond file j (index 9)
+  });
+});

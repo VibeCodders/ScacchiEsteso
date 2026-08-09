@@ -1,4 +1,18 @@
-import { createPieceInstance, coordToFileRank, fileRankToCoord, getPieceAt, removePieceAt, setPieceAt, swapPieces, type BoardState, type Coord, type Owner, type PieceInstance } from './board';
+import {
+  createPieceInstance,
+  coordToFileRank,
+  fileRankToCoord,
+  getPieceAt,
+  removePieceAt,
+  setPieceAt,
+  swapPieces,
+  DEFAULT_BOARD_DIMENSIONS,
+  type BoardDimensions,
+  type BoardState,
+  type Coord,
+  type Owner,
+  type PieceInstance,
+} from './board';
 import { applyMove, getPieceDef, type GeneratedMove } from './moveEngine';
 import { getLegalMoves, isCheckmate, isKingInCheck, isStalemate } from './check';
 import { getPromotionOptions, isPromotionMove } from './promotion';
@@ -39,6 +53,8 @@ export interface HistoryEntry {
 
 export interface GameState {
   board: BoardState;
+  /** Board size this match is being played on — fixed for the whole game, set once at creation. */
+  dimensions: BoardDimensions;
   /** Whose turn it is to move now. */
   turn: Owner;
   /** 1-based count of turns completed so far, plus the one currently in progress. */
@@ -74,17 +90,17 @@ export type ApplyTurnResult =
   | { ok: true; state: GameState }
   | { ok: false; reason: string };
 
-function computeStatus(board: BoardState, playerToMove: Owner, turnsSinceProgress: number): GameStatus {
-  if (isCheckmate(board, playerToMove)) return 'checkmate';
-  if (isStalemate(board, playerToMove)) return 'stalemate';
+function computeStatus(board: BoardState, playerToMove: Owner, turnsSinceProgress: number, dimensions: BoardDimensions): GameStatus {
+  if (isCheckmate(board, playerToMove, dimensions)) return 'checkmate';
+  if (isStalemate(board, playerToMove, dimensions)) return 'stalemate';
   if (turnsSinceProgress >= ANTI_STALEMATE_TURN_LIMIT) return 'anti_stalemate';
-  if (isKingInCheck(board, playerToMove)) return 'check';
+  if (isKingInCheck(board, playerToMove, dimensions)) return 'check';
   return 'ongoing';
 }
 
-function resolveWinner(status: GameStatus, board: BoardState, actingOwner: Owner): Owner | undefined {
+function resolveWinner(status: GameStatus, board: BoardState, actingOwner: Owner, dimensions: BoardDimensions): Owner | undefined {
   if (status === 'checkmate') return actingOwner;
-  if (status === 'anti_stalemate') return resolveAntiStalemateWinner(board);
+  if (status === 'anti_stalemate') return resolveAntiStalemateWinner(board, dimensions);
   return undefined;
 }
 
@@ -96,14 +112,15 @@ function isProgressEntry(entry: HistoryEntry): boolean {
   return getPieceDef(entry.sigla).categoria === 'pedone';
 }
 
-export function createInitialGameState(board: BoardState, firstTurn: Owner = 'A'): GameState {
+export function createInitialGameState(board: BoardState, firstTurn: Owner = 'A', dimensions: BoardDimensions = DEFAULT_BOARD_DIMENSIONS): GameState {
   return {
     board,
+    dimensions,
     turn: firstTurn,
     turnNumber: 1,
     history: [],
     captured: { A: [], B: [] },
-    status: computeStatus(board, firstTurn, 0),
+    status: computeStatus(board, firstTurn, 0, dimensions),
     enPassantTarget: null,
     pendingExtraMove: null,
     turnsSinceProgress: 0,
@@ -115,7 +132,13 @@ const GAME_OVER_STATUSES: ReadonlySet<GameStatus> = new Set(['checkmate', 'stale
 /** README §6 — en passant is only between Pedoni (PE), not the checkers-style Pedone di Dama. */
 const EN_PASSANT_SIGLA = 'PE';
 
-function computeEnPassantCapture(board: BoardState, from: Coord, piece: PieceInstance, enPassantTarget: Coord): GeneratedMove | null {
+function computeEnPassantCapture(
+  board: BoardState,
+  from: Coord,
+  piece: PieceInstance,
+  enPassantTarget: Coord,
+  dimensions: BoardDimensions,
+): GeneratedMove | null {
   if (piece.sigla !== EN_PASSANT_SIGLA) return null;
   if (getPieceAt(board, enPassantTarget)) return null; // destination must be empty
 
@@ -124,7 +147,7 @@ function computeEnPassantCapture(board: BoardState, from: Coord, piece: PieceIns
   const forwardDelta = piece.owner === 'A' ? 1 : -1;
   if (targetRank !== fromRank + forwardDelta || Math.abs(targetFile - fromFile) !== 1) return null;
 
-  const capturedCoord = fileRankToCoord(targetFile, fromRank);
+  const capturedCoord = fileRankToCoord(targetFile, fromRank, dimensions);
   if (!capturedCoord) return null;
   const capturedPiece = getPieceAt(board, capturedCoord);
   if (!capturedPiece || capturedPiece.sigla !== EN_PASSANT_SIGLA || capturedPiece.owner === piece.owner) return null;
@@ -145,34 +168,34 @@ export function getLegalMovesForTurn(state: GameState, from: Coord, orphanMimicS
   if (!piece) return [];
 
   if (canMimic(getPieceDef(piece.sigla))) {
-    const threats = getOrphanThreats(state.board, from, piece.owner);
+    const threats = getOrphanThreats(state.board, from, piece.owner, state.dimensions);
     if (threats.length > 0) {
       if (!orphanMimicSource || !threats.includes(orphanMimicSource)) return [];
-      return getMimicMoves(state.board, from, orphanMimicSource).filter((move) => {
+      return getMimicMoves(state.board, from, orphanMimicSource, state.dimensions).filter((move) => {
         const resultingBoard = applyMove(state.board, move);
-        return !isKingInCheck(resultingBoard, piece.owner);
+        return !isKingInCheck(resultingBoard, piece.owner, state.dimensions);
       });
     }
   }
 
-  const baseMoves = getLegalMoves(state.board, from);
+  const baseMoves = getLegalMoves(state.board, from, state.dimensions);
   if (!state.enPassantTarget) return baseMoves;
 
-  const enPassantMove = computeEnPassantCapture(state.board, from, piece, state.enPassantTarget);
+  const enPassantMove = computeEnPassantCapture(state.board, from, piece, state.enPassantTarget, state.dimensions);
   if (!enPassantMove) return baseMoves;
 
   const resultingBoard = applyMove(state.board, enPassantMove);
-  if (isKingInCheck(resultingBoard, piece.owner)) return baseMoves;
+  if (isKingInCheck(resultingBoard, piece.owner, state.dimensions)) return baseMoves;
 
   return [...baseMoves, enPassantMove];
 }
 
-function computeEnPassantTargetAfter(piece: PieceInstance, move: GeneratedMove): Coord | null {
+function computeEnPassantTargetAfter(piece: PieceInstance, move: GeneratedMove, dimensions: BoardDimensions): Coord | null {
   if (piece.sigla !== EN_PASSANT_SIGLA || move.isCapture) return null;
   const { file: fromFile, rank: fromRank } = coordToFileRank(move.from);
   const { rank: toRank } = coordToFileRank(move.to);
   if (Math.abs(toRank - fromRank) !== 2) return null;
-  return fileRankToCoord(fromFile, (fromRank + toRank) / 2);
+  return fileRankToCoord(fromFile, (fromRank + toRank) / 2, dimensions);
 }
 
 interface MoveOutcome {
@@ -196,8 +219,8 @@ function resolveMove(state: GameState, piece: PieceInstance, move: GeneratedMove
 
   let areaDamageCoords: Coord[] | undefined;
   const pieceDef = getPieceDef(piece.sigla);
-  if (triggersAreaDamage(pieceDef, move) && !isSilenced(nextBoard, move.to, piece.owner)) {
-    const victims = getAreaDamageVictims(nextBoard, move.to);
+  if (triggersAreaDamage(pieceDef, move) && !isSilenced(nextBoard, move.to, piece.owner, state.dimensions)) {
+    const victims = getAreaDamageVictims(nextBoard, move.to, state.dimensions);
     if (victims.length > 0) {
       areaDamageCoords = victims;
       for (const coord of victims) {
@@ -234,17 +257,18 @@ function resolveMove(state: GameState, piece: PieceInstance, move: GeneratedMove
 function finalizeTurn(state: GameState, piece: PieceInstance, move: GeneratedMove, outcome: MoveOutcome, forcedProgress: boolean): GameState {
   const nextTurn: Owner = piece.owner === 'A' ? 'B' : 'A';
   const turnsSinceProgress = forcedProgress || isProgressEntry(outcome.historyEntry) ? 0 : state.turnsSinceProgress + 1;
-  const status = computeStatus(outcome.nextBoard, nextTurn, turnsSinceProgress);
+  const status = computeStatus(outcome.nextBoard, nextTurn, turnsSinceProgress, state.dimensions);
 
   return {
     board: outcome.nextBoard,
+    dimensions: state.dimensions,
     turn: nextTurn,
     turnNumber: state.turnNumber + 1,
     history: [...state.history, outcome.historyEntry],
     captured: outcome.nextCaptured,
     status,
-    winner: resolveWinner(status, outcome.nextBoard, piece.owner),
-    enPassantTarget: computeEnPassantTargetAfter(piece, move),
+    winner: resolveWinner(status, outcome.nextBoard, piece.owner, state.dimensions),
+    enPassantTarget: computeEnPassantTargetAfter(piece, move, state.dimensions),
     pendingExtraMove: null,
     turnsSinceProgress,
   };
@@ -254,11 +278,12 @@ function finalizeTurn(state: GameState, piece: PieceInstance, move: GeneratedMov
 function enterExtraMovePhase(state: GameState, piece: PieceInstance, outcome: MoveOutcome): GameState {
   return {
     board: outcome.nextBoard,
+    dimensions: state.dimensions,
     turn: piece.owner,
     turnNumber: state.turnNumber,
     history: [...state.history, outcome.historyEntry],
     captured: outcome.nextCaptured,
-    status: computeStatus(outcome.nextBoard, piece.owner, state.turnsSinceProgress),
+    status: computeStatus(outcome.nextBoard, piece.owner, state.turnsSinceProgress, state.dimensions),
     winner: undefined,
     enPassantTarget: null,
     pendingExtraMove: outcome.historyEntry.to,
@@ -315,7 +340,7 @@ export function applyTurn(state: GameState, from: Coord, to: Coord, promotionCho
   }
 
   const pieceDef = getPieceDef(piece.sigla);
-  if (isPromotionMove(pieceDef, piece.owner, to)) {
+  if (isPromotionMove(pieceDef, piece.owner, to, state.dimensions)) {
     const options = getPromotionOptions(pieceDef);
     if (!promotionChoice) {
       return { ok: false, reason: 'Scegli il pezzo di promozione.' };
@@ -343,7 +368,7 @@ export function skipExtraMove(state: GameState): ApplyTurnResult {
   const nextTurn: Owner = state.turn === 'A' ? 'B' : 'A';
   // forcedProgress: the capture that opened this bonus phase already counts as progress this turn.
   const turnsSinceProgress = 0;
-  const status = computeStatus(state.board, nextTurn, turnsSinceProgress);
+  const status = computeStatus(state.board, nextTurn, turnsSinceProgress, state.dimensions);
 
   return {
     ok: true,
@@ -352,7 +377,7 @@ export function skipExtraMove(state: GameState): ApplyTurnResult {
       turn: nextTurn,
       turnNumber: state.turnNumber + 1,
       status,
-      winner: resolveWinner(status, state.board, state.turn),
+      winner: resolveWinner(status, state.board, state.turn, state.dimensions),
       pendingExtraMove: null,
       turnsSinceProgress,
     },
@@ -386,7 +411,7 @@ export function applyScocca(state: GameState, from: Coord, target: Coord): Apply
     return { ok: false, reason: 'Questo pezzo non può scoccare.' };
   }
 
-  const targets = getScoccaTargets(state.board, from, piece.owner);
+  const targets = getScoccaTargets(state.board, from, piece.owner, state.dimensions);
   if (!targets.includes(target)) {
     return { ok: false, reason: `Bersaglio non valido per lo scoccare: ${target}.` };
   }
@@ -394,13 +419,13 @@ export function applyScocca(state: GameState, from: Coord, target: Coord): Apply
   const targetPiece = getPieceAt(state.board, target)!;
   const nextBoard = removePieceAt(state.board, target);
 
-  if (isKingInCheck(nextBoard, piece.owner)) {
+  if (isKingInCheck(nextBoard, piece.owner, state.dimensions)) {
     return { ok: false, reason: 'Questa azione lascerebbe il tuo Re sotto scacco.' };
   }
 
   const nextTurn: Owner = piece.owner === 'A' ? 'B' : 'A';
   const turnsSinceProgress = 0; // a capture — always progress
-  const status = computeStatus(nextBoard, nextTurn, turnsSinceProgress);
+  const status = computeStatus(nextBoard, nextTurn, turnsSinceProgress, state.dimensions);
 
   const historyEntry: HistoryEntry = {
     turnNumber: state.turnNumber,
@@ -421,12 +446,13 @@ export function applyScocca(state: GameState, from: Coord, target: Coord): Apply
     ok: true,
     state: {
       board: nextBoard,
+      dimensions: state.dimensions,
       turn: nextTurn,
       turnNumber: state.turnNumber + 1,
       history: [...state.history, historyEntry],
       captured: nextCaptured,
       status,
-      winner: resolveWinner(status, nextBoard, piece.owner),
+      winner: resolveWinner(status, nextBoard, piece.owner, state.dimensions),
       enPassantTarget: null,
       pendingExtraMove: null,
       turnsSinceProgress,
@@ -460,20 +486,20 @@ export function applySwap(state: GameState, from: Coord, target: Coord): ApplyTu
     return { ok: false, reason: 'Questo pezzo non può scambiare posizione.' };
   }
 
-  const targets = getSwapTargets(state.board, from, piece.owner);
+  const targets = getSwapTargets(state.board, from, piece.owner, state.dimensions);
   if (!targets.includes(target)) {
     return { ok: false, reason: `Scambio non valido con: ${target}.` };
   }
 
   const nextBoard = swapPieces(state.board, from, target);
 
-  if (isKingInCheck(nextBoard, piece.owner)) {
+  if (isKingInCheck(nextBoard, piece.owner, state.dimensions)) {
     return { ok: false, reason: 'Questa azione lascerebbe il tuo Re sotto scacco.' };
   }
 
   const nextTurn: Owner = piece.owner === 'A' ? 'B' : 'A';
   const turnsSinceProgress = 0; // a swap — always progress, per the user's clarification
-  const status = computeStatus(nextBoard, nextTurn, turnsSinceProgress);
+  const status = computeStatus(nextBoard, nextTurn, turnsSinceProgress, state.dimensions);
 
   const historyEntry: HistoryEntry = {
     turnNumber: state.turnNumber,
@@ -489,12 +515,13 @@ export function applySwap(state: GameState, from: Coord, target: Coord): ApplyTu
     ok: true,
     state: {
       board: nextBoard,
+      dimensions: state.dimensions,
       turn: nextTurn,
       turnNumber: state.turnNumber + 1,
       history: [...state.history, historyEntry],
       captured: state.captured,
       status,
-      winner: resolveWinner(status, nextBoard, piece.owner),
+      winner: resolveWinner(status, nextBoard, piece.owner, state.dimensions),
       enPassantTarget: null,
       pendingExtraMove: null,
       turnsSinceProgress,
@@ -529,7 +556,7 @@ export function applyRevive(state: GameState, from: Coord, target: Coord, sigla:
     return { ok: false, reason: 'Questo pezzo non può rianimare alleati.' };
   }
 
-  const revivalSquares = getRevivalSquares(state.board, from, piece.owner);
+  const revivalSquares = getRevivalSquares(state.board, from, piece.owner, state.dimensions);
   if (!revivalSquares.includes(target)) {
     return { ok: false, reason: `Casella non valida per la rianimazione: ${target}.` };
   }
@@ -546,13 +573,13 @@ export function applyRevive(state: GameState, from: Coord, target: Coord, sigla:
 
   const nextBoard = setPieceAt(state.board, target, createPieceInstance(sigla, piece.owner));
 
-  if (isKingInCheck(nextBoard, piece.owner)) {
+  if (isKingInCheck(nextBoard, piece.owner, state.dimensions)) {
     return { ok: false, reason: 'Questa azione lascerebbe il tuo Re sotto scacco.' };
   }
 
   const nextTurn: Owner = piece.owner === 'A' ? 'B' : 'A';
   const turnsSinceProgress = 0; // a revival — always progress, per the user's clarification
-  const status = computeStatus(nextBoard, nextTurn, turnsSinceProgress);
+  const status = computeStatus(nextBoard, nextTurn, turnsSinceProgress, state.dimensions);
 
   const historyEntry: HistoryEntry = {
     turnNumber: state.turnNumber,
@@ -569,12 +596,13 @@ export function applyRevive(state: GameState, from: Coord, target: Coord, sigla:
     ok: true,
     state: {
       board: nextBoard,
+      dimensions: state.dimensions,
       turn: nextTurn,
       turnNumber: state.turnNumber + 1,
       history: [...state.history, historyEntry],
       captured: nextCaptured,
       status,
-      winner: resolveWinner(status, nextBoard, piece.owner),
+      winner: resolveWinner(status, nextBoard, piece.owner, state.dimensions),
       enPassantTarget: null,
       pendingExtraMove: null,
       turnsSinceProgress,

@@ -6,6 +6,8 @@ import {
   getPieceAt,
   movePiece,
   removePieceAt,
+  DEFAULT_BOARD_DIMENSIONS,
+  type BoardDimensions,
   type BoardState,
   type Coord,
   type Owner,
@@ -90,12 +92,13 @@ function generateStepOrSlideMoves(
   moveEntry: Move,
   effectiveMaxSteps: number,
   captureOnly: boolean,
+  dimensions: BoardDimensions,
 ): GeneratedMove[] {
   const results: GeneratedMove[] = [];
 
   for (const relDir of moveEntry.directions) {
     const vector = ABSOLUTE_DIRECTION_VECTORS[toAbsoluteDirection(relDir, owner)];
-    const ray = castRay(board, from, vector, effectiveMaxSteps);
+    const ray = castRay(board, from, vector, effectiveMaxSteps, dimensions);
 
     if (!captureOnly) {
       ray.emptySquares.forEach((to, idx) => {
@@ -131,6 +134,7 @@ function generateJumpMoves(
   owner: Owner,
   moveEntry: Move,
   effectiveMaxSteps: number,
+  dimensions: BoardDimensions,
 ): GeneratedMove[] {
   const results: GeneratedMove[] = [];
   const { file: fromFile, rank: fromRank } = coordToFileRank(from);
@@ -139,7 +143,7 @@ function generateJumpMoves(
     const vector = ABSOLUTE_DIRECTION_VECTORS[toAbsoluteDirection(relDir, owner)];
 
     for (let dist = moveEntry.minSteps; dist <= effectiveMaxSteps; dist++) {
-      const to = fileRankToCoord(fromFile + vector.df * dist, fromRank + vector.dr * dist);
+      const to = fileRankToCoord(fromFile + vector.df * dist, fromRank + vector.dr * dist, dimensions);
       if (!to) continue; // this distance is off-board, but a shorter/longer one might not be
 
       const occupant = getPieceAt(board, to);
@@ -154,12 +158,12 @@ function generateJumpMoves(
   return results;
 }
 
-function generateKnightPatternMoves(board: BoardState, from: Coord, owner: Owner, moveEntry: Move): GeneratedMove[] {
+function generateKnightPatternMoves(board: BoardState, from: Coord, owner: Owner, moveEntry: Move, dimensions: BoardDimensions): GeneratedMove[] {
   const results: GeneratedMove[] = [];
   const { file: fromFile, rank: fromRank } = coordToFileRank(from);
 
   for (const { df, dr } of KNIGHT_OFFSETS) {
-    const to = fileRankToCoord(fromFile + df, fromRank + dr);
+    const to = fileRankToCoord(fromFile + df, fromRank + dr, dimensions);
     if (!to) continue;
 
     const occupant = getPieceAt(board, to);
@@ -174,7 +178,7 @@ function generateKnightPatternMoves(board: BoardState, from: Coord, owner: Owner
 }
 
 /** Grasshopper: slides until the first occupied square in the line, then lands immediately beyond it. */
-function generateGrasshopperMoves(board: BoardState, from: Coord, owner: Owner, moveEntry: Move): GeneratedMove[] {
+function generateGrasshopperMoves(board: BoardState, from: Coord, owner: Owner, moveEntry: Move, dimensions: BoardDimensions): GeneratedMove[] {
   const results: GeneratedMove[] = [];
   const { file: fromFile, rank: fromRank } = coordToFileRank(from);
 
@@ -184,7 +188,7 @@ function generateGrasshopperMoves(board: BoardState, from: Coord, owner: Owner, 
     let dist = 1;
     let hurdleCoord: Coord | null = null;
     while (true) {
-      const probe = fileRankToCoord(fromFile + vector.df * dist, fromRank + vector.dr * dist);
+      const probe = fileRankToCoord(fromFile + vector.df * dist, fromRank + vector.dr * dist, dimensions);
       if (!probe) break; // ran off the board without finding a hurdle
       if (getPieceAt(board, probe)) {
         hurdleCoord = probe;
@@ -195,7 +199,7 @@ function generateGrasshopperMoves(board: BoardState, from: Coord, owner: Owner, 
 
     if (!hurdleCoord) continue;
 
-    const landing = fileRankToCoord(fromFile + vector.df * (dist + 1), fromRank + vector.dr * (dist + 1));
+    const landing = fileRankToCoord(fromFile + vector.df * (dist + 1), fromRank + vector.dr * (dist + 1), dimensions);
     if (!landing) continue;
 
     const occupant = getPieceAt(board, landing);
@@ -210,14 +214,14 @@ function generateGrasshopperMoves(board: BoardState, from: Coord, owner: Owner, 
 }
 
 /** Checkers-style jump: requires an adjacent enemy at distance 1, lands on the empty square at distance 2, capturing the hurdle. Single jump only — chained multi-capture is a later step. */
-function generateCheckersJumpMoves(board: BoardState, from: Coord, owner: Owner, moveEntry: Move): GeneratedMove[] {
+function generateCheckersJumpMoves(board: BoardState, from: Coord, owner: Owner, moveEntry: Move, dimensions: BoardDimensions): GeneratedMove[] {
   const results: GeneratedMove[] = [];
   const { file: fromFile, rank: fromRank } = coordToFileRank(from);
 
   for (const relDir of moveEntry.directions) {
     const vector = ABSOLUTE_DIRECTION_VECTORS[toAbsoluteDirection(relDir, owner)];
-    const hurdle = fileRankToCoord(fromFile + vector.df, fromRank + vector.dr);
-    const landing = fileRankToCoord(fromFile + vector.df * 2, fromRank + vector.dr * 2);
+    const hurdle = fileRankToCoord(fromFile + vector.df, fromRank + vector.dr, dimensions);
+    const landing = fileRankToCoord(fromFile + vector.df * 2, fromRank + vector.dr * 2, dimensions);
     if (!hurdle || !landing) continue;
 
     const hurdleOccupant = getPieceAt(board, hurdle);
@@ -248,26 +252,33 @@ function isPawnDiagonalCaptureOnly(pieceDef: Piece, moveEntry: Move): boolean {
   );
 }
 
-function generateMovesForEntry(board: BoardState, from: Coord, piece: PieceInstance, pieceDef: Piece, moveEntry: Move): GeneratedMove[] {
+function generateMovesForEntry(
+  board: BoardState,
+  from: Coord,
+  piece: PieceInstance,
+  pieceDef: Piece,
+  moveEntry: Move,
+  dimensions: BoardDimensions,
+): GeneratedMove[] {
   if (!passesColorRestriction(moveEntry, from)) return [];
 
   const effectiveMaxSteps = moveEntry.primaMossaDoppia && piece.hasMoved ? 1 : moveEntry.maxSteps;
 
   if (moveEntry.leapPattern === 'L') {
-    return generateKnightPatternMoves(board, from, piece.owner, moveEntry);
+    return generateKnightPatternMoves(board, from, piece.owner, moveEntry, dimensions);
   }
   if (moveEntry.leapPattern === 'grasshopper') {
-    return generateGrasshopperMoves(board, from, piece.owner, moveEntry);
+    return generateGrasshopperMoves(board, from, piece.owner, moveEntry, dimensions);
   }
   if (moveEntry.jump && moveEntry.maxSteps === 0) {
     // jump:true with no distance range and no leap pattern encodes the checkers-style
     // jump-over-adjacent-enemy capture (currently only the Pedone di Dama, "DA").
-    return generateCheckersJumpMoves(board, from, piece.owner, moveEntry);
+    return generateCheckersJumpMoves(board, from, piece.owner, moveEntry, dimensions);
   }
   if (moveEntry.jump) {
-    return generateJumpMoves(board, from, piece.owner, moveEntry, effectiveMaxSteps);
+    return generateJumpMoves(board, from, piece.owner, moveEntry, effectiveMaxSteps, dimensions);
   }
-  return generateStepOrSlideMoves(board, from, piece.owner, moveEntry, effectiveMaxSteps, isPawnDiagonalCaptureOnly(pieceDef, moveEntry));
+  return generateStepOrSlideMoves(board, from, piece.owner, moveEntry, effectiveMaxSteps, isPawnDiagonalCaptureOnly(pieceDef, moveEntry), dimensions);
 }
 
 /**
@@ -294,7 +305,11 @@ function isCaptureBlockedByArmor(board: BoardState, attackerDef: Piece, move: Ge
 }
 
 /** All pseudo-legal moves for the piece at `from` — no notion of check yet (see check.ts). */
-export function generatePseudoLegalMoves(board: BoardState, from: Coord): GeneratedMove[] {
+export function generatePseudoLegalMoves(
+  board: BoardState,
+  from: Coord,
+  dimensions: BoardDimensions = DEFAULT_BOARD_DIMENSIONS,
+): GeneratedMove[] {
   const piece = getPieceAt(board, from);
   if (!piece) return [];
   const pieceDef = getPieceDef(piece.sigla);
@@ -302,7 +317,7 @@ export function generatePseudoLegalMoves(board: BoardState, from: Coord): Genera
   const seen = new Set<string>();
   const moves: GeneratedMove[] = [];
   for (const moveEntry of pieceDef.moves) {
-    for (const move of generateMovesForEntry(board, from, piece, pieceDef, moveEntry)) {
+    for (const move of generateMovesForEntry(board, from, piece, pieceDef, moveEntry, dimensions)) {
       const key = `${move.to}|${move.capturedCoord ?? ''}|${move.isCapture}`;
       if (seen.has(key)) continue;
       seen.add(key);

@@ -7,6 +7,8 @@ import {
   getPieceAt,
   isValidCoord,
   setPieceAt,
+  DEFAULT_BOARD_DIMENSIONS,
+  type BoardDimensions,
   type BoardState,
   type Coord,
   type Owner,
@@ -16,6 +18,7 @@ export type Roster = Map<string, number>; // sigla -> count still to place
 
 export interface DeploymentState {
   board: BoardState;
+  dimensions: BoardDimensions;
   remaining: Record<Owner, Roster>;
   /** Whose turn it is to place a piece next. */
   currentPlacer: Owner;
@@ -23,9 +26,9 @@ export interface DeploymentState {
   firstPlacer: Owner;
 }
 
-/** README §2: each player's deployment zone is their own 2 back ranks. */
-export function ownDeploymentRanks(owner: Owner): [number, number] {
-  return owner === 'A' ? [1, 2] : [7, 8];
+/** README §2: each player's deployment zone is their own 2 back ranks, whatever the board's height. */
+export function ownDeploymentRanks(owner: Owner, dimensions: BoardDimensions = DEFAULT_BOARD_DIMENSIONS): [number, number] {
+  return owner === 'A' ? [1, 2] : [dimensions.height - 1, dimensions.height];
 }
 
 function totalRemaining(roster: Roster): number {
@@ -34,11 +37,28 @@ function totalRemaining(roster: Roster): number {
   return total;
 }
 
-/** Starts deployment with each King already placed centrally (e1 / e8), everything else still to place. */
-export function createDeploymentState(teamA: Map<string, number>, teamB: Map<string, number>, firstPlacer: Owner): DeploymentState {
+/**
+ * The King's default file: exact center for an odd width, otherwise the center file closer to
+ * the last file (e.g. 'h' on a classic 8-wide board) — this specific tie-break is chosen because
+ * it reproduces the existing 'e1'/'e8' King squares exactly on the default 8×8 board.
+ */
+function kingStartFile(width: number): number {
+  return Math.ceil((width - 1) / 2);
+}
+
+/** Starts deployment with each King already placed centrally on its own back rank, everything else still to place. */
+export function createDeploymentState(
+  teamA: Map<string, number>,
+  teamB: Map<string, number>,
+  firstPlacer: Owner,
+  dimensions: BoardDimensions = DEFAULT_BOARD_DIMENSIONS,
+): DeploymentState {
   let board = createEmptyBoard();
-  board = setPieceAt(board, 'e1', createPieceInstance(KING_SIGLA, 'A'));
-  board = setPieceAt(board, 'e8', createPieceInstance(KING_SIGLA, 'B'));
+  const kingFile = kingStartFile(dimensions.width);
+  const kingSquareA = fileRankToCoord(kingFile, 1, dimensions)!;
+  const kingSquareB = fileRankToCoord(kingFile, dimensions.height, dimensions)!;
+  board = setPieceAt(board, kingSquareA, createPieceInstance(KING_SIGLA, 'A'));
+  board = setPieceAt(board, kingSquareB, createPieceInstance(KING_SIGLA, 'B'));
 
   const remainingA = new Map(teamA);
   remainingA.delete(KING_SIGLA);
@@ -47,6 +67,7 @@ export function createDeploymentState(teamA: Map<string, number>, teamB: Map<str
 
   return {
     board,
+    dimensions,
     remaining: { A: remainingA, B: remainingB },
     currentPlacer: firstPlacer,
     firstPlacer,
@@ -73,11 +94,11 @@ export function placePiece(state: DeploymentState, sigla: string, coord: Coord):
   if (available <= 0) {
     return { ok: false, reason: `Nessun pezzo "${sigla}" ancora da schierare per questo giocatore.` };
   }
-  if (!isValidCoord(coord)) {
+  if (!isValidCoord(coord, state.dimensions)) {
     return { ok: false, reason: `Casella non valida: ${coord}.` };
   }
-  const rank = Number(coord[1]);
-  if (!ownDeploymentRanks(owner).includes(rank)) {
+  const rank = Number(coord.match(/\d+$/)![0]);
+  if (!ownDeploymentRanks(owner, state.dimensions).includes(rank)) {
     return { ok: false, reason: 'Fuori dalla propria zona di schieramento (le 2 traverse più vicine).' };
   }
   if (getPieceAt(state.board, coord)) {
@@ -107,17 +128,29 @@ function computeNextPlacer(remaining: Record<Owner, Roster>, justPlaced: Owner):
   return justPlaced; // the other side is exhausted (or was already) — this player continues alone
 }
 
-// Front rank = the one closer to the opponent (e.g. A's rank 2, facing rank 8); back rank = the
-// player's own edge (A's rank 1, where the King starts).
-function frontRank(owner: Owner): number { return owner === 'A' ? 2 : 7; }
-function backRank(owner: Owner): number { return owner === 'A' ? 1 : 8; }
+// Front rank = the one closer to the opponent (e.g. A's rank 2, facing the far side); back rank =
+// the player's own edge (A's rank 1, where the King starts).
+function frontRank(owner: Owner, height: number): number { return owner === 'A' ? 2 : height - 1; }
+function backRank(owner: Owner, height: number): number { return owner === 'A' ? 1 : height; }
 
-// Center files first: pieces placed earlier in a rank land more centrally, which — all else being
-// equal — gives them more reach/board control than an edge square.
-const CENTER_OUT_FILES = [3, 4, 2, 5, 1, 6, 0, 7]; // d, e, c, f, b, g, a, h
+/**
+ * File order for filling a rank center-out: pieces placed earlier land more centrally, which —
+ * all else being equal — gives them more reach/board control than an edge square. Ties (a file
+ * pair equidistant from center, which happens on any even width) break toward the 'a' side; this
+ * specific tie-break reproduces the exact previous fixed 8-wide order ([3,4,2,5,1,6,0,7]).
+ */
+function centerOutFiles(width: number): number[] {
+  const center = (width - 1) / 2;
+  return Array.from({ length: width }, (_, i) => i).sort((a, b) => {
+    const distanceDelta = Math.abs(a - center) - Math.abs(b - center);
+    return distanceDelta !== 0 ? distanceDelta : a - b;
+  });
+}
 
-function rankSquaresCenterOut(rank: number): Coord[] {
-  return CENTER_OUT_FILES.map((file) => fileRankToCoord(file, rank)).filter((c): c is Coord => c !== null);
+function rankSquaresCenterOut(rank: number, dimensions: BoardDimensions): Coord[] {
+  return centerOutFiles(dimensions.width)
+    .map((file) => fileRankToCoord(file, rank, dimensions))
+    .filter((c): c is Coord => c !== null);
 }
 
 interface RosterItem { sigla: string; punti: number; categoria: string }
@@ -137,7 +170,8 @@ function expandRoster(roster: Roster): RosterItem[] {
  * reasonable default rather than a search): "pedone"-category pieces go on the front rank to
  * screen the rest, everything else stays on the back rank behind them, and within each rank
  * higher-value pieces land on the more central files (more central squares generally reach more
- * of the board). Overflow (e.g. more than 8 pedoni) spills onto the other rank's empty squares.
+ * of the board). Overflow (e.g. more than the rank's width in pedoni) spills onto the other
+ * rank's empty squares.
  */
 export function autoPlaceRemaining(state: DeploymentState, owner: Owner): DeploymentState {
   const roster = state.remaining[owner];
@@ -147,8 +181,8 @@ export function autoPlaceRemaining(state: DeploymentState, owner: Owner): Deploy
   const pedoneItems = items.filter((i) => i.categoria === 'pedone').sort((a, b) => b.punti - a.punti);
   const otherItems = items.filter((i) => i.categoria !== 'pedone').sort((a, b) => b.punti - a.punti);
 
-  const frontQueue = rankSquaresCenterOut(frontRank(owner)).filter((c) => !getPieceAt(state.board, c));
-  const backQueue = rankSquaresCenterOut(backRank(owner)).filter((c) => !getPieceAt(state.board, c));
+  const frontQueue = rankSquaresCenterOut(frontRank(owner, state.dimensions.height), state.dimensions).filter((c) => !getPieceAt(state.board, c));
+  const backQueue = rankSquaresCenterOut(backRank(owner, state.dimensions.height), state.dimensions).filter((c) => !getPieceAt(state.board, c));
 
   const placements: Array<{ sigla: string; coord: Coord }> = [];
   for (const item of pedoneItems) {

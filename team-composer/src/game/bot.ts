@@ -66,13 +66,13 @@ export function generateBotActions(state: GameState, owner: Owner): BotAction[] 
     return actions;
   }
 
-  for (const from of allCoords()) {
+  for (const from of allCoords(state.dimensions)) {
     const piece = getPieceAt(state.board, from);
     if (!piece || piece.owner !== owner) continue;
     const pieceDef = getPieceDef(piece.sigla);
 
     if (canMimic(pieceDef)) {
-      const threats = getOrphanThreats(state.board, from, owner);
+      const threats = getOrphanThreats(state.board, from, owner, state.dimensions);
       if (threats.length > 0) {
         for (const threat of threats) {
           for (const move of getLegalMovesForTurn(state, from, threat)) {
@@ -84,7 +84,7 @@ export function generateBotActions(state: GameState, owner: Owner): BotAction[] 
     }
 
     for (const move of getLegalMovesForTurn(state, from)) {
-      if (isPromotionMove(pieceDef, owner, move.to)) {
+      if (isPromotionMove(pieceDef, owner, move.to, state.dimensions)) {
         for (const promotionChoice of getPromotionOptions(pieceDef)) {
           actions.push({ kind: 'move', from, to: move.to, promotionChoice });
         }
@@ -94,13 +94,13 @@ export function generateBotActions(state: GameState, owner: Owner): BotAction[] 
     }
 
     if (canUseScocca(pieceDef)) {
-      for (const target of getScoccaTargets(state.board, from, owner)) {
+      for (const target of getScoccaTargets(state.board, from, owner, state.dimensions)) {
         actions.push({ kind: 'scocca', from, target });
       }
     }
 
     if (canSwap(pieceDef)) {
-      for (const target of getSwapTargets(state.board, from, owner)) {
+      for (const target of getSwapTargets(state.board, from, owner, state.dimensions)) {
         actions.push({ kind: 'swap', from, target });
       }
     }
@@ -108,7 +108,7 @@ export function generateBotActions(state: GameState, owner: Owner): BotAction[] 
     if (canRevive(pieceDef)) {
       const siglas = getRevivableSiglas(state.captured[owner]);
       if (siglas.length > 0) {
-        for (const target of getRevivalSquares(state.board, from, owner)) {
+        for (const target of getRevivalSquares(state.board, from, owner, state.dimensions)) {
           for (const sigla of siglas) {
             actions.push({ kind: 'revive', from, target, sigla });
           }
@@ -125,9 +125,9 @@ const CENTER_CONTROL_BONUS = 3;
 const CHECKMATE_SCORE = 100000;
 
 function positionalScore(state: GameState, owner: Owner): number {
-  let score = computeMaterialScore(state.board, owner);
+  let score = computeMaterialScore(state.board, owner, state.dimensions);
 
-  for (const coord of allCoords()) {
+  for (const coord of allCoords(state.dimensions)) {
     const piece = getPieceAt(state.board, coord);
     if (piece && piece.owner === owner && CENTER_SQUARES.has(coord)) {
       score += CENTER_CONTROL_BONUS;

@@ -1,6 +1,14 @@
 import { KING_SIGLA } from '../data/pieces';
 import type { CaptureMode } from '../types';
-import { allCoords, getPieceAt, type BoardState, type Coord, type Owner } from './board';
+import {
+  allCoords,
+  getPieceAt,
+  DEFAULT_BOARD_DIMENSIONS,
+  type BoardDimensions,
+  type BoardState,
+  type Coord,
+  type Owner,
+} from './board';
 import { applyMove, generatePseudoLegalMoves, type GeneratedMove } from './moveEngine';
 
 /**
@@ -12,8 +20,8 @@ import { applyMove, generatePseudoLegalMoves, type GeneratedMove } from './moveE
  */
 const CAPTURE_MODES_THAT_CANNOT_THREATEN_THE_KING: ReadonlySet<CaptureMode> = new Set(['ranged', 'area', 'none']);
 
-export function findKingCoord(board: BoardState, owner: Owner): Coord | undefined {
-  for (const coord of allCoords()) {
+export function findKingCoord(board: BoardState, owner: Owner, dimensions: BoardDimensions = DEFAULT_BOARD_DIMENSIONS): Coord | undefined {
+  for (const coord of allCoords(dimensions)) {
     const piece = getPieceAt(board, coord);
     if (piece && piece.owner === owner && piece.sigla === KING_SIGLA) return coord;
   }
@@ -21,15 +29,15 @@ export function findKingCoord(board: BoardState, owner: Owner): Coord | undefine
 }
 
 /** True if `owner`'s King is currently under a threat that could actually capture it. */
-export function isKingInCheck(board: BoardState, owner: Owner): boolean {
-  const kingCoord = findKingCoord(board, owner);
+export function isKingInCheck(board: BoardState, owner: Owner, dimensions: BoardDimensions = DEFAULT_BOARD_DIMENSIONS): boolean {
+  const kingCoord = findKingCoord(board, owner, dimensions);
   if (!kingCoord) return false;
 
-  for (const coord of allCoords()) {
+  for (const coord of allCoords(dimensions)) {
     const piece = getPieceAt(board, coord);
     if (!piece || piece.owner === owner) continue;
 
-    const moves = generatePseudoLegalMoves(board, coord);
+    const moves = generatePseudoLegalMoves(board, coord, dimensions);
     if (moves.some((m) => m.isCapture && m.capturedCoord === kingCoord && !CAPTURE_MODES_THAT_CANNOT_THREATEN_THE_KING.has(m.captureMode))) {
       return true;
     }
@@ -38,34 +46,35 @@ export function isKingInCheck(board: BoardState, owner: Owner): boolean {
 }
 
 /** Pseudo-legal moves for the piece at `from`, minus any that would leave its own King in check. */
-export function getLegalMoves(board: BoardState, from: Coord): GeneratedMove[] {
+export function getLegalMoves(board: BoardState, from: Coord, dimensions: BoardDimensions = DEFAULT_BOARD_DIMENSIONS): GeneratedMove[] {
   const piece = getPieceAt(board, from);
   if (!piece) return [];
 
-  return generatePseudoLegalMoves(board, from).filter((move) => !applyingMoveLeavesOwnKingInCheck(board, piece.owner, move));
+  return generatePseudoLegalMoves(board, from, dimensions)
+    .filter((move) => !applyingMoveLeavesOwnKingInCheck(board, piece.owner, move, dimensions));
 }
 
-function applyingMoveLeavesOwnKingInCheck(board: BoardState, owner: Owner, move: GeneratedMove): boolean {
+function applyingMoveLeavesOwnKingInCheck(board: BoardState, owner: Owner, move: GeneratedMove, dimensions: BoardDimensions): boolean {
   const resultingBoard = applyMove(board, move);
-  return isKingInCheck(resultingBoard, owner);
+  return isKingInCheck(resultingBoard, owner, dimensions);
 }
 
 /** All legal moves for every piece `owner` currently has on the board. */
-export function getAllLegalMoves(board: BoardState, owner: Owner): GeneratedMove[] {
+export function getAllLegalMoves(board: BoardState, owner: Owner, dimensions: BoardDimensions = DEFAULT_BOARD_DIMENSIONS): GeneratedMove[] {
   const moves: GeneratedMove[] = [];
-  for (const coord of allCoords()) {
+  for (const coord of allCoords(dimensions)) {
     const piece = getPieceAt(board, coord);
     if (piece && piece.owner === owner) {
-      moves.push(...getLegalMoves(board, coord));
+      moves.push(...getLegalMoves(board, coord, dimensions));
     }
   }
   return moves;
 }
 
-export function isCheckmate(board: BoardState, owner: Owner): boolean {
-  return isKingInCheck(board, owner) && getAllLegalMoves(board, owner).length === 0;
+export function isCheckmate(board: BoardState, owner: Owner, dimensions: BoardDimensions = DEFAULT_BOARD_DIMENSIONS): boolean {
+  return isKingInCheck(board, owner, dimensions) && getAllLegalMoves(board, owner, dimensions).length === 0;
 }
 
-export function isStalemate(board: BoardState, owner: Owner): boolean {
-  return !isKingInCheck(board, owner) && getAllLegalMoves(board, owner).length === 0;
+export function isStalemate(board: BoardState, owner: Owner, dimensions: BoardDimensions = DEFAULT_BOARD_DIMENSIONS): boolean {
+  return !isKingInCheck(board, owner, dimensions) && getAllLegalMoves(board, owner, dimensions).length === 0;
 }

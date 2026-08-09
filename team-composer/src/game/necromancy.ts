@@ -1,6 +1,16 @@
 import type { Piece } from '../types';
 import { sortSiglasByPunti } from '../data/pieces';
-import { coordToFileRank, fileRankToCoord, getPieceAt, type BoardState, type Coord, type Owner, type PieceInstance } from './board';
+import {
+  coordToFileRank,
+  fileRankToCoord,
+  getPieceAt,
+  DEFAULT_BOARD_DIMENSIONS,
+  type BoardDimensions,
+  type BoardState,
+  type Coord,
+  type Owner,
+  type PieceInstance,
+} from './board';
 import { getPieceDef } from './moveEngine';
 import { isSilenced } from './auras';
 
@@ -17,14 +27,14 @@ export function canRevive(pieceDef: Piece): boolean {
  * Empty squares adjacent (8-neighbor) to `from` where a revived piece could be placed. Empty if
  * the Necromante itself is silenced by an enemy Inquisitore's aura (README §7.3).
  */
-export function getRevivalSquares(board: BoardState, from: Coord, owner: Owner): Coord[] {
-  if (isSilenced(board, from, owner)) return [];
+export function getRevivalSquares(board: BoardState, from: Coord, owner: Owner, dimensions: BoardDimensions = DEFAULT_BOARD_DIMENSIONS): Coord[] {
+  if (isSilenced(board, from, owner, dimensions)) return [];
 
   const { file, rank } = coordToFileRank(from);
   const results: Coord[] = [];
 
   for (const { df, dr } of ADJACENT_OFFSETS) {
-    const coord = fileRankToCoord(file + df, rank + dr);
+    const coord = fileRankToCoord(file + df, rank + dr, dimensions);
     if (coord && !getPieceAt(board, coord)) results.push(coord);
   }
 

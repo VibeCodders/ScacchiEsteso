@@ -1,6 +1,15 @@
 import { KING_SIGLA } from '../data/pieces';
 import type { Piece } from '../types';
-import { coordToFileRank, fileRankToCoord, getPieceAt, type BoardState, type Coord, type Owner } from './board';
+import {
+  coordToFileRank,
+  fileRankToCoord,
+  getPieceAt,
+  DEFAULT_BOARD_DIMENSIONS,
+  type BoardDimensions,
+  type BoardState,
+  type Coord,
+  type Owner,
+} from './board';
 import { isSilenced } from './auras';
 
 const ADJACENT_OFFSETS: Array<{ df: number; dr: number }> = [
@@ -17,14 +26,14 @@ export function canSwap(pieceDef: Piece): boolean {
  * excluding the King (README, Mistico's alternativeActions: "esclusi": ["re"]). Empty if the
  * Mistico itself is silenced by an enemy Inquisitore's aura (README §7.3).
  */
-export function getSwapTargets(board: BoardState, from: Coord, owner: Owner): Coord[] {
-  if (isSilenced(board, from, owner)) return [];
+export function getSwapTargets(board: BoardState, from: Coord, owner: Owner, dimensions: BoardDimensions = DEFAULT_BOARD_DIMENSIONS): Coord[] {
+  if (isSilenced(board, from, owner, dimensions)) return [];
 
   const { file, rank } = coordToFileRank(from);
   const results: Coord[] = [];
 
   for (const { df, dr } of ADJACENT_OFFSETS) {
-    const coord = fileRankToCoord(file + df, rank + dr);
+    const coord = fileRankToCoord(file + df, rank + dr, dimensions);
     if (!coord) continue;
 
     const occupant = getPieceAt(board, coord);

@@ -166,6 +166,24 @@ describe('bot vs. bot self-play — PvC end-to-end (Step 12)', () => {
   }, 30000); // easy (depth 1) keeps each ply fast, but 60 of them still need more than the default 5s timeout
 });
 
+describe('chooseBotAction — custom board dimensions', () => {
+  it('considers and plays moves beyond the default 8×8 bounds when the state carries wider dimensions', () => {
+    let board = place(createEmptyBoard(), 'a1', 'RE', 'A');
+    board = place(board, 'j4', 'RE', 'B'); // only a valid square with width >= 10
+    board = place(board, 'a4', 'TO', 'A');
+    board = place(board, 'j1', 'TO', 'B');
+    const state = createInitialGameState(board, 'A', { width: 10, height: 8 });
+
+    const action = chooseBotAction(state, 'A', 'easy');
+    expect(action).not.toBeNull();
+    if (!action) return;
+    const result = applyBotAction(state, action);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.dimensions).toEqual({ width: 10, height: 8 });
+  });
+});
+
 describe('chooseBotAction — hard difficulty performance', () => {
   it('respects its wall-clock time budget (with slack for one in-flight branch) on the classic starting position', () => {
     const board = buildClassicStartingBoard();

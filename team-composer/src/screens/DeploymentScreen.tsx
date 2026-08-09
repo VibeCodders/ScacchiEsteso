@@ -11,7 +11,7 @@ import {
   placePiece,
   type DeploymentState,
 } from '../game/deployment';
-import { allCoords, type Owner } from '../game/board';
+import { allCoords, coordToFileRank, type Owner } from '../game/board';
 import { pieces, sortSiglasByPunti } from '../data/pieces';
 import '../App.css';
 
@@ -33,8 +33,8 @@ function DeploymentScreen() {
 
   const emptyOwnRankSquares = useMemo(() => {
     if (!deployment || !selectedSigla) return [];
-    const ranks = ownDeploymentRanks(deployment.currentPlacer);
-    return allCoords().filter((coord) => ranks.includes(Number(coord[1])) && !deployment.board.has(coord));
+    const ranks = ownDeploymentRanks(deployment.currentPlacer, deployment.dimensions);
+    return allCoords(deployment.dimensions).filter((coord) => ranks.includes(coordToFileRank(coord).rank) && !deployment.board.has(coord));
   }, [deployment, selectedSigla]);
 
   const handleCoinToss = () => {

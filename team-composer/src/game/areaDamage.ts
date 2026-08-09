@@ -1,6 +1,14 @@
 import { KING_SIGLA } from '../data/pieces';
 import type { Piece } from '../types';
-import { coordToFileRank, fileRankToCoord, getPieceAt, type BoardState, type Coord } from './board';
+import {
+  coordToFileRank,
+  fileRankToCoord,
+  getPieceAt,
+  DEFAULT_BOARD_DIMENSIONS,
+  type BoardDimensions,
+  type BoardState,
+  type Coord,
+} from './board';
 import type { GeneratedMove } from './moveEngine';
 
 const ORTHOGONAL_OFFSETS: Array<{ df: number; dr: number }> = [
@@ -21,12 +29,12 @@ export function triggersAreaDamage(pieceDef: Piece, move: GeneratedMove): boolea
  * Squares orthogonally adjacent to the landing square that get destroyed — both allied and enemy
  * pieces (README: "alleati e nemici"). The King is immune to collateral damage (README §3.3).
  */
-export function getAreaDamageVictims(board: BoardState, landingSquare: Coord): Coord[] {
+export function getAreaDamageVictims(board: BoardState, landingSquare: Coord, dimensions: BoardDimensions = DEFAULT_BOARD_DIMENSIONS): Coord[] {
   const { file, rank } = coordToFileRank(landingSquare);
   const victims: Coord[] = [];
 
   for (const { df, dr } of ORTHOGONAL_OFFSETS) {
-    const coord = fileRankToCoord(file + df, rank + dr);
+    const coord = fileRankToCoord(file + df, rank + dr, dimensions);
     if (!coord) continue;
     const occupant = getPieceAt(board, coord);
     if (occupant && occupant.sigla !== KING_SIGLA) victims.push(coord);

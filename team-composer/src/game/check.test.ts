@@ -120,3 +120,20 @@ describe('isStalemate', () => {
     expect(isStalemate(board, 'A')).toBe(false);
   });
 });
+
+describe('checkmate on a custom (non-default) board size', () => {
+  it('detects a corner ladder-mate on a 4×4 board, where the same position is NOT checkmate under the default 8×8 bounds', () => {
+    let board = place(createEmptyBoard(), 'a4', 'RE', 'B'); // cornered on a 4×4 board
+    board = place(board, 'd4', 'TO', 'A'); // checks along rank 4
+    board = place(board, 'd3', 'TO', 'A'); // covers rank 3, sealing off a3/b3
+    board = place(board, 'd1', 'RE', 'A');
+
+    const dims = { width: 4, height: 4 };
+    expect(isKingInCheck(board, 'B', dims)).toBe(true);
+    expect(isCheckmate(board, 'B', dims)).toBe(true);
+
+    // Under the default 8×8 bounds the very same board has escape squares (a5, b5, ...) that
+    // don't exist on the real 4×4 board — proving the dimensions parameter actually matters.
+    expect(isCheckmate(board, 'B')).toBe(false);
+  });
+});

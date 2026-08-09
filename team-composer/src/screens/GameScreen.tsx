@@ -151,7 +151,7 @@ function GameScreen() {
     if (!mover) return;
     const pieceDef = getPieceDef(mover.sigla);
 
-    if (isPromotionMove(pieceDef, mover.owner, to)) {
+    if (isPromotionMove(pieceDef, mover.owner, to, gameState.dimensions)) {
       const options = getPromotionOptions(pieceDef);
       if (options.length === 1) {
         commitPlainMove(from, to, options[0]);

@@ -1,4 +1,12 @@
-import { coordToFileRank, fileRankToCoord, getPieceAt, type BoardState, type Coord } from './board';
+import {
+  coordToFileRank,
+  fileRankToCoord,
+  getPieceAt,
+  DEFAULT_BOARD_DIMENSIONS,
+  type BoardDimensions,
+  type BoardState,
+  type Coord,
+} from './board';
 
 export interface Vector {
   df: number; // file delta
@@ -32,12 +40,18 @@ export interface RayResult {
  * primitive behind slide/step movement (README §7.1) and, later, ranged abilities that need to
  * check for a clear trajectory (e.g. the Arciere's "scocca").
  */
-export function castRay(board: BoardState, from: Coord, vector: Vector, maxSteps = 8): RayResult {
+export function castRay(
+  board: BoardState,
+  from: Coord,
+  vector: Vector,
+  maxSteps = 8,
+  dimensions: BoardDimensions = DEFAULT_BOARD_DIMENSIONS,
+): RayResult {
   const { file, rank } = coordToFileRank(from);
   const emptySquares: Coord[] = [];
 
   for (let dist = 1; dist <= maxSteps; dist++) {
-    const coord = fileRankToCoord(file + vector.df * dist, rank + vector.dr * dist);
+    const coord = fileRankToCoord(file + vector.df * dist, rank + vector.dr * dist, dimensions);
     if (!coord) break; // off the board
     if (getPieceAt(board, coord)) {
       return { emptySquares, blockedBy: coord };
@@ -53,7 +67,12 @@ export function castRay(board: BoardState, from: Coord, vector: Vector, maxSteps
  * i.e. a piece without the ability to ignore interposition (README §7.1) could draw a clear line
  * between the two. Returns false if `from`/`to` aren't aligned on a straight line at all.
  */
-export function isPathClear(board: BoardState, from: Coord, to: Coord): boolean {
+export function isPathClear(
+  board: BoardState,
+  from: Coord,
+  to: Coord,
+  dimensions: BoardDimensions = DEFAULT_BOARD_DIMENSIONS,
+): boolean {
   const vector = directionBetween(from, to);
   if (!vector) return false;
 
@@ -63,7 +82,7 @@ export function isPathClear(board: BoardState, from: Coord, to: Coord): boolean 
   let rank = r1 + vector.dr;
 
   while (file !== f2 || rank !== r2) {
-    const coord = fileRankToCoord(file, rank);
+    const coord = fileRankToCoord(file, rank, dimensions);
     if (!coord) return false; // shouldn't happen for two valid, aligned board coordinates
     if (getPieceAt(board, coord)) return false;
     file += vector.df;

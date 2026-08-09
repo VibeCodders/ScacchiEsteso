@@ -23,6 +23,14 @@ describe('computeMaterialScore', () => {
     board = place(board, 'a8', 'RA', 'B'); // 48pt, but owned by B
     expect(computeMaterialScore(board, 'A')).toBe(0);
   });
+
+  it('counts a piece placed beyond the default 8×8 bounds when the real board is wider/taller', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'j6', 'RA', 'A'); // 48pt — only a valid square on a board at least 10 wide, 6 tall
+    expect(computeMaterialScore(board, 'A', { width: 10, height: 6 })).toBe(48);
+    // Without the matching dimensions, allCoords() never visits j6, so it's silently missed.
+    expect(computeMaterialScore(board, 'A')).toBe(0);
+  });
 });
 
 describe('resolveAntiStalemateWinner', () => {

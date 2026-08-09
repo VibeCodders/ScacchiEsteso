@@ -1020,3 +1020,43 @@ describe('anti-stalemate game end (README §8.1-§8.3)', () => {
     expect(applyTurn(state, 'b1', 'a3').ok).toBe(false);
   });
 });
+
+describe('GameState — custom board dimensions', () => {
+  it('createInitialGameState carries the given dimensions through, defaulting to 8×8 when omitted', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+
+    expect(createInitialGameState(board, 'A').dimensions).toEqual({ width: 8, height: 8 });
+    expect(createInitialGameState(board, 'A', { width: 10, height: 6 }).dimensions).toEqual({ width: 10, height: 6 });
+  });
+
+  it('a move beyond the default 8×8 edge is legal when the state carries wider dimensions, and the resulting state keeps them', () => {
+    let board = place(createEmptyBoard(), 'a1', 'RE', 'A');
+    board = place(board, 'a6', 'RE', 'B');
+    board = place(board, 'a4', 'TO', 'A'); // will slide to j4 — beyond the default 8-file width
+
+    const state = createInitialGameState(board, 'A', { width: 10, height: 8 });
+    const result = applyTurn(state, 'a4', 'j4');
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.board.get('j4')?.sigla).toBe('TO');
+    expect(result.state.dimensions).toEqual({ width: 10, height: 8 });
+  });
+
+  it("anti-stalemate's material-score tiebreak correctly counts a piece placed beyond the default 8×8 bounds", () => {
+    let board = place(createEmptyBoard(), 'a1', 'RE', 'A');
+    board = place(board, 'a8', 'RE', 'B');
+    board = place(board, 'j1', 'RA', 'A'); // Regina, 48pt — only reachable with width >= 10; decisive material edge
+
+    let state = createInitialGameState(board, 'A', { width: 10, height: 8 });
+    state = { ...state, status: 'anti_stalemate', turnsSinceProgress: 20 };
+    // Re-derive status/winner the way applyTurn would, using the same dimensions-aware path.
+    const result = applyTurn({ ...state, status: 'ongoing', turnsSinceProgress: 19 }, 'a1', 'b1');
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.status).toBe('anti_stalemate');
+    expect(result.state.winner).toBe('A'); // only correct if the Regina at j1 was actually counted
+  });
+});
