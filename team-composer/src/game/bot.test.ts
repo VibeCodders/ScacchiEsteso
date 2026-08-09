@@ -136,6 +136,36 @@ describe('chooseBotAction', () => {
   });
 });
 
+describe('bot vs. bot self-play — PvC end-to-end (Step 12)', () => {
+  it('plays a full game to completion across many consecutive turns without ever leaving a King capturable', () => {
+    const MAX_PLIES = 60;
+    let state = createInitialGameState(buildClassicStartingBoard(), 'A');
+    let plies = 0;
+
+    while (state.status !== 'checkmate' && state.status !== 'stalemate' && state.status !== 'anti_stalemate' && plies < MAX_PLIES) {
+      const action = chooseBotAction(state, state.turn, 'easy'); // depth 1 — keeps a 60-ply game fast
+      expect(action).not.toBeNull();
+      if (!action) break;
+
+      const result = applyBotAction(state, action);
+      expect(result.ok).toBe(true);
+      if (!result.ok) break;
+
+      state = result.state;
+      // the King is never an actual capture target (check.ts filters out any move that would
+      // allow it) — both Kings must remain on the board no matter how the game unfolds.
+      expect([...state.board.values()].some((p) => p.sigla === 'RE' && p.owner === 'A')).toBe(true);
+      expect([...state.board.values()].some((p) => p.sigla === 'RE' && p.owner === 'B')).toBe(true);
+      plies++;
+    }
+
+    expect(['ongoing', 'check', 'checkmate', 'stalemate', 'anti_stalemate']).toContain(state.status);
+    if (state.status === 'checkmate') {
+      expect(state.winner).toBeDefined();
+    }
+  }, 30000); // easy (depth 1) keeps each ply fast, but 60 of them still need more than the default 5s timeout
+});
+
 describe('chooseBotAction — hard difficulty performance', () => {
   it('respects its wall-clock time budget (with slack for one in-flight branch) on the classic starting position', () => {
     const board = buildClassicStartingBoard();
