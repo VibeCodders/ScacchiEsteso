@@ -4,7 +4,8 @@ import { useGameSetup } from '../context/gameSetup';
 import Board from '../components/Board';
 import { getPieceDef } from '../game/moveEngine';
 import { getPromotionOptions, isPromotionMove } from '../game/promotion';
-import { createInitialGameState, applyTurn, getLegalMovesForTurn, skipExtraMove, type GameState } from '../game/turnManager';
+import { canUseScocca, getScoccaTargets } from '../game/scocca';
+import { createInitialGameState, applyTurn, applyScocca, getLegalMovesForTurn, skipExtraMove, type GameState } from '../game/turnManager';
 import { pieces } from '../data/pieces';
 import type { Coord, Owner } from '../game/board';
 import '../App.css';
@@ -33,13 +34,18 @@ function GameScreen() {
   const [orientation, setOrientation] = useState<Owner>('A');
   const [error, setError] = useState<string | null>(null);
   const [pendingPromotion, setPendingPromotion] = useState<PendingPromotion | null>(null);
+  const [scoccaMode, setScoccaMode] = useState(false);
 
   const effectiveSelected = gameState?.pendingExtraMove ?? selected;
 
   const legalDestinations = useMemo(() => {
     if (!gameState || !effectiveSelected) return [];
+    if (scoccaMode) {
+      const mover = gameState.board.get(effectiveSelected);
+      return mover ? getScoccaTargets(gameState.board, effectiveSelected, mover.owner) : [];
+    }
     return getLegalMovesForTurn(gameState, effectiveSelected).map((m) => m.to);
-  }, [gameState, effectiveSelected]);
+  }, [gameState, effectiveSelected, scoccaMode]);
 
   if (!deployedBoard || !gameState) {
     return (
@@ -92,6 +98,19 @@ function GameScreen() {
     commitPlainMove(from, to);
   };
 
+  const commitScocca = (from: Coord, target: Coord) => {
+    const result = applyScocca(gameState, from, target);
+    if (result.ok) {
+      setGameState(result.state);
+      setOrientation(result.state.turn);
+      setSelected(null);
+      setScoccaMode(false);
+      setError(null);
+    } else {
+      setError(result.reason);
+    }
+  };
+
   const handleSquareClick = (coord: Coord) => {
     if (gameOver || pendingPromotion) return;
 
@@ -100,6 +119,13 @@ function GameScreen() {
         attemptMove(gameState.pendingExtraMove, coord);
       }
       return; // no other square is selectable while the Berserker's bonus move is pending
+    }
+
+    if (scoccaMode && selected) {
+      if (legalDestinations.includes(coord)) {
+        commitScocca(selected, coord);
+      }
+      return;
     }
 
     const pieceHere = gameState.board.get(coord);
@@ -111,11 +137,13 @@ function GameScreen() {
 
     if (pieceHere && pieceHere.owner === gameState.turn) {
       setSelected(coord === selected ? null : coord);
+      setScoccaMode(false);
       setError(null);
       return;
     }
 
     setSelected(null);
+    setScoccaMode(false);
   };
 
   const handleDragStart = (coord: Coord) => {
@@ -124,6 +152,7 @@ function GameScreen() {
     const pieceHere = gameState.board.get(coord);
     if (pieceHere && pieceHere.owner === gameState.turn) {
       setSelected(coord);
+      setScoccaMode(false);
       setError(null);
     }
   };
@@ -167,12 +196,20 @@ function GameScreen() {
             onSquareClick={handleSquareClick}
             highlightedSquares={legalDestinations}
             selectedSquare={effectiveSelected}
-            onPieceDragStart={gameOver || pendingPromotion || gameState.pendingExtraMove ? undefined : handleDragStart}
-            onSquareDrop={gameOver || pendingPromotion ? undefined : handleSquareClick}
+            onPieceDragStart={gameOver || pendingPromotion || gameState.pendingExtraMove || scoccaMode ? undefined : handleDragStart}
+            onSquareDrop={gameOver || pendingPromotion || scoccaMode ? undefined : handleSquareClick}
           />
-          <button className="btn-improve" onClick={() => setOrientation((o) => (o === 'A' ? 'B' : 'A'))}>
-            🔄 Gira scacchiera (vista: {ownerLabel(orientation, mode)})
-          </button>
+          <div className="actions">
+            <button className="btn-improve" onClick={() => setOrientation((o) => (o === 'A' ? 'B' : 'A'))}>
+              🔄 Gira scacchiera (vista: {ownerLabel(orientation, mode)})
+            </button>
+            {selected && !gameState.pendingExtraMove && canUseScocca(getPieceDef(gameState.board.get(selected)!.sigla)) && (
+              <button className="btn-auto" onClick={() => setScoccaMode((m) => !m)}>
+                {scoccaMode ? '↩️ Annulla Scoccare' : '🏹 Scoccare'}
+              </button>
+            )}
+          </div>
+          {scoccaMode && <p>🏹 Modalità Scoccare: seleziona un bersaglio nemico a 3-4 caselle.</p>}
           {error && <p style={{ color: '#f87171' }}>{error}</p>}
 
           {gameState.pendingExtraMove && !pendingPromotion && (
@@ -232,6 +269,7 @@ function GameScreen() {
                     {entry.isCapture && ` (cattura ${entry.capturedSigla})`}
                     {entry.promotedTo && ` → promosso a ${entry.promotedTo}`}
                     {entry.isExtraMove && ' (movimento extra)'}
+                    {entry.isRangedAttack && ' (scocca)'}
                   </li>
                 ))}
               </ol>

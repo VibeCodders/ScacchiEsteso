@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createInitialGameState, applyTurn, skipExtraMove } from './turnManager';
+import { createInitialGameState, applyTurn, skipExtraMove, applyScocca } from './turnManager';
 import { createEmptyBoard, createPieceInstance, setPieceAt, type BoardState } from './board';
 
 function place(board: BoardState, coord: string, sigla: string, owner: 'A' | 'B' = 'A') {
@@ -410,5 +410,92 @@ describe('applyTurn — Berserker bonus move (README §4.2)', () => {
 
     const result = skipExtraMove(state);
     expect(result.ok).toBe(false);
+  });
+});
+
+describe('applyScocca — Arciere ranged elimination', () => {
+  it('eliminates the target without moving the Arciere, and passes the turn', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'AR', 'A');
+    board = place(board, 'd7', 'PE', 'B');
+    const state = createInitialGameState(board, 'A');
+
+    const result = applyScocca(state, 'd4', 'd7');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.state.board.get('d4')?.sigla).toBe('AR'); // attacker did not move
+    expect(result.state.board.has('d7')).toBe(false); // target eliminated
+    expect(result.state.turn).toBe('B');
+    expect(result.state.turnNumber).toBe(2);
+    expect(result.state.captured.B).toHaveLength(1);
+    expect(result.state.history[0]).toMatchObject({ isRangedAttack: true, isCapture: true, capturedSigla: 'PE' });
+  });
+
+  it('rejects a target outside the 3-4 square range', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'AR', 'A');
+    board = place(board, 'd6', 'PE', 'B'); // only 2 squares away
+    const state = createInitialGameState(board, 'A');
+
+    expect(applyScocca(state, 'd4', 'd6').ok).toBe(false);
+  });
+
+  it('rejects a target blocked by an interposed piece', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'AR', 'A');
+    board = place(board, 'd7', 'PE', 'B');
+    board = place(board, 'd5', 'CA', 'A');
+    const state = createInitialGameState(board, 'A');
+
+    expect(applyScocca(state, 'd4', 'd7').ok).toBe(false);
+  });
+
+  it('rejects targeting the King', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'd4', 'AR', 'A');
+    board = place(board, 'd7', 'RE', 'B');
+    const state = createInitialGameState(board, 'A');
+
+    expect(applyScocca(state, 'd4', 'd7').ok).toBe(false);
+  });
+
+  it('rejects the action for a piece that cannot scocca', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'TO', 'A');
+    board = place(board, 'd7', 'PE', 'B');
+    const state = createInitialGameState(board, 'A');
+
+    expect(applyScocca(state, 'd4', 'd7').ok).toBe(false);
+  });
+
+  it('rejects the action when the acting player\'s own King is already in check and this doesn\'t resolve it', () => {
+    let board = place(createEmptyBoard(), 'a1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'AR', 'A');
+    board = place(board, 'd7', 'PE', 'B'); // a valid scocca target, unrelated to the check
+    board = place(board, 'a8', 'TO', 'B'); // checks the King on a1 right now
+    const state = createInitialGameState(board, 'A');
+    expect(state.status).toBe('check');
+
+    const result = applyScocca(state, 'd4', 'd7');
+    expect(result.ok).toBe(false);
+  });
+
+  it('rejects any scocca once the game has ended', () => {
+    let board = place(createEmptyBoard(), 'a1', 'RE', 'A');
+    board = place(board, 'a8', 'TO', 'B');
+    board = place(board, 'b8', 'TO', 'B');
+    board = place(board, 'h8', 'RE', 'B');
+    board = place(board, 'e4', 'AR', 'A');
+    board = place(board, 'e7', 'PE', 'B');
+    const state = createInitialGameState(board, 'A');
+    expect(state.status).toBe('checkmate');
+
+    expect(applyScocca(state, 'e4', 'e7').ok).toBe(false);
   });
 });

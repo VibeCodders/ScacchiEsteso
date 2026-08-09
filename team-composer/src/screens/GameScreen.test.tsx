@@ -309,3 +309,67 @@ describe('GameScreen — Berserker bonus move', () => {
     expect(document.querySelector('[data-coord="d5"]')).toHaveClass('board-square-selected');
   });
 });
+
+describe('GameScreen — Arciere scocca', () => {
+  it('shows the "Scoccare" toggle only when an Arciere is selected', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'AR', 'A');
+    board = place(board, 'a1', 'TO', 'A');
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="a1"]')!);
+    expect(screen.queryByText(/Scoccare/i)).not.toBeInTheDocument();
+
+    fireEvent.click(document.querySelector('[data-coord="a1"]')!); // deselect
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    expect(screen.getByText(/🏹 Scoccare/i)).toBeInTheDocument();
+  });
+
+  it('entering scocca mode highlights ranged targets instead of normal move destinations', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'AR', 'A');
+    board = place(board, 'd7', 'PE', 'B');
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    expect(document.querySelector('[data-coord="d7"]')).not.toHaveClass('board-square-highlighted');
+
+    fireEvent.click(screen.getByText(/🏹 Scoccare/i));
+    expect(document.querySelector('[data-coord="d7"]')).toHaveClass('board-square-highlighted');
+    expect(document.querySelector('[data-coord="d5"]')).not.toHaveClass('board-square-highlighted'); // normal move square, not a scocca target
+  });
+
+  it('eliminates the target without moving the Arciere, and passes the turn', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'AR', 'A');
+    board = place(board, 'd7', 'PE', 'B');
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    fireEvent.click(screen.getByText(/🏹 Scoccare/i));
+    fireEvent.click(document.querySelector('[data-coord="d7"]')!);
+
+    expect(document.querySelector('[data-coord="d4"]')?.querySelector('svg')?.getAttribute('aria-label')).toBe('AR');
+    expect(document.querySelector('[data-coord="d7"]')?.querySelector('svg')).toBeNull();
+    expect(screen.getByText(/Turno: Giocatore 2/i)).toBeInTheDocument();
+    expect(screen.getByText(/\(scocca\)/i)).toBeInTheDocument();
+  });
+
+  it('"Annulla Scoccare" returns to normal move highlighting', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'AR', 'A');
+    board = place(board, 'd7', 'PE', 'B');
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    fireEvent.click(screen.getByText(/🏹 Scoccare/i));
+    fireEvent.click(screen.getByText(/Annulla Scoccare/i));
+
+    expect(document.querySelector('[data-coord="d5"]')).toHaveClass('board-square-highlighted'); // back to normal moves
+    expect(document.querySelector('[data-coord="d7"]')).not.toHaveClass('board-square-highlighted');
+  });
+});
