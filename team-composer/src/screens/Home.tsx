@@ -10,14 +10,14 @@ function Home() {
   const startPvp = () => {
     reset();
     setMode('pvp');
-    navigate('/team/a');
+    navigate('/game-settings');
   };
 
   const startPvc = (owner: Owner) => {
     reset();
     setMode('pvc');
     setHumanOwner(owner);
-    navigate(owner === 'A' ? '/team/a' : '/team/pc-choice');
+    navigate('/game-settings');
   };
 
   return (

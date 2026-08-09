@@ -1,4 +1,4 @@
-import type { Piece } from '../types';
+import type { Piece, Rules } from '../types';
 import { pieces, pickablePieces, rules, KING_SIGLA } from './pieces';
 import { getMaxIdenticalBySigla, countByCategory, computeBudgetSpent, computeTotalPieces } from './validators';
 
@@ -28,17 +28,17 @@ export interface OptimizerResult {
   message: string;
 }
 
-export function autoFillTeam(currentTeam: Map<string, number>): OptimizerResult {
+export function autoFillTeam(currentTeam: Map<string, number>, effectiveRules: Rules = rules): OptimizerResult {
   const team = cloneTeam(currentTeam);
   const currentCost = calcCost(team);
   const currentTotal = calcTotalPieces(team);
-  const remainingBudget = rules.budget - currentCost;
+  const remainingBudget = effectiveRules.budget - currentCost;
 
   if (remainingBudget <= 0) {
     return { team, changed: false, message: 'Budget esaurito, non è possibile aggiungere pezzi.' };
   }
 
-  if (currentTotal >= rules.maxPiecesTotal) {
+  if (currentTotal >= effectiveRules.maxPiecesTotal) {
     return { team, changed: false, message: 'Team già completo (numero massimo di pezzi raggiunto).' };
   }
 
@@ -46,7 +46,7 @@ export function autoFillTeam(currentTeam: Map<string, number>): OptimizerResult 
   let budgetLeft = remainingBudget;
   const maxPawns = rules.maxCountByCategory.pedone ?? rules.maxIdenticalDefault;
 
-  while (calcTotalPieces(team) < rules.maxPiecesTotal) {
+  while (calcTotalPieces(team) < effectiveRules.maxPiecesTotal) {
     let bestPiece: Piece | null = null;
     let bestScore = -Infinity;
 
@@ -87,16 +87,16 @@ export function autoFillTeam(currentTeam: Map<string, number>): OptimizerResult 
   }
 
   const newTotal = calcTotalPieces(team);
-  const budgetUsed = rules.budget - budgetLeft;
+  const budgetUsed = effectiveRules.budget - budgetLeft;
 
   return {
     team,
     changed: true,
-    message: `Aggiunti ${added} pezzo/i. Costo: ${budgetUsed}/${rules.budget} (${budgetLeft} rimanenti). Totale: ${newTotal} pezzi.`,
+    message: `Aggiunti ${added} pezzo/i. Costo: ${budgetUsed}/${effectiveRules.budget} (${budgetLeft} rimanenti). Totale: ${newTotal} pezzi.`,
   };
 }
 
-export function improveTeam(currentTeam: Map<string, number>): OptimizerResult {
+export function improveTeam(currentTeam: Map<string, number>, effectiveRules: Rules = rules): OptimizerResult {
   const team = cloneTeam(currentTeam);
   let improved = true;
   let iterations = 0;
@@ -108,9 +108,9 @@ export function improveTeam(currentTeam: Map<string, number>): OptimizerResult {
     iterations++;
 
     const currentCost = calcCost(team);
-    const currentDiff = Math.abs(rules.budget - currentCost);
+    const currentDiff = Math.abs(effectiveRules.budget - currentCost);
 
-    if (currentCost === rules.budget) {
+    if (currentCost === effectiveRules.budget) {
       return { team, changed: false, message: 'Il team è già perfettamente in budget!' };
     }
 
@@ -127,9 +127,9 @@ export function improveTeam(currentTeam: Map<string, number>): OptimizerResult {
         teamWithout.set(sigla, count - 1);
       }
       const costWithout = calcCost(teamWithout);
-      const diffWithout = Math.abs(rules.budget - costWithout);
+      const diffWithout = Math.abs(effectiveRules.budget - costWithout);
 
-      if (diffWithout < bestDiff && costWithout <= rules.budget) {
+      if (diffWithout < bestDiff && costWithout <= effectiveRules.budget) {
         bestDiff = diffWithout;
         bestTeam = teamWithout;
         improved = true;
@@ -144,9 +144,9 @@ export function improveTeam(currentTeam: Map<string, number>): OptimizerResult {
         if (piece.categoria === 'pedone' && calcTotalPawns(teamWithout) + 1 > maxPawns) continue;
 
         const costWithSwap = costWithout + piece.punti;
-        if (costWithSwap > rules.budget) continue;
+        if (costWithSwap > effectiveRules.budget) continue;
 
-        const diffSwap = Math.abs(rules.budget - costWithSwap);
+        const diffSwap = Math.abs(effectiveRules.budget - costWithSwap);
         if (diffSwap < bestDiff) {
           bestDiff = diffSwap;
           const swappedTeam = cloneTeam(teamWithout);
@@ -164,11 +164,11 @@ export function improveTeam(currentTeam: Map<string, number>): OptimizerResult {
       if (piece.categoria === 'pedone' && calcTotalPawns(team) + 1 > maxPawns) continue;
 
       const costAdd = currentCost + piece.punti;
-      if (costAdd > rules.budget) continue;
+      if (costAdd > effectiveRules.budget) continue;
       const totalAdd = calcTotalPieces(team) + 1;
-      if (totalAdd > rules.maxPiecesTotal) continue;
+      if (totalAdd > effectiveRules.maxPiecesTotal) continue;
 
-      const diffAdd = Math.abs(rules.budget - costAdd);
+      const diffAdd = Math.abs(effectiveRules.budget - costAdd);
       if (diffAdd < bestDiff) {
         bestDiff = diffAdd;
         const addedTeam = cloneTeam(team);
@@ -185,15 +185,15 @@ export function improveTeam(currentTeam: Map<string, number>): OptimizerResult {
   }
 
   const finalCost = calcCost(team);
-  const finalDiff = Math.abs(rules.budget - finalCost);
+  const finalDiff = Math.abs(effectiveRules.budget - finalCost);
 
-  if (finalCost === rules.budget) {
-    return { team, changed: true, message: `Team ottimizzato! Budget esatto: ${rules.budget}/${rules.budget}.` };
+  if (finalCost === effectiveRules.budget) {
+    return { team, changed: true, message: `Team ottimizzato! Budget esatto: ${effectiveRules.budget}/${effectiveRules.budget}.` };
   }
 
   return {
     team,
     changed: true,
-    message: `Team migliorato. Budget: ${finalCost}/${rules.budget} (differenza: ${finalDiff}).`,
+    message: `Team migliorato. Budget: ${finalCost}/${effectiveRules.budget} (differenza: ${finalDiff}).`,
   };
 }

@@ -1,8 +1,9 @@
 import { useState, useCallback, useMemo } from 'react';
-import { pieces, pickablePieces, rules, sortByPunti, BUDGET, MAX_PIECES_TOTAL, KING_SIGLA } from '../data/pieces';
+import { pieces, pickablePieces, rules, sortByPunti, scaleRulesForBoardSize, KING_SIGLA } from '../data/pieces';
 import { autoFillTeam, improveTeam } from '../data/optimizer';
 import { getMaxIdenticalBySigla, countByCategory, computeValidation } from '../data/validators';
 import { emptyTeam, type TeamMap } from '../context/gameSetup';
+import { DEFAULT_BOARD_DIMENSIONS, type BoardDimensions } from '../game/board';
 import type { Piece, TeamMember } from '../types';
 import '../App.css';
 
@@ -26,12 +27,21 @@ export interface TeamSelectScreenProps {
   onComplete: (team: TeamMap) => void;
   /** Max number of *distinct* non-classic siglas allowed this match. undefined/null = unlimited. */
   maxDistinctSpecialTypes?: number | null;
+  /** Board size for this match — budget and max-piece-count scale with its area. Defaults to the classic 8×8. */
+  boardDimensions?: BoardDimensions;
 }
 
-function TeamSelectScreen({ title, subtitle, initialTeam, completeButtonLabel, onComplete, maxDistinctSpecialTypes = null }: TeamSelectScreenProps) {
+function TeamSelectScreen({
+  title, subtitle, initialTeam, completeButtonLabel, onComplete,
+  maxDistinctSpecialTypes = null, boardDimensions = DEFAULT_BOARD_DIMENSIONS,
+}: TeamSelectScreenProps) {
   const [team, setTeam] = useState<TeamMap>(() => (initialTeam ? new Map(initialTeam) : emptyTeam()));
   const [filter, setFilter] = useState<string>('all');
   const [toasts, setToasts] = useState<Toast[]>([]);
+
+  const effectiveRules = useMemo(() => scaleRulesForBoardSize(rules, boardDimensions), [boardDimensions]);
+  const BUDGET = effectiveRules.budget;
+  const MAX_PIECES_TOTAL = effectiveRules.maxPiecesTotal;
 
   const addToast = useCallback((message: string, type: ToastType) => {
     const id = Date.now();
@@ -42,24 +52,24 @@ function TeamSelectScreen({ title, subtitle, initialTeam, completeButtonLabel, o
   }, []);
 
   const handleAutoFill = useCallback(() => {
-    const result = autoFillTeam(team);
+    const result = autoFillTeam(team, effectiveRules);
     if (result.changed) {
       setTeam(result.team);
       addToast(result.message, 'success');
     } else {
       addToast(result.message, 'info');
     }
-  }, [team, addToast]);
+  }, [team, addToast, effectiveRules]);
 
   const handleImprove = useCallback(() => {
-    const result = improveTeam(team);
+    const result = improveTeam(team, effectiveRules);
     if (result.changed) {
       setTeam(result.team);
       addToast(result.message, 'success');
     } else {
       addToast(result.message, 'info');
     }
-  }, [team, addToast]);
+  }, [team, addToast, effectiveRules]);
 
   const addPiece = useCallback((piece: Piece) => {
     if (piece.sigla === KING_SIGLA) return;
@@ -134,8 +144,8 @@ function TeamSelectScreen({ title, subtitle, initialTeam, completeButtonLabel, o
   const hasKing = kingCount === 1;
 
   const validation = useMemo(
-    () => computeValidation(team, pieces, rules, maxDistinctSpecialTypes),
-    [team, maxDistinctSpecialTypes],
+    () => computeValidation(team, pieces, effectiveRules, maxDistinctSpecialTypes),
+    [team, maxDistinctSpecialTypes, effectiveRules],
   );
 
   const filteredPieces = sortByPunti(

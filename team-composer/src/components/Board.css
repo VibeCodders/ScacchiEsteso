@@ -9,8 +9,7 @@
 
 .board-grid {
   display: grid;
-  grid-template-columns: repeat(8, minmax(2.5rem, 4rem));
-  grid-template-rows: repeat(8, minmax(2.5rem, 4rem));
+  /* grid-template-columns/rows are set inline by Board.tsx, sized from the game's board dimensions. */
   border: 3px solid #1a1a1a;
 }
 

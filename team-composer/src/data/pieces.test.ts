@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { pieces, pickablePieces, sortByPunti, sortSiglasByPunti } from './pieces';
+import { pieces, pickablePieces, rules, sortByPunti, sortSiglasByPunti, scaleRulesForBoardSize } from './pieces';
 
 describe('sortByPunti', () => {
   it('sorts a shuffled list of pieces ascending by point cost', () => {
@@ -66,5 +66,39 @@ describe('sortSiglasByPunti', () => {
 
   it('breaks a point-cost tie by sigla, alphabetically (Torre and Spettro are both 15pt)', () => {
     expect(sortSiglasByPunti(['TO', 'SP'])).toEqual(['SP', 'TO']);
+  });
+});
+
+describe('scaleRulesForBoardSize', () => {
+  it('leaves budget and maxPiecesTotal unchanged for the classic 8×8 board', () => {
+    const scaled = scaleRulesForBoardSize(rules, { width: 8, height: 8 });
+    expect(scaled.budget).toBe(rules.budget);
+    expect(scaled.maxPiecesTotal).toBe(rules.maxPiecesTotal);
+  });
+
+  it('doubles budget and maxPiecesTotal when the board area doubles', () => {
+    const scaled = scaleRulesForBoardSize(rules, { width: 16, height: 8 }); // 128 squares vs 64
+    expect(scaled.budget).toBe(rules.budget * 2);
+    expect(scaled.maxPiecesTotal).toBe(rules.maxPiecesTotal * 2);
+  });
+
+  it('halves budget and maxPiecesTotal (rounded) for a smaller board', () => {
+    const scaled = scaleRulesForBoardSize(rules, { width: 4, height: 8 }); // 32 squares — half the area
+    expect(scaled.budget).toBe(Math.round(rules.budget / 2));
+    expect(scaled.maxPiecesTotal).toBe(Math.round(rules.maxPiecesTotal / 2));
+  });
+
+  it('leaves every other rule (max identical, per-category caps) untouched', () => {
+    const scaled = scaleRulesForBoardSize(rules, { width: 20, height: 20 });
+    expect(scaled.maxIdenticalDefault).toBe(rules.maxIdenticalDefault);
+    expect(scaled.maxIdenticalByCategory).toEqual(rules.maxIdenticalByCategory);
+    expect(scaled.maxCountByCategory).toEqual(rules.maxCountByCategory);
+    expect(scaled.kingSigla).toBe(rules.kingSigla);
+  });
+
+  it('does not mutate the input rules object', () => {
+    const original = { ...rules };
+    scaleRulesForBoardSize(rules, { width: 12, height: 12 });
+    expect(rules).toEqual(original);
   });
 });

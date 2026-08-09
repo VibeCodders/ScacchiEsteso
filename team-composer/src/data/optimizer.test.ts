@@ -81,3 +81,31 @@ describe('improveTeam — still tries to approach the budget cap, but is optiona
     expect(computeBudgetSpent(result.team, pieces)).toBeLessThanOrEqual(rules.budget);
   });
 });
+
+describe('autoFillTeam / improveTeam — custom (scaled) rules', () => {
+  it('autoFillTeam respects a larger budget/piece-cap than the default rules when given custom ones', () => {
+    const biggerRules = { ...rules, budget: rules.budget * 2, maxPiecesTotal: rules.maxPiecesTotal * 2 };
+    const start = new Map<string, number>([[KING_SIGLA, 1]]);
+
+    const result = autoFillTeam(start, biggerRules);
+    expect(result.changed).toBe(true);
+    expect(computeBudgetSpent(result.team, pieces)).toBeLessThanOrEqual(biggerRules.budget);
+    expect(computeTotalPieces(result.team)).toBeLessThanOrEqual(biggerRules.maxPiecesTotal);
+    // with double the default budget, it should be able to add more pieces than the default rules would ever allow
+    const defaultResult = autoFillTeam(start);
+    expect(computeTotalPieces(result.team)).toBeGreaterThan(computeTotalPieces(defaultResult.team));
+  });
+
+  it('autoFillTeam still stops at the default budget when no custom rules are passed', () => {
+    const start = new Map<string, number>([[KING_SIGLA, 1]]);
+    const result = autoFillTeam(start);
+    expect(computeBudgetSpent(result.team, pieces)).toBeLessThanOrEqual(rules.budget);
+  });
+
+  it('improveTeam targets a custom budget instead of the default one', () => {
+    const smallerRules = { ...rules, budget: 20, maxPiecesTotal: rules.maxPiecesTotal };
+    const start = new Map<string, number>([[KING_SIGLA, 1], ['PE', 1]]); // 4pt, far from a 20pt target
+    const result = improveTeam(start, smallerRules);
+    expect(computeBudgetSpent(result.team, pieces)).toBeLessThanOrEqual(smallerRules.budget);
+  });
+});

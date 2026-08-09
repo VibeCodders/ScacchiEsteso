@@ -1,6 +1,7 @@
 import piecesRaw from './pieces.json';
 import rulesRaw from './rules.json';
 import type { Piece, Rules } from '../types';
+import { DEFAULT_BOARD_DIMENSIONS, type BoardDimensions } from '../game/board';
 
 export const pieces: Piece[] = piecesRaw as Piece[];
 export const rules: Rules = rulesRaw as Rules;
@@ -11,6 +12,22 @@ export const pickablePieces: Piece[] = pieces.filter((p) => !p.obtainableOnlyVia
 export const BUDGET = rules.budget;
 export const MAX_PIECES_TOTAL = rules.maxPiecesTotal;
 export const KING_SIGLA = rules.kingSigla;
+
+/**
+ * Scales `budget` and `maxPiecesTotal` proportionally to board area relative to the classic 8×8
+ * (154pt/16 pieces baseline) — a bigger board can support a proportionally bigger army. Every
+ * other rule (max identical copies, per-category caps) is left untouched; the user only asked for
+ * budget and total-piece-count to grow with the board.
+ */
+export function scaleRulesForBoardSize(baseRules: Rules, dimensions: BoardDimensions): Rules {
+  const baseArea = DEFAULT_BOARD_DIMENSIONS.width * DEFAULT_BOARD_DIMENSIONS.height;
+  const ratio = (dimensions.width * dimensions.height) / baseArea;
+  return {
+    ...baseRules,
+    budget: Math.round(baseRules.budget * ratio),
+    maxPiecesTotal: Math.round(baseRules.maxPiecesTotal * ratio),
+  };
+}
 
 /**
  * Sorts a copy of `items` by point cost, ascending, then by sigla — used everywhere a piece list

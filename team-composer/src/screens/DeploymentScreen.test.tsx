@@ -7,23 +7,26 @@ import { GameSetupProvider } from '../context/GameSetupContext';
 import { useGameSetup } from '../context/gameSetup';
 import { KING_SIGLA } from '../data/pieces';
 
-function Bootstrap({ teamA, teamB }: { teamA: Map<string, number>; teamB: Map<string, number> }) {
-  const { setTeamA, setTeamB, setMode, teamA: currentA } = useGameSetup();
+function Bootstrap({
+  teamA, teamB, dimensions,
+}: { teamA: Map<string, number>; teamB: Map<string, number>; dimensions?: { width: number; height: number } }) {
+  const { setTeamA, setTeamB, setMode, setBoardDimensions, teamA: currentA } = useGameSetup();
   useEffect(() => {
     setMode('pvp');
     setTeamA(teamA);
     setTeamB(teamB);
+    if (dimensions) setBoardDimensions(dimensions);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   if (!currentA) return null; // avoid rendering DeploymentScreen before context is populated
   return <DeploymentScreen />;
 }
 
-function renderDeployment(teamA: Map<string, number>, teamB: Map<string, number>) {
+function renderDeployment(teamA: Map<string, number>, teamB: Map<string, number>, dimensions?: { width: number; height: number }) {
   return render(
     <MemoryRouter>
       <GameSetupProvider>
-        <Bootstrap teamA={teamA} teamB={teamB} />
+        <Bootstrap teamA={teamA} teamB={teamB} dimensions={dimensions} />
       </GameSetupProvider>
     </MemoryRouter>,
   );
@@ -138,5 +141,13 @@ describe('DeploymentScreen', () => {
 
     const renderedSiglas = [...document.querySelectorAll('.piece-grid .piece-card .sigla')].map((el) => el.textContent);
     expect(renderedSiglas).toEqual(['PE', 'TO', 'RA']);
+  });
+
+  it('Step 14g: renders the board at the custom size configured in Game Settings, not the default 8×8', () => {
+    renderDeployment(new Map([[KING_SIGLA, 1]]), new Map([[KING_SIGLA, 1]]), { width: 10, height: 6 });
+    fireEvent.click(screen.getByText('Tira la moneta'));
+
+    expect(document.querySelectorAll('.board-square')).toHaveLength(60);
+    expect(document.querySelector('[data-coord="j6"]')).not.toBeNull(); // only exists on a 10-wide board
   });
 });

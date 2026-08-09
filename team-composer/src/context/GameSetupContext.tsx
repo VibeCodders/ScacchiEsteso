@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { GameSetupContext, type GameMode, type GameSetupContextValue, type MatchResult, type TeamMap } from './gameSetup';
-import type { BoardState, Owner } from '../game/board';
+import { DEFAULT_BOARD_DIMENSIONS, type BoardDimensions, type BoardState, type Owner } from '../game/board';
 import type { BotDifficulty } from '../game/bot';
 
 const DEFAULT_HUMAN_OWNER: Owner = 'A';
@@ -16,6 +16,7 @@ export function GameSetupProvider({ children }: { children: ReactNode }) {
   const [humanOwner, setHumanOwnerState] = useState<Owner>(DEFAULT_HUMAN_OWNER);
   const [botDifficulty, setBotDifficultyState] = useState<BotDifficulty>(DEFAULT_BOT_DIFFICULTY);
   const [maxDistinctSpecialTypes, setMaxDistinctSpecialTypesState] = useState<number | null>(DEFAULT_MAX_DISTINCT_SPECIAL_TYPES);
+  const [boardDimensions, setBoardDimensionsState] = useState<BoardDimensions>(DEFAULT_BOARD_DIMENSIONS);
 
   const setMode = useCallback((next: GameMode) => setModeState(next), []);
   const setTeamA = useCallback((team: TeamMap) => setTeamAState(team), []);
@@ -25,6 +26,7 @@ export function GameSetupProvider({ children }: { children: ReactNode }) {
   const setHumanOwner = useCallback((owner: Owner) => setHumanOwnerState(owner), []);
   const setBotDifficulty = useCallback((difficulty: BotDifficulty) => setBotDifficultyState(difficulty), []);
   const setMaxDistinctSpecialTypes = useCallback((limit: number | null) => setMaxDistinctSpecialTypesState(limit), []);
+  const setBoardDimensions = useCallback((dimensions: BoardDimensions) => setBoardDimensionsState(dimensions), []);
   const reset = useCallback(() => {
     setModeState(null);
     setTeamAState(null);
@@ -34,17 +36,18 @@ export function GameSetupProvider({ children }: { children: ReactNode }) {
     setHumanOwnerState(DEFAULT_HUMAN_OWNER);
     setBotDifficultyState(DEFAULT_BOT_DIFFICULTY);
     setMaxDistinctSpecialTypesState(DEFAULT_MAX_DISTINCT_SPECIAL_TYPES);
+    setBoardDimensionsState(DEFAULT_BOARD_DIMENSIONS);
   }, []);
 
   const value = useMemo<GameSetupContextValue>(
     () => ({
-      mode, teamA, teamB, deployedBoard, matchResult, humanOwner, botDifficulty, maxDistinctSpecialTypes,
+      mode, teamA, teamB, deployedBoard, matchResult, humanOwner, botDifficulty, maxDistinctSpecialTypes, boardDimensions,
       setMode, setTeamA, setTeamB, setDeployedBoard, setMatchResult, setHumanOwner, setBotDifficulty,
-      setMaxDistinctSpecialTypes, reset,
+      setMaxDistinctSpecialTypes, setBoardDimensions, reset,
     }),
-    [mode, teamA, teamB, deployedBoard, matchResult, humanOwner, botDifficulty, maxDistinctSpecialTypes,
+    [mode, teamA, teamB, deployedBoard, matchResult, humanOwner, botDifficulty, maxDistinctSpecialTypes, boardDimensions,
       setMode, setTeamA, setTeamB, setDeployedBoard, setMatchResult, setHumanOwner, setBotDifficulty,
-      setMaxDistinctSpecialTypes, reset],
+      setMaxDistinctSpecialTypes, setBoardDimensions, reset],
   );
 
   return <GameSetupContext.Provider value={value}>{children}</GameSetupContext.Provider>;

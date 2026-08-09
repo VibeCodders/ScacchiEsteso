@@ -13,10 +13,11 @@ function place(board: BoardState, coord: string, sigla: string, owner: 'A' | 'B'
   return setPieceAt(board, coord, createPieceInstance(sigla, owner));
 }
 
-function Bootstrap({ board }: { board: BoardState }) {
-  const { setDeployedBoard, setMode, deployedBoard } = useGameSetup();
+function Bootstrap({ board, dimensions }: { board: BoardState; dimensions?: { width: number; height: number } }) {
+  const { setDeployedBoard, setMode, setBoardDimensions, deployedBoard } = useGameSetup();
   useEffect(() => {
     setMode('pvp');
+    if (dimensions) setBoardDimensions(dimensions);
     setDeployedBoard(board);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -24,11 +25,11 @@ function Bootstrap({ board }: { board: BoardState }) {
   return <GameScreen />;
 }
 
-function renderGame(board: BoardState) {
+function renderGame(board: BoardState, dimensions?: { width: number; height: number }) {
   return render(
     <MemoryRouter>
       <GameSetupProvider>
-        <Bootstrap board={board} />
+        <Bootstrap board={board} dimensions={dimensions} />
       </GameSetupProvider>
     </MemoryRouter>,
   );
@@ -863,5 +864,24 @@ describe('GameScreen — Step 13a: special-ability buttons hidden when there is 
 
     fireEvent.click(document.querySelector('[data-coord="d4"]')!); // select the fully-surrounded Necromante
     expect(screen.queryByText(/Rianima alleato/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('GameScreen — Step 14g: custom board dimensions', () => {
+  it('renders the board at the configured custom size and lets a move beyond the default 8×8 bounds be played', () => {
+    let board = place(createEmptyBoard(), 'f1', KING_SIGLA, 'A');
+    board = place(board, 'f6', KING_SIGLA, 'B');
+    board = place(board, 'a4', 'TO', 'A');
+    const dimensions = { width: 10, height: 6 };
+    renderGame(board, dimensions);
+
+    expect(document.querySelectorAll('.board-square')).toHaveLength(60);
+    expect(document.querySelector('[data-coord="j4"]')).not.toBeNull(); // only exists on a 10-wide board
+
+    fireEvent.click(document.querySelector('[data-coord="a4"]')!);
+    fireEvent.click(document.querySelector('[data-coord="j4"]')!); // slide the full width — impossible on 8×8
+
+    expect(document.querySelector('[data-coord="j4"]')?.querySelector('svg')?.getAttribute('aria-label')).toBe('TO');
+    expect(screen.getByText(/Turno: Giocatore 2/i)).toBeInTheDocument();
   });
 });

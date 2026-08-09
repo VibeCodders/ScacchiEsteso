@@ -7,11 +7,13 @@ import DeploymentScreen from './screens/DeploymentScreen';
 import GameScreen from './screens/GameScreen';
 import GameOverScreen from './screens/GameOverScreen';
 import PieceEncyclopediaScreen from './screens/PieceEncyclopediaScreen';
+import GameSettingsScreen from './screens/GameSettingsScreen';
 
 function App() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
+      <Route path="/game-settings" element={<GameSettingsScreen />} />
       <Route path="/team/a" element={<TeamSelectRouteA />} />
       <Route path="/team/pc-choice" element={<PcTeamChoiceScreen />} />
       <Route path="/team/b" element={<TeamSelectRouteB />} />

@@ -37,10 +37,10 @@ interface PendingMimicChoice {
 
 function GameScreen() {
   const navigate = useNavigate();
-  const { mode, humanOwner, botDifficulty, deployedBoard, setMatchResult } = useGameSetup();
+  const { mode, humanOwner, botDifficulty, deployedBoard, boardDimensions, setMatchResult } = useGameSetup();
   const ownerLabel = (owner: Owner) => playerLabel(owner, mode, humanOwner);
 
-  const [gameState, setGameState] = useState<GameState | null>(() => (deployedBoard ? createInitialGameState(deployedBoard, 'A') : null));
+  const [gameState, setGameState] = useState<GameState | null>(() => (deployedBoard ? createInitialGameState(deployedBoard, 'A', boardDimensions) : null));
   const [selected, setSelected] = useState<Coord | null>(null);
   const [orientation, setOrientation] = useState<Owner>('A');
   const [error, setError] = useState<string | null>(null);
@@ -308,6 +308,7 @@ function GameScreen() {
           <Board
             pieces={gameState.board}
             orientation={orientation}
+            dimensions={gameState.dimensions}
             onSquareClick={handleSquareClick}
             highlightedSquares={legalDestinations}
             selectedSquare={effectiveSelected}

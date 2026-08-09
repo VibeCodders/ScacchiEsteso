@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 import { KING_SIGLA } from '../data/pieces';
-import type { BoardState, Owner } from '../game/board';
+import type { BoardDimensions, BoardState, Owner } from '../game/board';
 import type { GameStatus } from '../game/turnManager';
 import type { BotDifficulty } from '../game/bot';
 
@@ -34,6 +34,8 @@ export interface GameSetupState {
   botDifficulty: BotDifficulty;
   /** Max number of *distinct* non-classic siglas either team may include this match. null = unlimited. */
   maxDistinctSpecialTypes: number | null;
+  /** Board size for this match. Defaults to the classic 8×8. */
+  boardDimensions: BoardDimensions;
 }
 
 export interface GameSetupContextValue extends GameSetupState {
@@ -45,6 +47,7 @@ export interface GameSetupContextValue extends GameSetupState {
   setHumanOwner: (owner: Owner) => void;
   setBotDifficulty: (difficulty: BotDifficulty) => void;
   setMaxDistinctSpecialTypes: (limit: number | null) => void;
+  setBoardDimensions: (dimensions: BoardDimensions) => void;
   reset: () => void;
 }
 

@@ -21,7 +21,7 @@ function pickCoinToss(): Owner {
 
 function DeploymentScreen() {
   const navigate = useNavigate();
-  const { mode, humanOwner, teamA, teamB, setDeployedBoard } = useGameSetup();
+  const { mode, humanOwner, teamA, teamB, boardDimensions, setDeployedBoard } = useGameSetup();
   const [coinToss, setCoinToss] = useState<Owner | null>(null);
   const [deployment, setDeployment] = useState<DeploymentState | null>(null);
   const [selectedSigla, setSelectedSigla] = useState<string | null>(null);
@@ -40,7 +40,7 @@ function DeploymentScreen() {
   const handleCoinToss = () => {
     const winner = pickCoinToss();
     setCoinToss(winner);
-    setDeployment(createDeploymentState(teamAResolved, teamBResolved, winner));
+    setDeployment(createDeploymentState(teamAResolved, teamBResolved, winner, boardDimensions));
   };
 
   const handleSquareClick = (coord: string) => {
@@ -116,6 +116,7 @@ function DeploymentScreen() {
           <Board
             pieces={deployment.board}
             orientation={orientation}
+            dimensions={deployment.dimensions}
             onSquareClick={handleSquareClick}
             onSquareDrop={handleSquareClick}
             highlightedSquares={emptyOwnRankSquares}

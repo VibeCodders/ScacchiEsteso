@@ -72,6 +72,37 @@ describe('Board rendering', () => {
   });
 });
 
+describe('Board — Step 14e: custom board dimensions', () => {
+  it('renders width × height squares for a custom (non-default) board size', () => {
+    render(<Board pieces={createEmptyBoard()} orientation="A" dimensions={{ width: 10, height: 6 }} />);
+    expect(document.querySelectorAll('.board-square')).toHaveLength(60);
+  });
+
+  it('renders exactly 16 squares for the minimum 4×4 board', () => {
+    render(<Board pieces={createEmptyBoard()} orientation="A" dimensions={{ width: 4, height: 4 }} />);
+    expect(document.querySelectorAll('.board-square')).toHaveLength(16);
+  });
+
+  it('labels files with double letters past the 26th file, and ranks from the real height', () => {
+    render(<Board pieces={createEmptyBoard()} orientation="A" dimensions={{ width: 30, height: 4 }} />);
+    expect(document.querySelector('[data-coord="aa1"]')).not.toBeNull();
+    expect(document.querySelector('[data-coord="ad4"]')).not.toBeNull();
+  });
+
+  it('places a piece correctly on a coordinate beyond the default 8×8 bounds', () => {
+    const board = setPieceAt(createEmptyBoard(), 'j5', createPieceInstance('RE', 'A'));
+    render(<Board pieces={board} orientation="A" dimensions={{ width: 10, height: 8 }} />);
+
+    const j5 = document.querySelector('[data-coord="j5"]')!;
+    expect(j5.querySelector('svg')).not.toBeNull();
+  });
+
+  it('defaults to the classic 8×8 board when dimensions is omitted (used by the piece encyclopedia)', () => {
+    render(<Board pieces={createEmptyBoard()} orientation="A" />);
+    expect(document.querySelectorAll('.board-square')).toHaveLength(64);
+  });
+});
+
 describe('Board — Step 13c: move/capture flash', () => {
   it('renders a flash overlay only on the squares listed in flashSquares', () => {
     render(<Board pieces={createEmptyBoard()} orientation="A" flashSquares={['d4', 'e5']} flashVersion={1} />);
