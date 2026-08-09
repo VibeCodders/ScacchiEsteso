@@ -1,6 +1,6 @@
 import { pieces as PIECE_DEFS } from '../data/pieces';
 import type { CaptureMode, Direction, Move, Piece } from '../types';
-import { FILES, getPieceAt, type BoardState, type Coord, type Owner, type PieceInstance } from './board';
+import { FILES, getPieceAt, movePiece, removePieceAt, type BoardState, type Coord, type Owner, type PieceInstance } from './board';
 
 const PIECE_BY_SIGLA = new Map(PIECE_DEFS.map((p) => [p.sigla, p]));
 
@@ -260,6 +260,16 @@ function generateMovesForEntry(board: BoardState, from: Coord, piece: PieceInsta
     return generateJumpMoves(board, from, piece.owner, moveEntry, effectiveMaxSteps);
   }
   return generateStepOrSlideMoves(board, from, piece.owner, moveEntry, effectiveMaxSteps, isPawnDiagonalCaptureOnly(pieceDef, moveEntry));
+}
+
+/**
+ * Applies a generated move to the board, returning a new board. Removes the captured piece
+ * first (which may sit on a different square than `to`, e.g. the DA checkers-style jump) and
+ * then relocates the moving piece.
+ */
+export function applyMove(board: BoardState, move: GeneratedMove): BoardState {
+  const withCaptureResolved = move.capturedCoord ? removePieceAt(board, move.capturedCoord) : board;
+  return movePiece(withCaptureResolved, move.from, move.to);
 }
 
 /** All pseudo-legal moves for the piece at `from` — no notion of check yet (see check.ts). */
