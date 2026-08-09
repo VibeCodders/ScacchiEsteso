@@ -1,8 +1,9 @@
-import { createPieceInstance, coordToFileRank, fileRankToCoord, getPieceAt, removePieceAt, setPieceAt, type BoardState, type Coord, type Owner, type PieceInstance } from './board';
+import { createPieceInstance, coordToFileRank, fileRankToCoord, getPieceAt, removePieceAt, setPieceAt, swapPieces, type BoardState, type Coord, type Owner, type PieceInstance } from './board';
 import { applyMove, getPieceDef, type GeneratedMove } from './moveEngine';
 import { getLegalMoves, isCheckmate, isKingInCheck, isStalemate } from './check';
 import { getPromotionOptions, isPromotionMove } from './promotion';
 import { canUseScocca, getScoccaTargets } from './scocca';
+import { canSwap, getSwapTargets } from './swap';
 
 export type GameStatus = 'ongoing' | 'check' | 'checkmate' | 'stalemate';
 
@@ -21,6 +22,8 @@ export interface HistoryEntry {
   isExtraMove?: boolean;
   /** True for an Arciere's "scocca" — a ranged elimination that doesn't move the attacker. */
   isRangedAttack?: boolean;
+  /** True for a Mistico's "scambio di posizione" with an adjacent ally. */
+  isSwap?: boolean;
 }
 
 export interface GameState {
@@ -339,6 +342,72 @@ export function applyScocca(state: GameState, from: Coord, target: Coord): Apply
       turnNumber: state.turnNumber + 1,
       history: [...state.history, historyEntry],
       captured: nextCaptured,
+      status,
+      winner: status === 'checkmate' ? piece.owner : undefined,
+      enPassantTarget: null,
+      pendingExtraMove: null,
+    },
+  };
+}
+
+/**
+ * Plays a Mistico's "scambio di posizione" as the turn's action: instantly swaps places with an
+ * adjacent ally (never the King), as an alternative to a normal move. Like any action, it's
+ * rejected if it would leave the acting player's own King in check (README §3.2).
+ */
+export function applySwap(state: GameState, from: Coord, target: Coord): ApplyTurnResult {
+  if (GAME_OVER_STATUSES.has(state.status)) {
+    return { ok: false, reason: 'La partita è terminata.' };
+  }
+  if (state.pendingExtraMove) {
+    return { ok: false, reason: 'Devi prima completare (o saltare) il movimento extra del Berserker.' };
+  }
+
+  const piece = getPieceAt(state.board, from);
+  if (!piece) {
+    return { ok: false, reason: `Nessun pezzo in ${from}.` };
+  }
+  if (piece.owner !== state.turn) {
+    return { ok: false, reason: 'Non è il turno di questo giocatore.' };
+  }
+
+  const pieceDef = getPieceDef(piece.sigla);
+  if (!canSwap(pieceDef)) {
+    return { ok: false, reason: 'Questo pezzo non può scambiare posizione.' };
+  }
+
+  const targets = getSwapTargets(state.board, from, piece.owner);
+  if (!targets.includes(target)) {
+    return { ok: false, reason: `Scambio non valido con: ${target}.` };
+  }
+
+  const nextBoard = swapPieces(state.board, from, target);
+
+  if (isKingInCheck(nextBoard, piece.owner)) {
+    return { ok: false, reason: 'Questa azione lascerebbe il tuo Re sotto scacco.' };
+  }
+
+  const nextTurn: Owner = piece.owner === 'A' ? 'B' : 'A';
+  const status = computeStatus(nextBoard, nextTurn);
+
+  const historyEntry: HistoryEntry = {
+    turnNumber: state.turnNumber,
+    owner: piece.owner,
+    from,
+    to: target,
+    sigla: piece.sigla,
+    isCapture: false,
+    isSwap: true,
+  };
+
+  return {
+    ok: true,
+    state: {
+      board: nextBoard,
+      turn: nextTurn,
+      turnNumber: state.turnNumber + 1,
+      history: [...state.history, historyEntry],
+      captured: state.captured,
       status,
       winner: status === 'checkmate' ? piece.owner : undefined,
       enPassantTarget: null,

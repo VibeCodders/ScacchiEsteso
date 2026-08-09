@@ -63,6 +63,21 @@ export function movePiece(board: BoardState, from: Coord, to: Coord): BoardState
   return next;
 }
 
+/** Swaps two occupied squares' pieces in place (e.g. the Mistico's "scambio di posizione"). Both squares mark hasMoved. */
+export function swapPieces(board: BoardState, coordA: Coord, coordB: Coord): BoardState {
+  if (!isValidCoord(coordA) || !isValidCoord(coordB)) {
+    throw new Error(`Invalid coordinate in swap: ${coordA} <-> ${coordB}`);
+  }
+  const pieceA = board.get(coordA);
+  const pieceB = board.get(coordB);
+  if (!pieceA || !pieceB) throw new Error(`Both squares must be occupied to swap: ${coordA}, ${coordB}`);
+
+  const next = new Map(board);
+  next.set(coordA, { ...pieceB, hasMoved: true });
+  next.set(coordB, { ...pieceA, hasMoved: true });
+  return next;
+}
+
 let instanceCounter = 0;
 
 export function createPieceInstance(sigla: string, owner: Owner, resistenzaCorrente = 0): PieceInstance {

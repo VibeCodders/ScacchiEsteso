@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createInitialGameState, applyTurn, skipExtraMove, applyScocca } from './turnManager';
+import { createInitialGameState, applyTurn, skipExtraMove, applyScocca, applySwap } from './turnManager';
 import { createEmptyBoard, createPieceInstance, setPieceAt, type BoardState } from './board';
 
 function place(board: BoardState, coord: string, sigla: string, owner: 'A' | 'B' = 'A') {
@@ -497,5 +497,77 @@ describe('applyScocca — Arciere ranged elimination', () => {
     expect(state.status).toBe('checkmate');
 
     expect(applyScocca(state, 'e4', 'e7').ok).toBe(false);
+  });
+});
+
+describe('applySwap — Mistico position swap', () => {
+  it('swaps the two pieces and passes the turn', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'MI', 'A');
+    board = place(board, 'd5', 'CA', 'A');
+    const state = createInitialGameState(board, 'A');
+
+    const result = applySwap(state, 'd4', 'd5');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.state.board.get('d5')?.sigla).toBe('MI');
+    expect(result.state.board.get('d4')?.sigla).toBe('CA');
+    expect(result.state.turn).toBe('B');
+    expect(result.state.turnNumber).toBe(2);
+    expect(result.state.history[0]).toMatchObject({ isSwap: true, from: 'd4', to: 'd5' });
+  });
+
+  it('rejects swapping with the King', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd1', 'MI', 'A');
+    const state = createInitialGameState(board, 'A');
+
+    expect(applySwap(state, 'd1', 'e1').ok).toBe(false);
+  });
+
+  it('rejects swapping with an enemy piece', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'MI', 'A');
+    board = place(board, 'd5', 'PE', 'B');
+    const state = createInitialGameState(board, 'A');
+
+    expect(applySwap(state, 'd4', 'd5').ok).toBe(false);
+  });
+
+  it('rejects swapping onto an empty square', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'MI', 'A');
+    const state = createInitialGameState(board, 'A');
+
+    expect(applySwap(state, 'd4', 'd5').ok).toBe(false);
+  });
+
+  it('rejects the action for a piece that cannot swap', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'TO', 'A');
+    board = place(board, 'd5', 'CA', 'A');
+    const state = createInitialGameState(board, 'A');
+
+    expect(applySwap(state, 'd4', 'd5').ok).toBe(false);
+  });
+
+  it('rejects a swap while the acting player\'s own King is already in check and this doesn\'t resolve it', () => {
+    // Swapping two other pieces can't clear a pre-existing check (occupancy is unchanged).
+    let board = place(createEmptyBoard(), 'a1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'MI', 'A');
+    board = place(board, 'd5', 'CA', 'A');
+    board = place(board, 'a8', 'TO', 'B'); // checks the King on a1 right now
+    const state = createInitialGameState(board, 'A');
+    expect(state.status).toBe('check');
+
+    const result = applySwap(state, 'd4', 'd5');
+    expect(result.ok).toBe(false);
   });
 });

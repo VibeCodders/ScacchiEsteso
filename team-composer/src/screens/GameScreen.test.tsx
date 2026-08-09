@@ -373,3 +373,67 @@ describe('GameScreen — Arciere scocca', () => {
     expect(document.querySelector('[data-coord="d7"]')).not.toHaveClass('board-square-highlighted');
   });
 });
+
+describe('GameScreen — Mistico swap', () => {
+  it('shows the "Scambia posizione" toggle only when a Mistico is selected', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'MI', 'A');
+    board = place(board, 'a1', 'TO', 'A');
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="a1"]')!);
+    expect(screen.queryByText(/Scambia posizione/i)).not.toBeInTheDocument();
+
+    fireEvent.click(document.querySelector('[data-coord="a1"]')!); // deselect
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    expect(screen.getByText(/🔀 Scambia posizione/i)).toBeInTheDocument();
+  });
+
+  it('entering swap mode highlights adjacent allies instead of normal move destinations', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'MI', 'A');
+    board = place(board, 'd5', 'CA', 'A');
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    expect(document.querySelector('[data-coord="b4"]')).toHaveClass('board-square-highlighted'); // normal move square (west, unblocked)
+
+    fireEvent.click(screen.getByText(/🔀 Scambia posizione/i));
+    expect(document.querySelector('[data-coord="d5"]')).toHaveClass('board-square-highlighted'); // adjacent ally
+    expect(document.querySelector('[data-coord="b4"]')).not.toHaveClass('board-square-highlighted');
+  });
+
+  it('swaps the two pieces and passes the turn', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'MI', 'A');
+    board = place(board, 'd5', 'CA', 'A');
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    fireEvent.click(screen.getByText(/🔀 Scambia posizione/i));
+    fireEvent.click(document.querySelector('[data-coord="d5"]')!);
+
+    expect(document.querySelector('[data-coord="d5"]')?.querySelector('svg')?.getAttribute('aria-label')).toBe('MI');
+    expect(document.querySelector('[data-coord="d4"]')?.querySelector('svg')?.getAttribute('aria-label')).toBe('CA');
+    expect(screen.getByText(/Turno: Giocatore 2/i)).toBeInTheDocument();
+    expect(screen.getByText(/\(scambio\)/i)).toBeInTheDocument();
+  });
+
+  it('"Annulla Scambio" returns to normal move highlighting', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'MI', 'A');
+    board = place(board, 'd5', 'CA', 'A');
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    fireEvent.click(screen.getByText(/🔀 Scambia posizione/i));
+    fireEvent.click(screen.getByText(/Annulla Scambio/i));
+
+    expect(document.querySelector('[data-coord="b4"]')).toHaveClass('board-square-highlighted'); // back to normal moves
+    expect(document.querySelector('[data-coord="d5"]')).not.toHaveClass('board-square-highlighted');
+  });
+});
