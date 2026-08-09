@@ -24,9 +24,11 @@ export interface TeamSelectScreenProps {
   initialTeam?: TeamMap;
   completeButtonLabel?: string;
   onComplete: (team: TeamMap) => void;
+  /** Max number of *distinct* non-classic siglas allowed this match. undefined/null = unlimited. */
+  maxDistinctSpecialTypes?: number | null;
 }
 
-function TeamSelectScreen({ title, subtitle, initialTeam, completeButtonLabel, onComplete }: TeamSelectScreenProps) {
+function TeamSelectScreen({ title, subtitle, initialTeam, completeButtonLabel, onComplete, maxDistinctSpecialTypes = null }: TeamSelectScreenProps) {
   const [team, setTeam] = useState<TeamMap>(() => (initialTeam ? new Map(initialTeam) : emptyTeam()));
   const [filter, setFilter] = useState<string>('all');
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -131,7 +133,10 @@ function TeamSelectScreen({ title, subtitle, initialTeam, completeButtonLabel, o
   const kingCount = team.get(KING_SIGLA) ?? 0;
   const hasKing = kingCount === 1;
 
-  const validation = useMemo(() => computeValidation(team, pieces, rules), [team]);
+  const validation = useMemo(
+    () => computeValidation(team, pieces, rules, maxDistinctSpecialTypes),
+    [team, maxDistinctSpecialTypes],
+  );
 
   const filteredPieces = sortByPunti(
     filter === 'all' ? pickablePieces : pickablePieces.filter((p: Piece) => p.classico === (filter === 'classico')),
@@ -328,6 +333,12 @@ function TeamSelectScreen({ title, subtitle, initialTeam, completeButtonLabel, o
                   <span className="icon">{validation.kingCount.valid ? '✓' : '✗'}</span>
                   <span>{validation.kingCount.message}</span>
                 </div>
+                {maxDistinctSpecialTypes != null && (
+                  <div className={`validation-item ${validation.specialTypesLimit.level}`}>
+                    <span className="icon">{validation.specialTypesLimit.valid ? '✓' : '✗'}</span>
+                    <span>{validation.specialTypesLimit.message}</span>
+                  </div>
+                )}
               </div>
 
               <div className="actions">

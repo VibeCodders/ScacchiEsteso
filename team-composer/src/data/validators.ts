@@ -33,7 +33,23 @@ export function computeTotalPieces(team: Map<string, number>): number {
   return total;
 }
 
-export function computeValidation(team: Map<string, number>, pieces: Piece[], rules: Rules): ValidationResult {
+/** Number of *distinct* non-classic ("speciale") siglas in the team — copies of the same sigla count once. */
+export function computeDistinctSpecialTypes(team: Map<string, number>, pieces: Piece[]): number {
+  let distinct = 0;
+  team.forEach((count, sigla) => {
+    if (count <= 0) return;
+    const piece = pieces.find((p) => p.sigla === sigla);
+    if (piece && !piece.classico) distinct += 1;
+  });
+  return distinct;
+}
+
+export function computeValidation(
+  team: Map<string, number>,
+  pieces: Piece[],
+  rules: Rules,
+  maxDistinctSpecialTypes: number | null = null,
+): ValidationResult {
   const budgetSpent = computeBudgetSpent(team, pieces);
   const budgetRemaining = rules.budget - budgetSpent;
   const budgetOk = budgetSpent <= rules.budget;
@@ -75,7 +91,15 @@ export function computeValidation(team: Map<string, number>, pieces: Piece[], ru
       ? 'Nessun Re presente'
       : `Troppi Re: ${kingCount} (1 obbligatorio)`;
 
-  const overall = budgetOk && totalPiecesOk && maxFiveOk && maxPawnsOk && hasKingOk && kingCountOk;
+  const distinctSpecialTypes = computeDistinctSpecialTypes(team, pieces);
+  const specialTypesLimitOk = maxDistinctSpecialTypes == null || distinctSpecialTypes <= maxDistinctSpecialTypes;
+  const specialTypesLimitMsg = maxDistinctSpecialTypes == null
+    ? 'Nessun limite di tipi speciali'
+    : specialTypesLimitOk
+      ? `Tipi speciali distinti: ${distinctSpecialTypes}/${maxDistinctSpecialTypes} max`
+      : `Troppi tipi speciali distinti: ${distinctSpecialTypes}/${maxDistinctSpecialTypes} max`;
+
+  const overall = budgetOk && totalPiecesOk && maxFiveOk && maxPawnsOk && hasKingOk && kingCountOk && specialTypesLimitOk;
 
   return {
     budget: { valid: budgetOk, message: budgetMsg, level: budgetOk ? 'success' : 'error' },
@@ -84,6 +108,7 @@ export function computeValidation(team: Map<string, number>, pieces: Piece[], ru
     maxPawns: { valid: maxPawnsOk, message: pawnsMsg, level: maxPawnsOk ? 'success' : 'error' },
     hasKing: { valid: hasKingOk, message: kingMsg, level: hasKingOk ? 'success' : 'error' },
     kingCount: { valid: kingCountOk, message: kingCountMsg, level: kingCountOk ? 'success' : 'error' },
+    specialTypesLimit: { valid: specialTypesLimitOk, message: specialTypesLimitMsg, level: specialTypesLimitOk ? 'success' : 'error' },
     overall,
   };
 }

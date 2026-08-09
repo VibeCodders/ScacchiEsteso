@@ -32,6 +32,8 @@ export interface GameSetupState {
   /** In PvC, which owner the human plays (the bot takes the opposite owner). Unused in PvP. */
   humanOwner: Owner;
   botDifficulty: BotDifficulty;
+  /** Max number of *distinct* non-classic siglas either team may include this match. null = unlimited. */
+  maxDistinctSpecialTypes: number | null;
 }
 
 export interface GameSetupContextValue extends GameSetupState {
@@ -42,6 +44,7 @@ export interface GameSetupContextValue extends GameSetupState {
   setMatchResult: (result: MatchResult) => void;
   setHumanOwner: (owner: Owner) => void;
   setBotDifficulty: (difficulty: BotDifficulty) => void;
+  setMaxDistinctSpecialTypes: (limit: number | null) => void;
   reset: () => void;
 }
 

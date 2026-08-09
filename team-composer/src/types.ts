@@ -96,5 +96,6 @@ export interface ValidationResult {
   maxPawns: ConstraintResult;
   hasKing: ConstraintResult;
   kingCount: ConstraintResult;
+  specialTypesLimit: ConstraintResult;
   overall: boolean;
 }

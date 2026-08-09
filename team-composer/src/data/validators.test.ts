@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { pieces, rules, KING_SIGLA } from './pieces';
-import { computeValidation, computeBudgetSpent, getMaxIdenticalBySigla } from './validators';
+import { computeValidation, computeBudgetSpent, computeDistinctSpecialTypes, getMaxIdenticalBySigla } from './validators';
 
 function teamOf(entries: Array<[string, number]>): Map<string, number> {
   return new Map(entries);
@@ -104,5 +104,51 @@ describe('computeValidation — budget as a cap, not an exact requirement', () =
 
     const twoKings = teamOf([[KING_SIGLA, 2]]);
     expect(computeValidation(twoKings, pieces, rules).kingCount.valid).toBe(false);
+  });
+});
+
+describe('computeDistinctSpecialTypes', () => {
+  it('counts distinct non-classic siglas, not total copies (3 Colossi + 1 Necromante = 2 types, not 4)', () => {
+    const team = teamOf([[KING_SIGLA, 1], ['CO', 3], ['NE', 1]]);
+    expect(computeDistinctSpecialTypes(team, pieces)).toBe(2);
+  });
+
+  it('never counts classic pieces (including the King) toward the total', () => {
+    const team = teamOf([[KING_SIGLA, 1], ['RA', 4], ['TO', 2], ['CA', 1]]); // all classico: true
+    expect(computeDistinctSpecialTypes(team, pieces)).toBe(0);
+  });
+
+  it('is 0 for an empty/King-only team', () => {
+    expect(computeDistinctSpecialTypes(teamOf([[KING_SIGLA, 1]]), pieces)).toBe(0);
+  });
+});
+
+describe('computeValidation — optional max-distinct-special-types limit', () => {
+  it('is always valid when no limit is set (default, null)', () => {
+    const team = teamOf([[KING_SIGLA, 1], ['CO', 1], ['NE', 1], ['BE', 1]]); // 3 distinct special types
+    const result = computeValidation(team, pieces, rules, null);
+    expect(result.specialTypesLimit.valid).toBe(true);
+    expect(result.overall).toBe(true);
+  });
+
+  it('is valid when distinct special types are within the limit, regardless of copy count', () => {
+    const team = teamOf([[KING_SIGLA, 1], ['CO', 2], ['NE', 1]]); // 2 distinct types, within budget (44*2 + 30 = 118)
+    const result = computeValidation(team, pieces, rules, 2);
+    expect(result.specialTypesLimit.valid).toBe(true);
+    expect(result.overall).toBe(true);
+  });
+
+  it('is invalid, and drags down "overall", when distinct special types exceed the limit', () => {
+    const team = teamOf([[KING_SIGLA, 1], ['CO', 1], ['NE', 1], ['BE', 1]]); // 3 distinct types
+    const result = computeValidation(team, pieces, rules, 2);
+    expect(result.specialTypesLimit.valid).toBe(false);
+    expect(result.specialTypesLimit.level).toBe('error');
+    expect(result.overall).toBe(false);
+  });
+
+  it('classic pieces never count toward the limit, however many are included', () => {
+    const team = teamOf([[KING_SIGLA, 1], ['RA', 1], ['TO', 1], ['AL', 1], ['CA', 1], ['CO', 1]]); // 1 distinct special type
+    const result = computeValidation(team, pieces, rules, 1);
+    expect(result.specialTypesLimit.valid).toBe(true);
   });
 });

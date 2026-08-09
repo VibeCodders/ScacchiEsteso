@@ -4,7 +4,7 @@ import { useGameSetup, type TeamMap } from '../context/gameSetup';
 
 function TeamSelectRouteA() {
   const navigate = useNavigate();
-  const { mode, humanOwner, teamA, setTeamA } = useGameSetup();
+  const { mode, humanOwner, teamA, setTeamA, maxDistinctSpecialTypes } = useGameSetup();
   const isHuman = mode !== 'pvc' || humanOwner === 'A';
 
   const handleComplete = (team: TeamMap) => {
@@ -24,6 +24,7 @@ function TeamSelectRouteA() {
       initialTeam={teamA ?? undefined}
       completeButtonLabel={isHuman ? '✓ Conferma Team Giocatore 1' : '✓ Conferma Team del PC'}
       onComplete={handleComplete}
+      maxDistinctSpecialTypes={maxDistinctSpecialTypes}
     />
   );
 }

@@ -76,3 +76,30 @@ describe('TeamSelectScreen — parametrized team selection', () => {
     expect(memberSiglas).toEqual(['RE', 'PE', 'RA']); // King (0pt) always first, then ascending
   });
 });
+
+describe('TeamSelectScreen — optional max-distinct-special-types limit', () => {
+  it('shows no special-types validation row when no limit is passed', () => {
+    render(<TeamSelectScreen title="Test" onComplete={() => {}} />);
+    expect(screen.queryByText(/tipi speciali/i)).not.toBeInTheDocument();
+  });
+
+  it('allows confirming a team within the limit, and shows a success row', () => {
+    const onComplete = vi.fn();
+    const initialTeam: TeamMap = new Map([[KING_SIGLA, 1], ['CO', 1], ['NE', 1]]); // 2 distinct special types
+    render(<TeamSelectScreen title="Test" completeButtonLabel="Conferma" onComplete={onComplete} initialTeam={initialTeam} maxDistinctSpecialTypes={2} />);
+
+    expect(screen.getByText(/Tipi speciali distinti: 2\/2 max/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Conferma'));
+    expect(onComplete).toHaveBeenCalledTimes(1);
+  });
+
+  it('blocks confirming a team that exceeds the limit, with an error row', () => {
+    const onComplete = vi.fn();
+    const initialTeam: TeamMap = new Map([[KING_SIGLA, 1], ['CO', 1], ['NE', 1], ['BE', 1]]); // 3 distinct special types
+    render(<TeamSelectScreen title="Test" completeButtonLabel="Conferma" onComplete={onComplete} initialTeam={initialTeam} maxDistinctSpecialTypes={2} />);
+
+    expect(screen.getByText(/Troppi tipi speciali distinti: 3\/2 max/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByText(/Vincoli non rispettati/i));
+    expect(onComplete).not.toHaveBeenCalled();
+  });
+});
