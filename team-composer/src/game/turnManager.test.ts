@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createInitialGameState, applyTurn, skipExtraMove, applyScocca, applySwap } from './turnManager';
+import { createInitialGameState, applyTurn, skipExtraMove, applyScocca, applySwap, applyRevive } from './turnManager';
 import { createEmptyBoard, createPieceInstance, setPieceAt, type BoardState } from './board';
 
 function place(board: BoardState, coord: string, sigla: string, owner: 'A' | 'B' = 'A') {
@@ -569,5 +569,102 @@ describe('applySwap — Mistico position swap', () => {
 
     const result = applySwap(state, 'd4', 'd5');
     expect(result.ok).toBe(false);
+  });
+});
+
+describe('applyRevive — Necromante resurrection', () => {
+  it('revives a fallen ally onto an adjacent empty square, removing it from the graveyard', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'NE', 'A');
+    let state = createInitialGameState(board, 'A');
+    state = { ...state, captured: { ...state.captured, A: [createPieceInstance('PE', 'A')] } };
+
+    const result = applyRevive(state, 'd4', 'd5', 'PE');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.state.board.get('d5')?.sigla).toBe('PE');
+    expect(result.state.board.get('d5')?.owner).toBe('A');
+    expect(result.state.captured.A).toHaveLength(0);
+    expect(result.state.turn).toBe('B');
+    expect(result.state.turnNumber).toBe(2);
+    expect(result.state.history[0]).toMatchObject({ isRevival: true, revivedSigla: 'PE', to: 'd5' });
+  });
+
+  it('accepts reviving a Paggio or Fante — the whole "pedone" category, not just PE', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'NE', 'A');
+    let state = createInitialGameState(board, 'A');
+    state = { ...state, captured: { ...state.captured, A: [createPieceInstance('PG', 'A')] } };
+
+    const result = applyRevive(state, 'd4', 'd5', 'PG');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.board.get('d5')?.sigla).toBe('PG');
+  });
+
+  it('rejects reviving a sigla not present in the graveyard', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'NE', 'A');
+    const state = createInitialGameState(board, 'A');
+
+    expect(applyRevive(state, 'd4', 'd5', 'PE').ok).toBe(false);
+  });
+
+  it('rejects reviving a non-"pedone"-category piece even if somehow in the graveyard', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'NE', 'A');
+    let state = createInitialGameState(board, 'A');
+    state = { ...state, captured: { ...state.captured, A: [createPieceInstance('TO', 'A')] } };
+
+    expect(applyRevive(state, 'd4', 'd5', 'TO').ok).toBe(false);
+  });
+
+  it('rejects reviving onto an occupied square', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'NE', 'A');
+    board = place(board, 'd5', 'CA', 'A');
+    let state = createInitialGameState(board, 'A');
+    state = { ...state, captured: { ...state.captured, A: [createPieceInstance('PE', 'A')] } };
+
+    expect(applyRevive(state, 'd4', 'd5', 'PE').ok).toBe(false);
+  });
+
+  it('rejects reviving onto a non-adjacent square', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'NE', 'A');
+    let state = createInitialGameState(board, 'A');
+    state = { ...state, captured: { ...state.captured, A: [createPieceInstance('PE', 'A')] } };
+
+    expect(applyRevive(state, 'd4', 'd6', 'PE').ok).toBe(false);
+  });
+
+  it('rejects the action for a piece that cannot revive allies', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'TO', 'A');
+    let state = createInitialGameState(board, 'A');
+    state = { ...state, captured: { ...state.captured, A: [createPieceInstance('PE', 'A')] } };
+
+    expect(applyRevive(state, 'd4', 'd5', 'PE').ok).toBe(false);
+  });
+
+  it('only consumes one instance from the graveyard when duplicates exist', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'NE', 'A');
+    let state = createInitialGameState(board, 'A');
+    state = { ...state, captured: { ...state.captured, A: [createPieceInstance('PE', 'A'), createPieceInstance('PE', 'A')] } };
+
+    const result = applyRevive(state, 'd4', 'd5', 'PE');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.captured.A).toHaveLength(1);
   });
 });

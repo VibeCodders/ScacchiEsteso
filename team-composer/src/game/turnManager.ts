@@ -4,6 +4,7 @@ import { getLegalMoves, isCheckmate, isKingInCheck, isStalemate } from './check'
 import { getPromotionOptions, isPromotionMove } from './promotion';
 import { canUseScocca, getScoccaTargets } from './scocca';
 import { canSwap, getSwapTargets } from './swap';
+import { canRevive, getRevivalSquares, getRevivableSiglas } from './necromancy';
 
 export type GameStatus = 'ongoing' | 'check' | 'checkmate' | 'stalemate';
 
@@ -24,6 +25,10 @@ export interface HistoryEntry {
   isRangedAttack?: boolean;
   /** True for a Mistico's "scambio di posizione" with an adjacent ally. */
   isSwap?: boolean;
+  /** True for a Necromante's "rianimazione" of a fallen ally onto an adjacent empty square. */
+  isRevival?: boolean;
+  /** Sigla of the piece revived from the graveyard, when `isRevival` is true. */
+  revivedSigla?: string;
 }
 
 export interface GameState {
@@ -408,6 +413,84 @@ export function applySwap(state: GameState, from: Coord, target: Coord): ApplyTu
       turnNumber: state.turnNumber + 1,
       history: [...state.history, historyEntry],
       captured: state.captured,
+      status,
+      winner: status === 'checkmate' ? piece.owner : undefined,
+      enPassantTarget: null,
+      pendingExtraMove: null,
+    },
+  };
+}
+
+/**
+ * Plays a Necromante's "rianimazione" as the turn's action: revives a fallen ally of "pedone"
+ * category (PE, PG, or FG — the whole category, per the user's clarification, not just PE) from
+ * the graveyard onto an adjacent empty square, as an alternative to a normal move. Like any
+ * action, it's rejected if it would leave the acting player's own King in check (README §3.2).
+ */
+export function applyRevive(state: GameState, from: Coord, target: Coord, sigla: string): ApplyTurnResult {
+  if (GAME_OVER_STATUSES.has(state.status)) {
+    return { ok: false, reason: 'La partita è terminata.' };
+  }
+  if (state.pendingExtraMove) {
+    return { ok: false, reason: 'Devi prima completare (o saltare) il movimento extra del Berserker.' };
+  }
+
+  const piece = getPieceAt(state.board, from);
+  if (!piece) {
+    return { ok: false, reason: `Nessun pezzo in ${from}.` };
+  }
+  if (piece.owner !== state.turn) {
+    return { ok: false, reason: 'Non è il turno di questo giocatore.' };
+  }
+
+  const pieceDef = getPieceDef(piece.sigla);
+  if (!canRevive(pieceDef)) {
+    return { ok: false, reason: 'Questo pezzo non può rianimare alleati.' };
+  }
+
+  const revivalSquares = getRevivalSquares(state.board, from);
+  if (!revivalSquares.includes(target)) {
+    return { ok: false, reason: `Casella non valida per la rianimazione: ${target}.` };
+  }
+
+  const graveyard = state.captured[piece.owner];
+  const revivableSiglas = getRevivableSiglas(graveyard);
+  if (!revivableSiglas.includes(sigla)) {
+    return { ok: false, reason: `Nessun pezzo "${sigla}" disponibile nel cimitero.` };
+  }
+
+  const indexToRevive = graveyard.findIndex((p) => p.sigla === sigla);
+  const nextGraveyard = [...graveyard.slice(0, indexToRevive), ...graveyard.slice(indexToRevive + 1)];
+  const nextCaptured: Record<Owner, PieceInstance[]> = { ...state.captured, [piece.owner]: nextGraveyard };
+
+  const nextBoard = setPieceAt(state.board, target, createPieceInstance(sigla, piece.owner));
+
+  if (isKingInCheck(nextBoard, piece.owner)) {
+    return { ok: false, reason: 'Questa azione lascerebbe il tuo Re sotto scacco.' };
+  }
+
+  const nextTurn: Owner = piece.owner === 'A' ? 'B' : 'A';
+  const status = computeStatus(nextBoard, nextTurn);
+
+  const historyEntry: HistoryEntry = {
+    turnNumber: state.turnNumber,
+    owner: piece.owner,
+    from,
+    to: target,
+    sigla: piece.sigla,
+    isCapture: false,
+    isRevival: true,
+    revivedSigla: sigla,
+  };
+
+  return {
+    ok: true,
+    state: {
+      board: nextBoard,
+      turn: nextTurn,
+      turnNumber: state.turnNumber + 1,
+      history: [...state.history, historyEntry],
+      captured: nextCaptured,
       status,
       winner: status === 'checkmate' ? piece.owner : undefined,
       enPassantTarget: null,

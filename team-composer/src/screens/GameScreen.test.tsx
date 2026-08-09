@@ -437,3 +437,95 @@ describe('GameScreen — Mistico swap', () => {
     expect(document.querySelector('[data-coord="d5"]')).not.toHaveClass('board-square-highlighted');
   });
 });
+
+describe('GameScreen — Necromante revival', () => {
+  it('shows the "Rianima alleato" toggle only once the graveyard has a "pedone"-category piece to revive', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'NE', 'A');
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    expect(screen.queryByText(/Rianima alleato/i)).not.toBeInTheDocument(); // empty graveyard
+  });
+
+  it('auto-applies the revival when the graveyard has only one revivable sigla', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'h1', 'CR', 'A');
+    board = place(board, 'a4', 'PE', 'A');
+    board = place(board, 'd4', 'NE', 'A');
+    board = place(board, 'a8', 'TO', 'B');
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="h1"]')!); // A: harmless move
+    fireEvent.click(document.querySelector('[data-coord="h3"]')!);
+    fireEvent.click(document.querySelector('[data-coord="a8"]')!); // B: captures A's pawn
+    fireEvent.click(document.querySelector('[data-coord="a4"]')!);
+
+    expect(screen.getByText(/Turno: Giocatore 1/i)).toBeInTheDocument();
+
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!); // select the Necromante
+    fireEvent.click(screen.getByText(/🧟 Rianima alleato/i));
+    fireEvent.click(document.querySelector('[data-coord="d5"]')!); // adjacent empty square
+
+    expect(screen.queryByText(/Chi rianimare/i)).not.toBeInTheDocument(); // no dialog — only one option
+    expect(document.querySelector('[data-coord="d5"]')?.querySelector('svg')?.getAttribute('aria-label')).toBe('PE');
+    expect(screen.getByText(/Turno: Giocatore 2/i)).toBeInTheDocument();
+    expect(screen.getByText(/\(rianimato PE\)/i)).toBeInTheDocument();
+  });
+
+  it('shows a choice dialog when the graveyard has more than one revivable sigla', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'h1', 'CR', 'A');
+    board = place(board, 'a4', 'PE', 'A');
+    board = place(board, 'b4', 'PG', 'A');
+    board = place(board, 'd4', 'NE', 'A');
+    board = place(board, 'a8', 'TO', 'B');
+    board = place(board, 'd5', 'CA', 'B');
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="h1"]')!); // A: harmless move
+    fireEvent.click(document.querySelector('[data-coord="h3"]')!);
+    fireEvent.click(document.querySelector('[data-coord="a8"]')!); // B: captures the Pedone
+    fireEvent.click(document.querySelector('[data-coord="a4"]')!);
+    fireEvent.click(document.querySelector('[data-coord="h3"]')!); // A: another harmless move
+    fireEvent.click(document.querySelector('[data-coord="h5"]')!);
+    fireEvent.click(document.querySelector('[data-coord="d5"]')!); // B: captures the Paggio
+    fireEvent.click(document.querySelector('[data-coord="b4"]')!);
+
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!); // select the Necromante
+    fireEvent.click(screen.getByText(/🧟 Rianima alleato/i));
+    fireEvent.click(document.querySelector('[data-coord="d5"]')!); // now empty again
+
+    expect(screen.getByText(/Chi rianimare/i)).toBeInTheDocument();
+    expect(screen.getByText(/PE — Pedone/i)).toBeInTheDocument();
+    expect(screen.getByText(/PG — Paggio/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText(/PG — Paggio/i));
+    expect(document.querySelector('[data-coord="d5"]')?.querySelector('svg')?.getAttribute('aria-label')).toBe('PG');
+  });
+
+  it('"Annulla Rianimazione" returns to normal move highlighting', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'h1', 'CR', 'A');
+    board = place(board, 'a4', 'PE', 'A');
+    board = place(board, 'd4', 'NE', 'A');
+    board = place(board, 'a8', 'TO', 'B');
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="h1"]')!);
+    fireEvent.click(document.querySelector('[data-coord="h3"]')!);
+    fireEvent.click(document.querySelector('[data-coord="a8"]')!);
+    fireEvent.click(document.querySelector('[data-coord="a4"]')!);
+
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    fireEvent.click(screen.getByText(/🧟 Rianima alleato/i));
+    fireEvent.click(screen.getByText(/Annulla Rianimazione/i));
+
+    expect(document.querySelector('[data-coord="e5"]')).toHaveClass('board-square-highlighted'); // back to normal (diagonal) moves
+    expect(document.querySelector('[data-coord="d5"]')).not.toHaveClass('board-square-highlighted');
+  });
+});

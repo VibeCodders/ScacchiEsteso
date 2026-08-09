@@ -6,7 +6,8 @@ import { getPieceDef } from '../game/moveEngine';
 import { getPromotionOptions, isPromotionMove } from '../game/promotion';
 import { canUseScocca, getScoccaTargets } from '../game/scocca';
 import { canSwap, getSwapTargets } from '../game/swap';
-import { createInitialGameState, applyTurn, applyScocca, applySwap, getLegalMovesForTurn, skipExtraMove, type GameState } from '../game/turnManager';
+import { canRevive, getRevivalSquares, getRevivableSiglas } from '../game/necromancy';
+import { createInitialGameState, applyTurn, applyScocca, applySwap, applyRevive, getLegalMovesForTurn, skipExtraMove, type GameState } from '../game/turnManager';
 import { pieces } from '../data/pieces';
 import type { Coord, Owner } from '../game/board';
 import '../App.css';
@@ -26,6 +27,12 @@ interface PendingPromotion {
   options: string[];
 }
 
+interface PendingRevival {
+  from: Coord;
+  target: Coord;
+  options: string[];
+}
+
 function GameScreen() {
   const navigate = useNavigate();
   const { mode, deployedBoard, setMatchResult } = useGameSetup();
@@ -35,7 +42,8 @@ function GameScreen() {
   const [orientation, setOrientation] = useState<Owner>('A');
   const [error, setError] = useState<string | null>(null);
   const [pendingPromotion, setPendingPromotion] = useState<PendingPromotion | null>(null);
-  const [actionMode, setActionMode] = useState<'scocca' | 'swap' | null>(null);
+  const [pendingRevival, setPendingRevival] = useState<PendingRevival | null>(null);
+  const [actionMode, setActionMode] = useState<'scocca' | 'swap' | 'revive' | null>(null);
 
   const effectiveSelected = gameState?.pendingExtraMove ?? selected;
 
@@ -47,6 +55,9 @@ function GameScreen() {
     }
     if (actionMode === 'swap') {
       return mover ? getSwapTargets(gameState.board, effectiveSelected, mover.owner) : [];
+    }
+    if (actionMode === 'revive') {
+      return getRevivalSquares(gameState.board, effectiveSelected);
     }
     return getLegalMovesForTurn(gameState, effectiveSelected).map((m) => m.to);
   }, [gameState, effectiveSelected, actionMode]);
@@ -128,8 +139,33 @@ function GameScreen() {
     }
   };
 
+  const commitRevive = (from: Coord, target: Coord, sigla: string) => {
+    const result = applyRevive(gameState, from, target, sigla);
+    if (result.ok) {
+      setGameState(result.state);
+      setOrientation(result.state.turn);
+      setSelected(null);
+      setActionMode(null);
+      setPendingRevival(null);
+      setError(null);
+    } else {
+      setError(result.reason);
+    }
+  };
+
+  const attemptRevive = (from: Coord, target: Coord) => {
+    const mover = gameState.board.get(from);
+    if (!mover) return;
+    const options = getRevivableSiglas(gameState.captured[mover.owner]);
+    if (options.length === 1) {
+      commitRevive(from, target, options[0]);
+    } else {
+      setPendingRevival({ from, target, options });
+    }
+  };
+
   const handleSquareClick = (coord: Coord) => {
-    if (gameOver || pendingPromotion) return;
+    if (gameOver || pendingPromotion || pendingRevival) return;
 
     if (gameState.pendingExtraMove) {
       if (legalDestinations.includes(coord)) {
@@ -141,7 +177,8 @@ function GameScreen() {
     if (actionMode && selected) {
       if (legalDestinations.includes(coord)) {
         if (actionMode === 'scocca') commitScocca(selected, coord);
-        else commitSwap(selected, coord);
+        else if (actionMode === 'swap') commitSwap(selected, coord);
+        else attemptRevive(selected, coord);
       }
       return;
     }
@@ -165,7 +202,7 @@ function GameScreen() {
   };
 
   const handleDragStart = (coord: Coord) => {
-    if (gameOver || pendingPromotion) return;
+    if (gameOver || pendingPromotion || pendingRevival) return;
     if (gameState.pendingExtraMove) return; // the bonus square is already the effective selection
     const pieceHere = gameState.board.get(coord);
     if (pieceHere && pieceHere.owner === gameState.turn) {
@@ -214,8 +251,8 @@ function GameScreen() {
             onSquareClick={handleSquareClick}
             highlightedSquares={legalDestinations}
             selectedSquare={effectiveSelected}
-            onPieceDragStart={gameOver || pendingPromotion || gameState.pendingExtraMove || actionMode ? undefined : handleDragStart}
-            onSquareDrop={gameOver || pendingPromotion || actionMode ? undefined : handleSquareClick}
+            onPieceDragStart={gameOver || pendingPromotion || pendingRevival || gameState.pendingExtraMove || actionMode ? undefined : handleDragStart}
+            onSquareDrop={gameOver || pendingPromotion || pendingRevival || actionMode ? undefined : handleSquareClick}
           />
           <div className="actions">
             <button className="btn-improve" onClick={() => setOrientation((o) => (o === 'A' ? 'B' : 'A'))}>
@@ -231,9 +268,16 @@ function GameScreen() {
                 {actionMode === 'swap' ? '↩️ Annulla Scambio' : '🔀 Scambia posizione'}
               </button>
             )}
+            {selected && !gameState.pendingExtraMove && canRevive(getPieceDef(gameState.board.get(selected)!.sigla))
+              && getRevivableSiglas(gameState.captured[gameState.board.get(selected)!.owner]).length > 0 && (
+              <button className="btn-auto" onClick={() => setActionMode((m) => (m === 'revive' ? null : 'revive'))}>
+                {actionMode === 'revive' ? '↩️ Annulla Rianimazione' : '🧟 Rianima alleato'}
+              </button>
+            )}
           </div>
           {actionMode === 'scocca' && <p>🏹 Modalità Scoccare: seleziona un bersaglio nemico a 3-4 caselle.</p>}
           {actionMode === 'swap' && <p>🔀 Modalità Scambio: seleziona un alleato adiacente.</p>}
+          {actionMode === 'revive' && <p>🧟 Modalità Rianimazione: seleziona una casella vuota adiacente.</p>}
           {error && <p style={{ color: '#f87171' }}>{error}</p>}
 
           {gameState.pendingExtraMove && !pendingPromotion && (
@@ -258,6 +302,29 @@ function GameScreen() {
                     key={sigla}
                     className="btn-save"
                     onClick={() => commitPlainMove(pendingPromotion.from, pendingPromotion.to, sigla)}
+                  >
+                    {sigla} — {pieceDescription(sigla)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {pendingRevival && (
+            <div
+              style={{
+                position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center', gap: '1rem',
+                background: 'rgba(15, 15, 20, 0.85)', borderRadius: '0.5rem',
+              }}
+            >
+              <h2>🧟 Chi rianimare?</h2>
+              <div className="actions" style={{ flexDirection: 'column' }}>
+                {pendingRevival.options.map((sigla) => (
+                  <button
+                    key={sigla}
+                    className="btn-save"
+                    onClick={() => commitRevive(pendingRevival.from, pendingRevival.target, sigla)}
                   >
                     {sigla} — {pieceDescription(sigla)}
                   </button>
@@ -295,6 +362,7 @@ function GameScreen() {
                     {entry.isExtraMove && ' (movimento extra)'}
                     {entry.isRangedAttack && ' (scocca)'}
                     {entry.isSwap && ' (scambio)'}
+                    {entry.isRevival && ` (rianimato ${entry.revivedSigla})`}
                   </li>
                 ))}
               </ol>
