@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react';
 import { KING_SIGLA } from '../data/pieces';
+import type { BoardState } from '../game/board';
 
 export type GameMode = 'pvp' | 'pvc';
 
@@ -13,12 +14,14 @@ export interface GameSetupState {
   mode: GameMode | null;
   teamA: TeamMap | null;
   teamB: TeamMap | null;
+  deployedBoard: BoardState | null;
 }
 
 export interface GameSetupContextValue extends GameSetupState {
   setMode: (mode: GameMode) => void;
   setTeamA: (team: TeamMap) => void;
   setTeamB: (team: TeamMap) => void;
+  setDeployedBoard: (board: BoardState) => void;
   reset: () => void;
 }
 

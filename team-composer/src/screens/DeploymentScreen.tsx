@@ -1,12 +1,87 @@
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useGameSetup } from '../context/gameSetup';
-import { computeBudgetSpent } from '../data/validators';
+import { emptyTeam, useGameSetup } from '../context/gameSetup';
+import Board from '../components/Board';
+import {
+  createDeploymentState,
+  isDeploymentComplete,
+  ownDeploymentRanks,
+  placePiece,
+  type DeploymentState,
+} from '../game/deployment';
+import { allCoords, type Owner } from '../game/board';
 import { pieces } from '../data/pieces';
 import '../App.css';
 
+function pickCoinToss(): Owner {
+  return Math.random() < 0.5 ? 'A' : 'B';
+}
+
 function DeploymentScreen() {
   const navigate = useNavigate();
-  const { mode, teamA, teamB } = useGameSetup();
+  const { mode, teamA, teamB, setDeployedBoard } = useGameSetup();
+  const [coinToss, setCoinToss] = useState<Owner | null>(null);
+  const [deployment, setDeployment] = useState<DeploymentState | null>(null);
+  const [selectedSigla, setSelectedSigla] = useState<string | null>(null);
+  const [orientation, setOrientation] = useState<Owner>('A');
+  const [error, setError] = useState<string | null>(null);
+
+  const teamAResolved = teamA ?? emptyTeam();
+  const teamBResolved = teamB ?? emptyTeam();
+
+  const emptyOwnRankSquares = useMemo(() => {
+    if (!deployment || !selectedSigla) return [];
+    const ranks = ownDeploymentRanks(deployment.currentPlacer);
+    return allCoords().filter((coord) => ranks.includes(Number(coord[1])) && !deployment.board.has(coord));
+  }, [deployment, selectedSigla]);
+
+  const handleCoinToss = () => {
+    const winner = pickCoinToss();
+    setCoinToss(winner);
+    setDeployment(createDeploymentState(teamAResolved, teamBResolved, winner));
+  };
+
+  const handleSquareClick = (coord: string) => {
+    if (!deployment || !selectedSigla) return;
+    const result = placePiece(deployment, selectedSigla, coord);
+    if (!result.ok) {
+      setError(result.reason);
+      return;
+    }
+    setError(null);
+    setDeployment(result.state);
+    setSelectedSigla(null);
+  };
+
+  const handleContinue = () => {
+    if (!deployment) return;
+    setDeployedBoard(deployment.board);
+    navigate('/game');
+  };
+
+  if (!coinToss || !deployment) {
+    return (
+      <div className="app">
+        <header className="header">
+          <div>
+            <h1>🏳️ Schieramento</h1>
+            <p className="subtitle">Modalità: {mode === 'pvc' ? 'PvC' : 'PvP locale'}</p>
+          </div>
+        </header>
+        <div className="main" style={{ gridTemplateColumns: '1fr', justifyItems: 'center', paddingTop: '2rem' }}>
+          <div className="panel" style={{ maxWidth: 480, textAlign: 'center' }}>
+            <h2>🪙 Tiro a sorte</h2>
+            <p>Chi vince tira a sorte decide chi schiera per primo (README §2.2).</p>
+            <button className="btn-save" onClick={handleCoinToss}>Tira la moneta</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const complete = isDeploymentComplete(deployment);
+  const currentRoster = deployment.remaining[deployment.currentPlacer];
+  const currentPlacerLabel = deployment.currentPlacer === 'A' ? 'Giocatore 1' : (mode === 'pvc' ? 'PC' : 'Giocatore 2');
 
   return (
     <div className="app">
@@ -14,24 +89,61 @@ function DeploymentScreen() {
         <div>
           <h1>🏳️ Schieramento</h1>
           <p className="subtitle">
-            Modalità: {mode === 'pvc' ? 'PvC' : 'PvP locale'} — schieramento manuale in arrivo (Step 4 del piano)
+            Ha vinto il tiro a sorte: {deployment.firstPlacer === 'A' ? 'Giocatore 1' : 'Giocatore 2'}.
+            {' '}Le posizioni sono visibili a entrambi (README §2.4).
           </p>
         </div>
       </header>
-      <div className="main" style={{ gridTemplateColumns: '1fr 1fr' }}>
-        <div className="panel">
-          <h2>Giocatore 1</h2>
-          <p>{teamA ? `${computeBudgetSpent(teamA, pieces)} punti, ${teamA.size} tipi di pezzo` : 'Nessun team'}</p>
+
+      <div className="main" style={{ gridTemplateColumns: '1fr 320px', paddingTop: '1rem' }}>
+        <div className="panel" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+          <Board
+            pieces={deployment.board}
+            orientation={orientation}
+            onSquareClick={handleSquareClick}
+            highlightedSquares={emptyOwnRankSquares}
+          />
+          <button className="btn-improve" onClick={() => setOrientation((o) => (o === 'A' ? 'B' : 'A'))}>
+            🔄 Gira scacchiera (vista: {orientation === 'A' ? 'Giocatore 1' : 'Giocatore 2'})
+          </button>
         </div>
+
         <div className="panel">
-          <h2>{mode === 'pvc' ? 'PC' : 'Giocatore 2'}</h2>
-          <p>{teamB ? `${computeBudgetSpent(teamB, pieces)} punti, ${teamB.size} tipi di pezzo` : 'Nessun team'}</p>
+          {complete ? (
+            <>
+              <h2>✅ Schieramento completo</h2>
+              <p>Entrambi gli eserciti sono stati posizionati.</p>
+              <button className="btn-save" onClick={handleContinue}>Vai alla partita →</button>
+            </>
+          ) : (
+            <>
+              <h2>Turno: {currentPlacerLabel}</h2>
+              <p>Seleziona un pezzo, poi clicca una casella libera nelle tue 2 traverse.</p>
+              <div className="piece-grid" style={{ gridTemplateColumns: '1fr' }}>
+                {[...currentRoster.entries()].map(([sigla, count]) => {
+                  const pieceDef = pieces.find((p) => p.sigla === sigla);
+                  return (
+                    <div
+                      key={sigla}
+                      className={`piece-card ${selectedSigla === sigla ? 'selected' : ''}`}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setSelectedSigla(sigla)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedSigla(sigla); } }}
+                    >
+                      <div className="piece-header">
+                        <span className="sigla">{sigla}</span>
+                        <span className="cost">×{count}</span>
+                      </div>
+                      <span className="desc">{pieceDef?.descrizione ?? sigla}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              {error && <p style={{ color: '#f87171' }}>{error}</p>}
+            </>
+          )}
         </div>
-      </div>
-      <div className="actions" style={{ justifyContent: 'center', padding: '1rem' }}>
-        <button className="btn-save" onClick={() => navigate('/game')}>
-          Avanti (placeholder) →
-        </button>
       </div>
     </div>
   );
