@@ -7,6 +7,7 @@ import { getPromotionOptions, isPromotionMove } from '../game/promotion';
 import { canUseScocca, getScoccaTargets } from '../game/scocca';
 import { canSwap, getSwapTargets } from '../game/swap';
 import { canRevive, getRevivalSquares, getRevivableSiglas } from '../game/necromancy';
+import { canMimic, getOrphanThreats } from '../game/orphan';
 import { createInitialGameState, applyTurn, applyScocca, applySwap, applyRevive, getLegalMovesForTurn, skipExtraMove, type GameState } from '../game/turnManager';
 import { pieces } from '../data/pieces';
 import type { Coord, Owner } from '../game/board';
@@ -33,6 +34,11 @@ interface PendingRevival {
   options: string[];
 }
 
+interface PendingMimicChoice {
+  from: Coord;
+  threats: Coord[];
+}
+
 function GameScreen() {
   const navigate = useNavigate();
   const { mode, deployedBoard, setMatchResult } = useGameSetup();
@@ -43,6 +49,8 @@ function GameScreen() {
   const [error, setError] = useState<string | null>(null);
   const [pendingPromotion, setPendingPromotion] = useState<PendingPromotion | null>(null);
   const [pendingRevival, setPendingRevival] = useState<PendingRevival | null>(null);
+  const [pendingMimicChoice, setPendingMimicChoice] = useState<PendingMimicChoice | null>(null);
+  const [orphanMimicSource, setOrphanMimicSource] = useState<Coord | null>(null);
   const [actionMode, setActionMode] = useState<'scocca' | 'swap' | 'revive' | null>(null);
 
   const effectiveSelected = gameState?.pendingExtraMove ?? selected;
@@ -59,8 +67,8 @@ function GameScreen() {
     if (actionMode === 'revive') {
       return mover ? getRevivalSquares(gameState.board, effectiveSelected, mover.owner) : [];
     }
-    return getLegalMovesForTurn(gameState, effectiveSelected).map((m) => m.to);
-  }, [gameState, effectiveSelected, actionMode]);
+    return getLegalMovesForTurn(gameState, effectiveSelected, orphanMimicSource ?? undefined).map((m) => m.to);
+  }, [gameState, effectiveSelected, actionMode, orphanMimicSource]);
 
   if (!deployedBoard || !gameState) {
     return (
@@ -83,15 +91,36 @@ function GameScreen() {
   const gameOver = gameState.status === 'checkmate' || gameState.status === 'stalemate';
 
   const commitPlainMove = (from: Coord, to: Coord, promotionChoice?: string) => {
-    const result = applyTurn(gameState, from, to, promotionChoice);
+    const result = applyTurn(gameState, from, to, promotionChoice, orphanMimicSource ?? undefined);
     if (result.ok) {
       setGameState(result.state);
       setOrientation(result.state.turn);
       setSelected(null);
       setError(null);
       setPendingPromotion(null);
+      setOrphanMimicSource(null);
+      setPendingMimicChoice(null);
     } else {
       setError(result.reason);
+    }
+  };
+
+  /** Selects a piece, resetting any in-progress action, and — for a threatened Orfano — sets up which threat it mimics (README, "copia_poteri"). */
+  const selectPiece = (coord: Coord) => {
+    setSelected(coord);
+    setActionMode(null);
+    setError(null);
+    setOrphanMimicSource(null);
+    setPendingMimicChoice(null);
+
+    const piece = gameState.board.get(coord);
+    if (piece && canMimic(getPieceDef(piece.sigla))) {
+      const threats = getOrphanThreats(gameState.board, coord, piece.owner);
+      if (threats.length === 1) {
+        setOrphanMimicSource(threats[0]);
+      } else if (threats.length > 1) {
+        setPendingMimicChoice({ from: coord, threats });
+      }
     }
   };
 
@@ -165,7 +194,7 @@ function GameScreen() {
   };
 
   const handleSquareClick = (coord: Coord) => {
-    if (gameOver || pendingPromotion || pendingRevival) return;
+    if (gameOver || pendingPromotion || pendingRevival || pendingMimicChoice) return;
 
     if (gameState.pendingExtraMove) {
       if (legalDestinations.includes(coord)) {
@@ -191,24 +220,29 @@ function GameScreen() {
     }
 
     if (pieceHere && pieceHere.owner === gameState.turn) {
-      setSelected(coord === selected ? null : coord);
-      setActionMode(null);
-      setError(null);
+      if (coord === selected) {
+        setSelected(null);
+        setActionMode(null);
+        setOrphanMimicSource(null);
+        setPendingMimicChoice(null);
+      } else {
+        selectPiece(coord);
+      }
       return;
     }
 
     setSelected(null);
     setActionMode(null);
+    setOrphanMimicSource(null);
+    setPendingMimicChoice(null);
   };
 
   const handleDragStart = (coord: Coord) => {
-    if (gameOver || pendingPromotion || pendingRevival) return;
+    if (gameOver || pendingPromotion || pendingRevival || pendingMimicChoice) return;
     if (gameState.pendingExtraMove) return; // the bonus square is already the effective selection
     const pieceHere = gameState.board.get(coord);
     if (pieceHere && pieceHere.owner === gameState.turn) {
-      setSelected(coord);
-      setActionMode(null);
-      setError(null);
+      selectPiece(coord);
     }
   };
 
@@ -251,8 +285,8 @@ function GameScreen() {
             onSquareClick={handleSquareClick}
             highlightedSquares={legalDestinations}
             selectedSquare={effectiveSelected}
-            onPieceDragStart={gameOver || pendingPromotion || pendingRevival || gameState.pendingExtraMove || actionMode ? undefined : handleDragStart}
-            onSquareDrop={gameOver || pendingPromotion || pendingRevival || actionMode ? undefined : handleSquareClick}
+            onPieceDragStart={gameOver || pendingPromotion || pendingRevival || pendingMimicChoice || gameState.pendingExtraMove || actionMode ? undefined : handleDragStart}
+            onSquareDrop={gameOver || pendingPromotion || pendingRevival || pendingMimicChoice || actionMode ? undefined : handleSquareClick}
           />
           <div className="actions">
             <button className="btn-improve" onClick={() => setOrientation((o) => (o === 'A' ? 'B' : 'A'))}>
@@ -278,6 +312,9 @@ function GameScreen() {
           {actionMode === 'scocca' && <p>🏹 Modalità Scoccare: seleziona un bersaglio nemico a 3-4 caselle.</p>}
           {actionMode === 'swap' && <p>🔀 Modalità Scambio: seleziona un alleato adiacente.</p>}
           {actionMode === 'revive' && <p>🧟 Modalità Rianimazione: seleziona una casella vuota adiacente.</p>}
+          {orphanMimicSource && (
+            <p>🎭 L'Orfano è sotto scacco: imita {gameState.board.get(orphanMimicSource)?.sigla} da {orphanMimicSource}.</p>
+          )}
           {error && <p style={{ color: '#f87171' }}>{error}</p>}
 
           {gameState.pendingExtraMove && !pendingPromotion && (
@@ -329,6 +366,35 @@ function GameScreen() {
                     {sigla} — {pieceDescription(sigla)}
                   </button>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {pendingMimicChoice && (
+            <div
+              style={{
+                position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center', gap: '1rem',
+                background: 'rgba(15, 15, 20, 0.85)', borderRadius: '0.5rem',
+              }}
+            >
+              <h2>🎭 Chi imitare?</h2>
+              <div className="actions" style={{ flexDirection: 'column' }}>
+                {pendingMimicChoice.threats.map((threatCoord) => {
+                  const threatSigla = gameState.board.get(threatCoord)?.sigla ?? '?';
+                  return (
+                    <button
+                      key={threatCoord}
+                      className="btn-save"
+                      onClick={() => {
+                        setOrphanMimicSource(threatCoord);
+                        setPendingMimicChoice(null);
+                      }}
+                    >
+                      {threatSigla} — {pieceDescription(threatSigla)} ({threatCoord})
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}

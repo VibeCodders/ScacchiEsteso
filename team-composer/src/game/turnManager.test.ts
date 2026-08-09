@@ -764,3 +764,80 @@ describe('applyTurn — Colosso area damage (README §4/§7)', () => {
     expect(moves.find((m) => m.to === 'd5' && m.isCapture)).toBeUndefined();
   });
 });
+
+describe('Orfano — copia_poteri (mimics whoever threatens it)', () => {
+  it('moves normally (1 square, any direction) when not under threat', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'OR', 'A');
+    const state = createInitialGameState(board, 'A');
+
+    const result = applyTurn(state, 'd4', 'd5');
+    expect(result.ok).toBe(true);
+  });
+
+  it('rejects a normal 1-square move while under threat, without a mimic source', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'OR', 'A');
+    board = place(board, 'd8', 'TO', 'B'); // threatens d4 along the d-file
+    const state = createInitialGameState(board, 'A');
+
+    const result = applyTurn(state, 'd4', 'd5'); // its normal 1-square move, no mimic source given
+    expect(result.ok).toBe(false);
+  });
+
+  it('moves using the mimicked piece\'s pattern once a threatening piece is chosen', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'OR', 'A');
+    board = place(board, 'd8', 'TO', 'B'); // Torre threatens d4 along the d-file
+    const state = createInitialGameState(board, 'A');
+
+    // Mimicking the Torre lets the Orfano slide, e.g. all the way to a4 (impossible for its own 1-step move).
+    const result = applyTurn(state, 'd4', 'a4', undefined, 'd8');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.board.get('a4')?.sigla).toBe('OR');
+    expect(result.state.board.get('a4')?.owner).toBe('A');
+  });
+
+  it('rejects an invalid or non-threatening mimic source', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'OR', 'A');
+    board = place(board, 'd8', 'TO', 'B');
+    board = place(board, 'h1', 'AL', 'B'); // not adjacent/threatening d4 at all
+    const state = createInitialGameState(board, 'A');
+
+    const result = applyTurn(state, 'd4', 'a4', undefined, 'h1');
+    expect(result.ok).toBe(false);
+  });
+
+  it('lets the player pick which of several threats to mimic', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'OR', 'A');
+    board = place(board, 'd8', 'TO', 'B'); // slide threat along the d-file
+    board = place(board, 'c6', 'CA', 'B'); // knight threat
+    const state = createInitialGameState(board, 'A');
+
+    // Mimic the Knight instead of the Rook: land on a square only a knight jump could reach.
+    const result = applyTurn(state, 'd4', 'b5', undefined, 'c6');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.board.get('b5')?.sigla).toBe('OR');
+  });
+
+  it('the mimicked move still cannot leave the Orfano\'s own King in check', () => {
+    let board = place(createEmptyBoard(), 'a1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd1', 'OR', 'A'); // blocks a check along rank 1
+    board = place(board, 'h1', 'TO', 'B'); // pins the Orfano — also threatens it, making it mimic-eligible
+    const state = createInitialGameState(board, 'A');
+
+    // Mimicking the Rook off the pin line (e.g. straight up the d-file) would expose the King.
+    const result = applyTurn(state, 'd1', 'd4', undefined, 'h1');
+    expect(result.ok).toBe(false);
+  });
+});

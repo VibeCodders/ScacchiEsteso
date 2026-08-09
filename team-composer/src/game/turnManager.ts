@@ -6,6 +6,7 @@ import { canUseScocca, getScoccaTargets } from './scocca';
 import { canSwap, getSwapTargets } from './swap';
 import { canRevive, getRevivalSquares, getRevivableSiglas } from './necromancy';
 import { getAreaDamageVictims, triggersAreaDamage } from './areaDamage';
+import { canMimic, getMimicMoves, getOrphanThreats } from './orphan';
 
 export type GameStatus = 'ongoing' | 'check' | 'checkmate' | 'stalemate';
 
@@ -106,10 +107,29 @@ function computeEnPassantCapture(board: BoardState, from: Coord, piece: PieceIns
   return { from, to: enPassantTarget, isCapture: true, capturedCoord, captureMode: 'melee', movementType: 'step' };
 }
 
-/** Legal moves for the piece at `from`, including the en passant capture when currently available. */
-export function getLegalMovesForTurn(state: GameState, from: Coord): GeneratedMove[] {
+/**
+ * Legal moves for the piece at `from`, including the en passant capture when currently available.
+ * If the piece is an Orfano currently threatened (README: "ha tutti i poteri di chi lo tiene in
+ * scacco"), its move set instead comes entirely from mimicking `orphanMimicSource` — one of the
+ * pieces returned by `getOrphanThreats` — chosen by the player when there's more than one threat.
+ * Passing no (or an invalid) mimic source while threatened yields no moves, forcing the caller to
+ * collect a choice first (mirroring the promotion-dialog pattern).
+ */
+export function getLegalMovesForTurn(state: GameState, from: Coord, orphanMimicSource?: Coord): GeneratedMove[] {
   const piece = getPieceAt(state.board, from);
   if (!piece) return [];
+
+  if (canMimic(getPieceDef(piece.sigla))) {
+    const threats = getOrphanThreats(state.board, from, piece.owner);
+    if (threats.length > 0) {
+      if (!orphanMimicSource || !threats.includes(orphanMimicSource)) return [];
+      return getMimicMoves(state.board, from, orphanMimicSource).filter((move) => {
+        const resultingBoard = applyMove(state.board, move);
+        return !isKingInCheck(resultingBoard, piece.owner);
+      });
+    }
+  }
+
   const baseMoves = getLegalMoves(state.board, from);
   if (!state.enPassantTarget) return baseMoves;
 
@@ -224,8 +244,10 @@ function triggersExtraMove(pieceDef: ReturnType<typeof getPieceDef>, move: Gener
  * player, illegal moves, and any move once the game has already ended. If the move promotes the
  * piece, `promotionChoice` (one of the piece's `promotionTypes`) is required — omitting it when
  * promotion applies returns a rejection asking the caller to collect a choice and retry.
+ * `orphanMimicSource` selects which threatening piece an Orfano imitates when under threat (see
+ * `getLegalMovesForTurn`) — required in that situation, ignored otherwise.
  */
-export function applyTurn(state: GameState, from: Coord, to: Coord, promotionChoice?: string): ApplyTurnResult {
+export function applyTurn(state: GameState, from: Coord, to: Coord, promotionChoice?: string, orphanMimicSource?: Coord): ApplyTurnResult {
   if (GAME_OVER_STATUSES.has(state.status)) {
     return { ok: false, reason: 'La partita è terminata.' };
   }
@@ -253,7 +275,7 @@ export function applyTurn(state: GameState, from: Coord, to: Coord, promotionCho
     return { ok: true, state: finalizeTurn(state, piece, move, outcome) };
   }
 
-  const move = getLegalMovesForTurn(state, from).find((m) => m.to === to);
+  const move = getLegalMovesForTurn(state, from, orphanMimicSource).find((m) => m.to === to);
   if (!move) {
     return { ok: false, reason: `Mossa non legale: ${from} → ${to}.` };
   }
