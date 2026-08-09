@@ -448,7 +448,7 @@ export function applyRevive(state: GameState, from: Coord, target: Coord, sigla:
     return { ok: false, reason: 'Questo pezzo non può rianimare alleati.' };
   }
 
-  const revivalSquares = getRevivalSquares(state.board, from);
+  const revivalSquares = getRevivalSquares(state.board, from, piece.owner);
   if (!revivalSquares.includes(target)) {
     return { ok: false, reason: `Casella non valida per la rianimazione: ${target}.` };
   }

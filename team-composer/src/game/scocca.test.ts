@@ -71,3 +71,27 @@ describe('getScoccaTargets', () => {
     expect(getScoccaTargets(board, 'd4', 'A').sort()).toEqual(['a4', 'd7']);
   });
 });
+
+describe('getScoccaTargets — aura interactions (README §7)', () => {
+  it('is empty when the Arciere itself is silenced by an adjacent enemy Inquisitore', () => {
+    let board = place(createEmptyBoard(), 'd4', 'AR', 'A');
+    board = place(board, 'd7', 'PE', 'B');
+    board = place(board, 'd5', 'IQ', 'B'); // adjacent to the Arciere
+    expect(getScoccaTargets(board, 'd4', 'A')).toEqual([]);
+  });
+
+  it('excludes a target shielded by an adjacent allied Paladino\'s egida', () => {
+    let board = place(createEmptyBoard(), 'd4', 'AR', 'A');
+    board = place(board, 'd7', 'PE', 'B');
+    board = place(board, 'd8', 'PA', 'B'); // adjacent to the target, shields it
+    expect(getScoccaTargets(board, 'd4', 'A')).toEqual([]);
+  });
+
+  it('priority: the shield lapses if the shielding Paladino is itself silenced', () => {
+    let board = place(createEmptyBoard(), 'd4', 'AR', 'A');
+    board = place(board, 'd7', 'PE', 'B');
+    board = place(board, 'd8', 'PA', 'B'); // shields d7...
+    board = place(board, 'e8', 'IQ', 'A'); // ...but this Inquisitore silences that Paladino
+    expect(getScoccaTargets(board, 'd4', 'A')).toEqual(['d7']);
+  });
+});

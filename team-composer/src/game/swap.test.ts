@@ -50,4 +50,11 @@ describe('getSwapTargets', () => {
     board = place(board, 'd6', 'PE', 'A');
     expect(getSwapTargets(board, 'd4', 'A')).toEqual([]);
   });
+
+  it('is empty when the Mistico itself is silenced by an adjacent enemy Inquisitore (README §7.3)', () => {
+    let board = place(createEmptyBoard(), 'd4', 'MI', 'A');
+    board = place(board, 'd5', 'CA', 'A');
+    board = place(board, 'e4', 'IQ', 'B');
+    expect(getSwapTargets(board, 'd4', 'A')).toEqual([]);
+  });
 });

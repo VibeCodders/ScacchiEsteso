@@ -17,7 +17,7 @@ describe('canRevive', () => {
 describe('getRevivalSquares', () => {
   it('lists all 8 adjacent squares when empty', () => {
     const board = place(createEmptyBoard(), 'd4', 'NE', 'A');
-    expect(getRevivalSquares(board, 'd4').sort()).toEqual(
+    expect(getRevivalSquares(board, 'd4', 'A').sort()).toEqual(
       ['c3', 'c4', 'c5', 'd3', 'd5', 'e3', 'e4', 'e5'].sort(),
     );
   });
@@ -26,7 +26,7 @@ describe('getRevivalSquares', () => {
     let board = place(createEmptyBoard(), 'd4', 'NE', 'A');
     board = place(board, 'd5', 'CA', 'A');
     board = place(board, 'e4', 'PE', 'B');
-    const squares = getRevivalSquares(board, 'd4');
+    const squares = getRevivalSquares(board, 'd4', 'A');
     expect(squares).not.toContain('d5');
     expect(squares).not.toContain('e4');
     expect(squares).toHaveLength(6);
@@ -34,7 +34,13 @@ describe('getRevivalSquares', () => {
 
   it('excludes off-board neighbors from a corner', () => {
     const board = place(createEmptyBoard(), 'a1', 'NE', 'A');
-    expect(getRevivalSquares(board, 'a1').sort()).toEqual(['a2', 'b1', 'b2'].sort());
+    expect(getRevivalSquares(board, 'a1', 'A').sort()).toEqual(['a2', 'b1', 'b2'].sort());
+  });
+
+  it('is empty when the Necromante itself is silenced by an adjacent enemy Inquisitore (README §7.3)', () => {
+    let board = place(createEmptyBoard(), 'd4', 'NE', 'A');
+    board = place(board, 'e4', 'IQ', 'B');
+    expect(getRevivalSquares(board, 'd4', 'A')).toEqual([]);
   });
 });
 

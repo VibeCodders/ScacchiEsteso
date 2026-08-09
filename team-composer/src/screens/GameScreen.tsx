@@ -57,7 +57,7 @@ function GameScreen() {
       return mover ? getSwapTargets(gameState.board, effectiveSelected, mover.owner) : [];
     }
     if (actionMode === 'revive') {
-      return getRevivalSquares(gameState.board, effectiveSelected);
+      return mover ? getRevivalSquares(gameState.board, effectiveSelected, mover.owner) : [];
     }
     return getLegalMovesForTurn(gameState, effectiveSelected).map((m) => m.to);
   }, [gameState, effectiveSelected, actionMode]);

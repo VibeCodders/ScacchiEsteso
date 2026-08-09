@@ -668,3 +668,38 @@ describe('applyRevive — Necromante resurrection', () => {
     expect(result.state.captured.A).toHaveLength(1);
   });
 });
+
+describe('Inquisitore Silenzio — blocks other special actions end-to-end (README §7.3)', () => {
+  it('applyScocca is rejected for an Arciere silenced by an adjacent enemy Inquisitore', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'AR', 'A');
+    board = place(board, 'd7', 'PE', 'B');
+    board = place(board, 'd5', 'IQ', 'B'); // adjacent to the Arciere
+    const state = createInitialGameState(board, 'A');
+
+    expect(applyScocca(state, 'd4', 'd7').ok).toBe(false);
+  });
+
+  it('applySwap is rejected for a Mistico silenced by an adjacent enemy Inquisitore', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'MI', 'A');
+    board = place(board, 'd5', 'CA', 'A');
+    board = place(board, 'e4', 'IQ', 'B'); // adjacent to the Mistico
+    const state = createInitialGameState(board, 'A');
+
+    expect(applySwap(state, 'd4', 'd5').ok).toBe(false);
+  });
+
+  it('applyRevive is rejected for a Necromante silenced by an adjacent enemy Inquisitore', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'NE', 'A');
+    board = place(board, 'e4', 'IQ', 'B'); // adjacent to the Necromante
+    let state = createInitialGameState(board, 'A');
+    state = { ...state, captured: { ...state.captured, A: [createPieceInstance('PE', 'A')] } };
+
+    expect(applyRevive(state, 'd4', 'd5', 'PE').ok).toBe(false);
+  });
+});
