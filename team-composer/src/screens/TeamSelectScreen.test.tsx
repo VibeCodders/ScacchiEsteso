@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import TeamSelectScreen from './TeamSelectScreen';
-import { KING_SIGLA, pickablePieces } from '../data/pieces';
+import { KING_SIGLA, pickablePieces, sortByPunti } from '../data/pieces';
 import type { TeamMap } from '../context/gameSetup';
 
 describe('TeamSelectScreen — parametrized team selection', () => {
@@ -59,10 +59,10 @@ describe('TeamSelectScreen — parametrized team selection', () => {
     expect(screen.queryByText('DM')).not.toBeInTheDocument();
   });
 
-  it('lists the roster grid sorted by point cost, ascending', () => {
+  it('lists the roster grid sorted by point cost (ascending), sigla as tie-breaker', () => {
     render(<TeamSelectScreen title="Test" onComplete={() => {}} />);
     const renderedSiglas = [...document.querySelectorAll('.piece-card .sigla')].map((el) => el.textContent);
-    const expectedSiglas = [...pickablePieces].sort((a, b) => a.punti - b.punti).map((p) => p.sigla);
+    const expectedSiglas = sortByPunti(pickablePieces).map((p) => p.sigla);
     expect(renderedSiglas).toEqual(expectedSiglas);
   });
 

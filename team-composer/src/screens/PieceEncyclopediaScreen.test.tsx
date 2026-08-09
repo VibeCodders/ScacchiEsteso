@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import PieceEncyclopediaScreen from './PieceEncyclopediaScreen';
-import { pieces } from '../data/pieces';
+import { pieces, sortByPunti } from '../data/pieces';
 
 function renderScreen() {
   return render(
@@ -19,10 +19,10 @@ describe('PieceEncyclopediaScreen', () => {
     expect(screen.getByText('DM')).toBeInTheDocument();
   });
 
-  it('lists every piece sorted by point cost, ascending', () => {
+  it('lists every piece sorted by point cost (ascending), sigla as tie-breaker', () => {
     renderScreen();
     const renderedSiglas = [...document.querySelectorAll('.piece-card .sigla')].map((el) => el.textContent);
-    const expectedSiglas = [...pieces].sort((a, b) => a.punti - b.punti).map((p) => p.sigla);
+    const expectedSiglas = sortByPunti(pieces).map((p) => p.sigla);
     expect(renderedSiglas).toEqual(expectedSiglas);
   });
 

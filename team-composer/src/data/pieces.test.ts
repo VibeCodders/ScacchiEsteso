@@ -26,6 +26,25 @@ describe('sortByPunti', () => {
       }
     }
   });
+
+  it('breaks a point-cost tie by sigla, alphabetically', () => {
+    // Torre (TO) and Spettro (SP) are both 15pt — the sigla must decide, not incidental array position.
+    const to = pieces.find((p) => p.sigla === 'TO')!;
+    const sp = pieces.find((p) => p.sigla === 'SP')!;
+    expect(to.punti).toBe(sp.punti);
+
+    expect(sortByPunti([to, sp])).toEqual([sp, to]); // 'SP' < 'TO'
+    expect(sortByPunti([sp, to])).toEqual([sp, to]); // stable regardless of input order
+  });
+
+  it('never leaves two equal-punti pieces in non-alphabetical order anywhere in a full sort', () => {
+    const sorted = sortByPunti(pieces);
+    for (let i = 1; i < sorted.length; i++) {
+      if (sorted[i].punti === sorted[i - 1].punti) {
+        expect(sorted[i].sigla >= sorted[i - 1].sigla).toBe(true);
+      }
+    }
+  });
 });
 
 describe('sortSiglasByPunti', () => {
@@ -43,5 +62,9 @@ describe('sortSiglasByPunti', () => {
 
   it('is a no-op on an empty list', () => {
     expect(sortSiglasByPunti([])).toEqual([]);
+  });
+
+  it('breaks a point-cost tie by sigla, alphabetically (Torre and Spettro are both 15pt)', () => {
+    expect(sortSiglasByPunti(['TO', 'SP'])).toEqual(['SP', 'TO']);
   });
 });

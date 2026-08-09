@@ -412,7 +412,11 @@ function GameScreen() {
               <h2>🎭 Chi imitare?</h2>
               <div className="actions" style={{ flexDirection: 'column' }}>
                 {[...pendingMimicChoice.threats]
-                  .sort((a, b) => getPieceDef(gameState.board.get(a)!.sigla).punti - getPieceDef(gameState.board.get(b)!.sigla).punti)
+                  .sort((a, b) => {
+                    const siglaA = gameState.board.get(a)!.sigla;
+                    const siglaB = gameState.board.get(b)!.sigla;
+                    return getPieceDef(siglaA).punti - getPieceDef(siglaB).punti || siglaA.localeCompare(siglaB);
+                  })
                   .map((threatCoord) => {
                   const threatSigla = gameState.board.get(threatCoord)?.sigla ?? '?';
                   return (

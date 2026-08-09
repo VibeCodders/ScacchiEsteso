@@ -105,7 +105,7 @@ function TeamSelectScreen({ title, subtitle, initialTeam, completeButtonLabel, o
         members.push({ piece, count });
       }
     });
-    return members.sort((a, b) => a.piece.punti - b.piece.punti);
+    return members.sort((a, b) => a.piece.punti - b.piece.punti || a.piece.sigla.localeCompare(b.piece.sigla));
   }, [team]);
 
   const totalPieces = useMemo(() => {
