@@ -1,6 +1,8 @@
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGameSetup } from '../context/gameSetup';
-import { getPresetTeams, buildPresetTeam, randomFillTeam, type PresetTeamId } from '../data/presetTeams';
+import { rules, scaleRulesForBoardSize } from '../data/pieces';
+import { getPresetTeams, buildPresetTeam, randomFillTeam, isPresetValid, type PresetTeamId } from '../data/presetTeams';
 import { DIFFICULTY_DEPTH, type BotDifficulty } from '../game/bot';
 import '../App.css';
 
@@ -8,7 +10,12 @@ const DIFFICULTY_LABELS: Record<BotDifficulty, string> = { easy: 'Facile', mediu
 
 function PcTeamChoiceScreen() {
   const navigate = useNavigate();
-  const { humanOwner, teamA, teamB, setTeamA, setTeamB, botDifficulty, setBotDifficulty } = useGameSetup();
+  const {
+    humanOwner, teamA, teamB, setTeamA, setTeamB, botDifficulty, setBotDifficulty,
+    boardDimensions, maxDistinctSpecialTypes,
+  } = useGameSetup();
+
+  const effectiveRules = useMemo(() => scaleRulesForBoardSize(rules, boardDimensions), [boardDimensions]);
 
   // The PC always composes whichever owner the human isn't playing.
   const targetOwner = humanOwner === 'A' ? 'B' : 'A';
@@ -33,7 +40,7 @@ function PcTeamChoiceScreen() {
   };
 
   const chooseRandom = () => {
-    setTargetTeam(randomFillTeam());
+    setTargetTeam(randomFillTeam(effectiveRules, maxDistinctSpecialTypes));
     goToNextStep();
   };
 
@@ -67,11 +74,21 @@ function PcTeamChoiceScreen() {
           <h2>🎯 Composizione</h2>
           <div className="actions" style={{ flexDirection: 'column' }}>
             <button className="btn-save" onClick={chooseManual}>Manuale — lo compongo io</button>
-            {getPresetTeams().map((preset) => (
-              <button key={preset.id} className="btn-auto" onClick={() => choosePreset(preset.id)}>
-                Preset: {preset.label} — {preset.description}
-              </button>
-            ))}
+            {getPresetTeams().map((preset) => {
+              const valid = isPresetValid(preset.id, effectiveRules, maxDistinctSpecialTypes);
+              return (
+                <button
+                  key={preset.id}
+                  className="btn-auto"
+                  onClick={() => choosePreset(preset.id)}
+                  disabled={!valid}
+                  title={valid ? undefined : 'Non valido con le impostazioni attuali della partita (budget o limite di tipi speciali)'}
+                >
+                  Preset: {preset.label} — {preset.description}
+                  {!valid && ' (non valido con queste impostazioni)'}
+                </button>
+              );
+            })}
             <button className="btn-improve" onClick={chooseMirror} disabled={!humanTeam}>
               Specchio — copia il mio team
             </button>

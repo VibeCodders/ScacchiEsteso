@@ -52,24 +52,24 @@ function TeamSelectScreen({
   }, []);
 
   const handleAutoFill = useCallback(() => {
-    const result = autoFillTeam(team, effectiveRules);
+    const result = autoFillTeam(team, effectiveRules, maxDistinctSpecialTypes);
     if (result.changed) {
       setTeam(result.team);
       addToast(result.message, 'success');
     } else {
       addToast(result.message, 'info');
     }
-  }, [team, addToast, effectiveRules]);
+  }, [team, addToast, effectiveRules, maxDistinctSpecialTypes]);
 
   const handleImprove = useCallback(() => {
-    const result = improveTeam(team, effectiveRules);
+    const result = improveTeam(team, effectiveRules, maxDistinctSpecialTypes);
     if (result.changed) {
       setTeam(result.team);
       addToast(result.message, 'success');
     } else {
       addToast(result.message, 'info');
     }
-  }, [team, addToast, effectiveRules]);
+  }, [team, addToast, effectiveRules, maxDistinctSpecialTypes]);
 
   const addPiece = useCallback((piece: Piece) => {
     if (piece.sigla === KING_SIGLA) return;

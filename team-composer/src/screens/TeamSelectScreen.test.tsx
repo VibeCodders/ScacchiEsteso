@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import TeamSelectScreen from './TeamSelectScreen';
-import { KING_SIGLA, pickablePieces, sortByPunti } from '../data/pieces';
+import { KING_SIGLA, pickablePieces, sortByPunti, pieces } from '../data/pieces';
+import { computeDistinctSpecialTypes } from '../data/validators';
 import type { TeamMap } from '../context/gameSetup';
 
 describe('TeamSelectScreen — parametrized team selection', () => {
@@ -101,5 +102,43 @@ describe('TeamSelectScreen — optional max-distinct-special-types limit', () =>
     expect(screen.getByText(/Troppi tipi speciali distinti: 3\/2 max/i)).toBeInTheDocument();
     fireEvent.click(screen.getByText(/Vincoli non rispettati/i));
     expect(onComplete).not.toHaveBeenCalled();
+  });
+});
+
+function memberSiglas(): string[] {
+  return [...document.querySelectorAll('.team-member .member-sigla')].map((el) => el.textContent ?? '');
+}
+
+describe('TeamSelectScreen — "Completa" and "Migliora" respect the distinct-special-types limit', () => {
+  it('"Completa" never pushes the team past the configured limit, click after click', () => {
+    const initialTeam: TeamMap = new Map([[KING_SIGLA, 1]]);
+    render(<TeamSelectScreen title="Test" onComplete={() => {}} initialTeam={initialTeam} maxDistinctSpecialTypes={1} />);
+
+    for (let i = 0; i < 5; i++) {
+      fireEvent.click(screen.getByText('Completa'));
+      const team = new Map(memberSiglas().map((s) => [s, 1]));
+      expect(computeDistinctSpecialTypes(team, pieces)).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('"Migliora" auto-corrects a team that was already over the limit before optimizing', () => {
+    const initialTeam: TeamMap = new Map([[KING_SIGLA, 1], ['CO', 1], ['NE', 1], ['BE', 1]]); // 3 distinct special types
+    render(<TeamSelectScreen title="Test" onComplete={() => {}} initialTeam={initialTeam} maxDistinctSpecialTypes={2} />);
+
+    expect(screen.getByText(/Troppi tipi speciali distinti/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Migliora'));
+
+    expect(screen.queryByText(/Troppi tipi speciali distinti/i)).not.toBeInTheDocument();
+    const team = new Map(memberSiglas().map((s) => [s, 1]));
+    expect(computeDistinctSpecialTypes(team, pieces)).toBeLessThanOrEqual(2);
+  });
+
+  it('"Migliora" never exceeds the limit while continuing to optimize toward the budget', () => {
+    const initialTeam: TeamMap = new Map([[KING_SIGLA, 1], ['PE', 2]]);
+    render(<TeamSelectScreen title="Test" onComplete={() => {}} initialTeam={initialTeam} maxDistinctSpecialTypes={1} />);
+
+    fireEvent.click(screen.getByText('Migliora'));
+    const team = new Map(memberSiglas().map((s) => [s, 1]));
+    expect(computeDistinctSpecialTypes(team, pieces)).toBeLessThanOrEqual(1);
   });
 });

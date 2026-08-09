@@ -44,6 +44,48 @@ export function computeDistinctSpecialTypes(team: Map<string, number>, pieces: P
   return distinct;
 }
 
+/**
+ * True if adding one more `piece` to `team` would introduce a *new* distinct special type beyond
+ * the configured limit — i.e. `piece` is non-classic, not already present in `team`, and every
+ * "slot" up to `maxDistinctSpecialTypes` is already taken. Always false when `piece` is classic,
+ * already present (adding a copy doesn't consume a new slot), or no limit is set.
+ */
+export function wouldExceedSpecialTypesLimit(
+  team: Map<string, number>,
+  piece: Piece,
+  pieces: Piece[],
+  maxDistinctSpecialTypes: number | null,
+): boolean {
+  if (maxDistinctSpecialTypes == null) return false;
+  if (piece.classico) return false;
+  if ((team.get(piece.sigla) ?? 0) > 0) return false; // already present — a copy doesn't need a new slot
+  return computeDistinctSpecialTypes(team, pieces) >= maxDistinctSpecialTypes;
+}
+
+/**
+ * Single source of truth for "is adding one more copy of `piece` to `team` structurally legal" —
+ * every automatic team-building tool (Completa/Migliora, the PC's random fill) should filter
+ * candidates through this instead of re-implementing the same checks. Does *not* check budget,
+ * since remaining budget is caller-specific context this function doesn't have.
+ */
+export function canAddPieceType(
+  team: Map<string, number>,
+  piece: Piece,
+  pieces: Piece[],
+  rules: Rules,
+  maxDistinctSpecialTypes: number | null = null,
+): boolean {
+  if (piece.sigla === rules.kingSigla) return false;
+  const currentCount = team.get(piece.sigla) ?? 0;
+  if (currentCount >= getMaxIdentical(piece, rules)) return false;
+  if (piece.categoria === 'pedone') {
+    const maxPawns = rules.maxCountByCategory.pedone ?? rules.maxIdenticalDefault;
+    if (countByCategory(team, pieces, 'pedone') + 1 > maxPawns) return false;
+  }
+  if (wouldExceedSpecialTypesLimit(team, piece, pieces, maxDistinctSpecialTypes)) return false;
+  return true;
+}
+
 export function computeValidation(
   team: Map<string, number>,
   pieces: Piece[],

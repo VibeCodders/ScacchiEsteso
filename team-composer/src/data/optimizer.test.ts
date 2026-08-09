@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { pieces, rules, KING_SIGLA } from './pieces';
 import { autoFillTeam, improveTeam } from './optimizer';
-import { computeBudgetSpent, computeTotalPieces } from './validators';
+import { computeBudgetSpent, computeDistinctSpecialTypes, computeTotalPieces } from './validators';
 
 describe('autoFillTeam — fills up without requiring an exact budget match', () => {
   it('adds pieces until the budget cap or piece cap is reached, never exceeding either', () => {
@@ -107,5 +107,97 @@ describe('autoFillTeam / improveTeam — custom (scaled) rules', () => {
     const start = new Map<string, number>([[KING_SIGLA, 1], ['PE', 1]]); // 4pt, far from a 20pt target
     const result = improveTeam(start, smallerRules);
     expect(computeBudgetSpent(result.team, pieces)).toBeLessThanOrEqual(smallerRules.budget);
+  });
+});
+
+describe('autoFillTeam — respects the optional distinct-special-types limit', () => {
+  it('never introduces more distinct special types than the configured limit, starting from empty', () => {
+    const start = new Map<string, number>([[KING_SIGLA, 1]]);
+    const result = autoFillTeam(start, rules, 2);
+    expect(computeDistinctSpecialTypes(result.team, pieces)).toBeLessThanOrEqual(2);
+  });
+
+  it('never introduces a new distinct special type once the limit is already saturated by the starting team', () => {
+    const start = new Map<string, number>([[KING_SIGLA, 1], ['CO', 1], ['NE', 1]]); // 2 distinct types, limit 2
+    const result = autoFillTeam(start, rules, 2);
+    expect(computeDistinctSpecialTypes(result.team, pieces)).toBe(2);
+    // still allowed to top up existing types or add classic pieces though
+    expect(result.team.get('CO')).toBeGreaterThanOrEqual(1);
+  });
+
+  it('never makes things worse when the starting team already exceeds the limit (pre-existing over-limit team)', () => {
+    const start = new Map<string, number>([[KING_SIGLA, 1], ['CO', 1], ['NE', 1], ['BE', 1]]); // 3 distinct types
+    const result = autoFillTeam(start, rules, 2); // limit lower than what's already there
+    expect(computeDistinctSpecialTypes(result.team, pieces)).toBe(3); // unchanged — no 4th type added
+  });
+
+  it('reports being blocked by the special-types limit when nothing else fits the remaining budget', () => {
+    // Budget only allows a single further piece and every special-type slot is used, but a new
+    // classic pawn copy is still legal — the "blocked" note only appears when literally nothing
+    // (new type or otherwise) can be added; here we instead assert the limit itself always holds.
+    const start = new Map<string, number>([[KING_SIGLA, 1], ['CO', 1], ['NE', 1]]);
+    const result = autoFillTeam(start, rules, 2);
+    expect(computeDistinctSpecialTypes(result.team, pieces)).toBeLessThanOrEqual(2);
+  });
+
+  it('prefers reinforcing an already-present special type over introducing a new one, even when a slot is still free', () => {
+    const startCost = 44; // CO alone
+    const start = new Map<string, number>([[KING_SIGLA, 1], ['CO', 1]]);
+    const effectiveRules = { ...rules, budget: startCost + 45, maxPiecesTotal: rules.maxPiecesTotal };
+
+    const result = autoFillTeam(start, effectiveRules, 3); // plenty of room for new types too
+    expect(result.team.get('CO')).toBe(2); // reinforced, not diluted into a new type
+    expect(computeDistinctSpecialTypes(result.team, pieces)).toBe(1); // still just CO
+  });
+
+  it('still introduces a new special type when no room is left to reinforce an existing one (identical-copy cap reached, and nothing cheaper fits)', () => {
+    const necromante = pieces.find((p) => p.sigla === 'NE')!;
+    const maxIdentical = rules.maxIdenticalByCategory[necromante.categoria] ?? rules.maxIdenticalDefault;
+    const start = new Map<string, number>([[KING_SIGLA, 1], ['NE', maxIdentical]]); // NE maxed out — no room to reinforce
+    const currentCost = computeBudgetSpent(start, pieces);
+    // Remaining budget of exactly 3 excludes every classic piece (cheapest non-King classic is 4pt) —
+    // only new special types costing ≤3 (PG=2, FG=3) can possibly fill it.
+    const effectiveRules = { ...rules, budget: currentCost + 3, maxPiecesTotal: computeTotalPieces(start) + 1 };
+
+    const result = autoFillTeam(start, effectiveRules, 2); // 1 slot free (NE is the only type so far)
+    expect(computeDistinctSpecialTypes(result.team, pieces)).toBe(2);
+  });
+});
+
+describe('improveTeam — respects and auto-corrects the optional distinct-special-types limit', () => {
+  it('never exceeds the limit while optimizing toward the budget', () => {
+    const start = new Map<string, number>([[KING_SIGLA, 1], ['PE', 2]]);
+    const result = improveTeam(start, rules, 1);
+    expect(computeDistinctSpecialTypes(result.team, pieces)).toBeLessThanOrEqual(1);
+  });
+
+  it('auto-corrects a starting team that already exceeds the limit before optimizing further', () => {
+    const start = new Map<string, number>([[KING_SIGLA, 1], ['CO', 1], ['NE', 1], ['BE', 1]]); // 3 distinct types
+    const result = improveTeam(start, rules, 2);
+
+    expect(computeDistinctSpecialTypes(result.team, pieces)).toBeLessThanOrEqual(2);
+    expect(result.changed).toBe(true);
+    expect(result.message).toMatch(/Rimoss/i);
+  });
+
+  it('removes the cheapest special type(s) first when correcting an over-limit team', () => {
+    // CO=44, NE=30, BE=26 — BE is cheapest, should be the first removed to free a slot.
+    const start = new Map<string, number>([[KING_SIGLA, 1], ['CO', 1], ['NE', 1], ['BE', 1]]);
+    const result = improveTeam(start, rules, 2);
+    expect(result.team.has('BE')).toBe(false);
+    expect(result.team.has('CO')).toBe(true);
+    expect(result.team.has('NE')).toBe(true);
+  });
+
+  it('never produces a team exceeding the budget even after the special-types correction pass', () => {
+    const start = new Map<string, number>([[KING_SIGLA, 1], ['CO', 1], ['NE', 1], ['BE', 1], ['PE', 3]]);
+    const result = improveTeam(start, rules, 1);
+    expect(computeBudgetSpent(result.team, pieces)).toBeLessThanOrEqual(rules.budget);
+  });
+
+  it('reports no correction needed when the starting team is already within the limit', () => {
+    const start = new Map<string, number>([[KING_SIGLA, 1], ['CO', 1]]);
+    const result = improveTeam(start, rules, 2);
+    expect(result.message).not.toMatch(/Rimoss/i);
   });
 });

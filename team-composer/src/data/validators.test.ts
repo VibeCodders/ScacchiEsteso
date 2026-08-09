@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { pieces, rules, KING_SIGLA } from './pieces';
-import { computeValidation, computeBudgetSpent, computeDistinctSpecialTypes, getMaxIdenticalBySigla } from './validators';
+import {
+  computeValidation, computeBudgetSpent, computeDistinctSpecialTypes, getMaxIdenticalBySigla,
+  canAddPieceType, wouldExceedSpecialTypesLimit,
+} from './validators';
 
 function teamOf(entries: Array<[string, number]>): Map<string, number> {
   return new Map(entries);
@@ -150,5 +153,94 @@ describe('computeValidation — optional max-distinct-special-types limit', () =
     const team = teamOf([[KING_SIGLA, 1], ['RA', 1], ['TO', 1], ['AL', 1], ['CA', 1], ['CO', 1]]); // 1 distinct special type
     const result = computeValidation(team, pieces, rules, 1);
     expect(result.specialTypesLimit.valid).toBe(true);
+  });
+});
+
+describe('wouldExceedSpecialTypesLimit', () => {
+  const colosso = pieces.find((p) => p.sigla === 'CO')!; // classico: false
+  const necromante = pieces.find((p) => p.sigla === 'NE')!; // classico: false
+  const torre = pieces.find((p) => p.sigla === 'TO')!; // classico: true
+
+  it('is always false when no limit is set', () => {
+    const team = teamOf([[KING_SIGLA, 1], ['CO', 1]]);
+    expect(wouldExceedSpecialTypesLimit(team, necromante, pieces, null)).toBe(false);
+  });
+
+  it('is always false for a classic piece, regardless of the limit', () => {
+    const team = teamOf([[KING_SIGLA, 1], ['CO', 1]]);
+    expect(wouldExceedSpecialTypesLimit(team, torre, pieces, 1)).toBe(false);
+  });
+
+  it('is false when the special type is already present (a copy does not need a new slot)', () => {
+    const team = teamOf([[KING_SIGLA, 1], ['CO', 1]]);
+    expect(wouldExceedSpecialTypesLimit(team, colosso, pieces, 1)).toBe(false);
+  });
+
+  it('is true when introducing a genuinely new special type with no slots left', () => {
+    const team = teamOf([[KING_SIGLA, 1], ['CO', 1]]); // 1/1 slots used
+    expect(wouldExceedSpecialTypesLimit(team, necromante, pieces, 1)).toBe(true);
+  });
+
+  it('is false when a slot is still free', () => {
+    const team = teamOf([[KING_SIGLA, 1], ['CO', 1]]); // 1/2 slots used
+    expect(wouldExceedSpecialTypesLimit(team, necromante, pieces, 2)).toBe(false);
+  });
+});
+
+describe('canAddPieceType — single source of truth for structural eligibility', () => {
+  it('rejects the King sigla (never addable through this path)', () => {
+    const king = pieces.find((p) => p.sigla === KING_SIGLA)!;
+    const team = teamOf([[KING_SIGLA, 1]]);
+    expect(canAddPieceType(team, king, pieces, rules)).toBe(false);
+  });
+
+  it('rejects a piece already at its max-identical count', () => {
+    const pawn = pieces.find((p) => p.categoria === 'pedone' && p.sigla !== KING_SIGLA)!;
+    const limit = getMaxIdenticalBySigla(pawn.sigla, pieces, rules);
+    const team = teamOf([[KING_SIGLA, 1], [pawn.sigla, limit]]);
+    expect(canAddPieceType(team, pawn, pieces, rules)).toBe(false);
+  });
+
+  it('rejects a pawn-category piece once the pawn category cap is reached', () => {
+    const maxPawns = rules.maxCountByCategory.pedone!;
+    const pawnPieces = pieces.filter((p) => p.categoria === 'pedone');
+    const team = teamOf([[KING_SIGLA, 1]]);
+    let remaining = maxPawns;
+    for (const p of pawnPieces) {
+      if (remaining <= 0) break;
+      const take = Math.min(remaining, getMaxIdenticalBySigla(p.sigla, pieces, rules));
+      team.set(p.sigla, take);
+      remaining -= take;
+    }
+    expect(remaining).toBe(0);
+
+    const anotherPawn = pawnPieces.find((p) => (team.get(p.sigla) ?? 0) < getMaxIdenticalBySigla(p.sigla, pieces, rules));
+    if (anotherPawn) {
+      expect(canAddPieceType(team, anotherPawn, pieces, rules)).toBe(false);
+    }
+  });
+
+  it('rejects a new special type once the distinct-types limit is saturated', () => {
+    const team = teamOf([[KING_SIGLA, 1], ['CO', 1]]);
+    const necromante = pieces.find((p) => p.sigla === 'NE')!;
+    expect(canAddPieceType(team, necromante, pieces, rules, 1)).toBe(false);
+  });
+
+  it('allows reinforcing an already-present special type even when the limit is saturated', () => {
+    const team = teamOf([[KING_SIGLA, 1], ['CO', 1]]);
+    const colosso = pieces.find((p) => p.sigla === 'CO')!;
+    expect(canAddPieceType(team, colosso, pieces, rules, 1)).toBe(true);
+  });
+
+  it('allows a classic piece even when the special-types limit is saturated', () => {
+    const team = teamOf([[KING_SIGLA, 1], ['CO', 1]]);
+    const torre = pieces.find((p) => p.sigla === 'TO')!;
+    expect(canAddPieceType(team, torre, pieces, rules, 1)).toBe(true);
+  });
+
+  it('does not check budget — a piece with punti beyond any remaining budget is still structurally addable', () => {
+    const queen = pieces.find((p) => p.descrizione === 'Regina')!;
+    const team = teamOf([[KING_SIGLA, 1]]);
+    expect(canAddPieceType(team, queen, pieces, rules)).toBe(true);
   });
 });

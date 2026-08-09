@@ -1,6 +1,6 @@
-import { pieces, rules, KING_SIGLA } from './pieces';
-import { getMaxIdenticalBySigla, computeBudgetSpent, countByCategory } from './validators';
-import type { Piece } from '../types';
+import { pieces, pickablePieces, rules, KING_SIGLA } from './pieces';
+import { canAddPieceType, computeBudgetSpent, computeTotalPieces, computeValidation } from './validators';
+import type { Piece, Rules } from '../types';
 
 export type PresetTeamId = 'bilanciato' | 'aggressivo' | 'difensivo';
 
@@ -11,7 +11,9 @@ interface PresetTeamDef {
   composition: Array<[string, number]>;
 }
 
-// Compositions are hand-picked within budget/rules; validity is enforced by tests, not assumed.
+// Compositions are hand-picked within the *default* 8×8 budget/rules and no special-types limit;
+// whether a given preset is still valid for the current match's (possibly scaled/limited) rules
+// must be checked at use-time with isPresetValid, not assumed.
 const PRESET_DEFS: PresetTeamDef[] = [
   {
     id: 'bilanciato',
@@ -43,36 +45,42 @@ export function buildPresetTeam(id: PresetTeamId): Map<string, number> {
   return new Map(def.composition);
 }
 
-function getMaxIdenticalFor(sigla: string): number {
-  return getMaxIdenticalBySigla(sigla, pieces, rules);
+/**
+ * Whether a fixed preset is still legal under the *current* match's rules — which may have a
+ * scaled budget/piece-cap (custom board size) and/or a distinct-special-types limit the preset's
+ * static composition was never designed against.
+ */
+export function isPresetValid(
+  id: PresetTeamId,
+  effectiveRules: Rules = rules,
+  maxDistinctSpecialTypes: number | null = null,
+): boolean {
+  const team = buildPresetTeam(id);
+  return computeValidation(team, pieces, effectiveRules, maxDistinctSpecialTypes).overall;
 }
 
 /**
- * Fills a team with random valid picks (respecting budget, max-identical, pawn cap,
- * and total piece cap) until nothing more fits — a random counterpart to autoFillTeam's
- * greedy optimizer.
+ * Fills a team with random valid picks (respecting budget, max-identical, pawn cap, total piece
+ * cap, and — when set — the distinct-special-types limit) until nothing more fits — a random
+ * counterpart to autoFillTeam's greedy optimizer.
  */
-export function randomFillTeam(): Map<string, number> {
+export function randomFillTeam(
+  effectiveRules: Rules = rules,
+  maxDistinctSpecialTypes: number | null = null,
+): Map<string, number> {
   const team = new Map<string, number>([[KING_SIGLA, 1]]);
-  const maxPawns = rules.maxCountByCategory.pedone ?? rules.maxIdenticalDefault;
 
   let guard = 0;
   while (guard++ < 500) {
     const spent = computeBudgetSpent(team, pieces);
-    let total = 0;
-    team.forEach((c) => { total += c; });
-    if (total >= rules.maxPiecesTotal) break;
-    const budgetLeft = rules.budget - spent;
+    const total = computeTotalPieces(team);
+    if (total >= effectiveRules.maxPiecesTotal) break;
+    const budgetLeft = effectiveRules.budget - spent;
     if (budgetLeft <= 0) break;
 
-    const candidates = pieces.filter((p: Piece) => {
-      if (p.sigla === KING_SIGLA) return false;
-      if (p.punti > budgetLeft) return false;
-      const currentCount = team.get(p.sigla) ?? 0;
-      if (currentCount >= getMaxIdenticalFor(p.sigla)) return false;
-      if (p.categoria === 'pedone' && countByCategory(team, pieces, 'pedone') + 1 > maxPawns) return false;
-      return true;
-    });
+    const candidates = pickablePieces.filter(
+      (p: Piece) => p.punti <= budgetLeft && canAddPieceType(team, p, pieces, effectiveRules, maxDistinctSpecialTypes),
+    );
 
     if (candidates.length === 0) break;
 
