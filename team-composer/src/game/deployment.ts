@@ -1,7 +1,9 @@
 import { KING_SIGLA } from '../data/pieces';
+import { getPieceDef } from './moveEngine';
 import {
   createEmptyBoard,
   createPieceInstance,
+  fileRankToCoord,
   getPieceAt,
   isValidCoord,
   setPieceAt,
@@ -103,4 +105,74 @@ function computeNextPlacer(remaining: Record<Owner, Roster>, justPlaced: Owner):
   const other: Owner = justPlaced === 'A' ? 'B' : 'A';
   if (totalRemaining(remaining[other]) > 0) return other;
   return justPlaced; // the other side is exhausted (or was already) — this player continues alone
+}
+
+// Front rank = the one closer to the opponent (e.g. A's rank 2, facing rank 8); back rank = the
+// player's own edge (A's rank 1, where the King starts).
+function frontRank(owner: Owner): number { return owner === 'A' ? 2 : 7; }
+function backRank(owner: Owner): number { return owner === 'A' ? 1 : 8; }
+
+// Center files first: pieces placed earlier in a rank land more centrally, which — all else being
+// equal — gives them more reach/board control than an edge square.
+const CENTER_OUT_FILES = [3, 4, 2, 5, 1, 6, 0, 7]; // d, e, c, f, b, g, a, h
+
+function rankSquaresCenterOut(rank: number): Coord[] {
+  return CENTER_OUT_FILES.map((file) => fileRankToCoord(file, rank)).filter((c): c is Coord => c !== null);
+}
+
+interface RosterItem { sigla: string; punti: number; categoria: string }
+
+function expandRoster(roster: Roster): RosterItem[] {
+  const items: RosterItem[] = [];
+  roster.forEach((count, sigla) => {
+    const def = getPieceDef(sigla);
+    for (let i = 0; i < count; i++) items.push({ sigla, punti: def.punti, categoria: def.categoria });
+  });
+  return items;
+}
+
+/**
+ * Auto-deploys every remaining piece for `owner` in one shot, using a simple opening-theory-style
+ * heuristic (no real "best" square exists for arbitrary custom pieces, so this aims for a
+ * reasonable default rather than a search): "pedone"-category pieces go on the front rank to
+ * screen the rest, everything else stays on the back rank behind them, and within each rank
+ * higher-value pieces land on the more central files (more central squares generally reach more
+ * of the board). Overflow (e.g. more than 8 pedoni) spills onto the other rank's empty squares.
+ */
+export function autoPlaceRemaining(state: DeploymentState, owner: Owner): DeploymentState {
+  const roster = state.remaining[owner];
+  if (totalRemaining(roster) === 0) return state;
+
+  const items = expandRoster(roster);
+  const pedoneItems = items.filter((i) => i.categoria === 'pedone').sort((a, b) => b.punti - a.punti);
+  const otherItems = items.filter((i) => i.categoria !== 'pedone').sort((a, b) => b.punti - a.punti);
+
+  const frontQueue = rankSquaresCenterOut(frontRank(owner)).filter((c) => !getPieceAt(state.board, c));
+  const backQueue = rankSquaresCenterOut(backRank(owner)).filter((c) => !getPieceAt(state.board, c));
+
+  const placements: Array<{ sigla: string; coord: Coord }> = [];
+  for (const item of pedoneItems) {
+    const coord = frontQueue.shift() ?? backQueue.shift();
+    if (coord) placements.push({ sigla: item.sigla, coord });
+  }
+  for (const item of otherItems) {
+    const coord = backQueue.shift() ?? frontQueue.shift();
+    if (coord) placements.push({ sigla: item.sigla, coord });
+  }
+
+  let board = state.board;
+  for (const { sigla, coord } of placements) {
+    board = setPieceAt(board, coord, createPieceInstance(sigla, owner));
+  }
+
+  const nextRemaining: Record<Owner, Roster> = { ...state.remaining, [owner]: new Map() };
+  const other: Owner = owner === 'A' ? 'B' : 'A';
+  const nextPlacer = totalRemaining(nextRemaining[other]) > 0 ? other : owner;
+
+  return { ...state, board, remaining: nextRemaining, currentPlacer: nextPlacer };
+}
+
+/** Auto-deploys every remaining piece for both players in one shot. */
+export function autoPlaceBoth(state: DeploymentState): DeploymentState {
+  return autoPlaceRemaining(autoPlaceRemaining(state, 'A'), 'B');
 }

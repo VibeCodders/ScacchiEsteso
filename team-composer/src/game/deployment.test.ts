@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { createDeploymentState, isDeploymentComplete, placePiece, ownDeploymentRanks } from './deployment';
-import { getPieceAt } from './board';
+import {
+  autoPlaceBoth,
+  autoPlaceRemaining,
+  createDeploymentState,
+  isDeploymentComplete,
+  ownDeploymentRanks,
+  placePiece,
+} from './deployment';
+import { allCoords, getPieceAt } from './board';
 import { KING_SIGLA } from '../data/pieces';
+import { getPieceDef } from './moveEngine';
 
 function team(entries: Array<[string, number]>) {
   return new Map<string, number>(entries);
@@ -111,5 +119,71 @@ describe('placePiece', () => {
     if (!result.ok) return;
     state = result.state;
     expect(isDeploymentComplete(state)).toBe(true);
+  });
+});
+
+describe('autoPlaceRemaining', () => {
+  it("places every remaining piece for the given owner, emptying that owner's roster", () => {
+    const state = createDeploymentState(team([[KING_SIGLA, 1], ['PE', 2], ['TO', 1]]), team([[KING_SIGLA, 1], ['CA', 1]]), 'A');
+    const result = autoPlaceRemaining(state, 'A');
+
+    expect(result.remaining.A.size).toBe(0);
+    expect(result.remaining.B).toEqual(state.remaining.B); // untouched
+    let placedCount = 0;
+    for (const coord of allCoords()) {
+      const piece = getPieceAt(result.board, coord);
+      if (piece?.owner === 'A') placedCount++;
+    }
+    expect(placedCount).toBe(4); // King + PE + PE + TO
+  });
+
+  it('only places within the deployment ranks (the own 2 back ranks) and never onto an occupied square', () => {
+    const state = createDeploymentState(team([[KING_SIGLA, 1], ['PE', 3], ['TO', 2]]), team([[KING_SIGLA, 1]]), 'A');
+    const result = autoPlaceRemaining(state, 'A');
+
+    const ranks = ownDeploymentRanks('A');
+    for (const coord of allCoords()) {
+      const piece = getPieceAt(result.board, coord);
+      if (piece?.owner === 'A') expect(ranks).toContain(Number(coord[1]));
+    }
+    // no square was double-booked — the King's e1 keeps its original occupant
+    expect(getPieceAt(result.board, 'e1')?.sigla).toBe(KING_SIGLA);
+  });
+
+  it('places "pedone"-category pieces on the front rank and everything else on the back rank when there is room', () => {
+    const state = createDeploymentState(team([[KING_SIGLA, 1], ['PE', 2], ['TO', 1]]), team([[KING_SIGLA, 1]]), 'A');
+    const result = autoPlaceRemaining(state, 'A');
+
+    for (const coord of allCoords()) {
+      const piece = getPieceAt(result.board, coord);
+      if (!piece || piece.owner !== 'A' || piece.sigla === KING_SIGLA) continue;
+      const categoria = getPieceDef(piece.sigla).categoria;
+      const rank = Number(coord[1]);
+      if (categoria === 'pedone') expect(rank).toBe(2); // A's front rank
+      else expect(rank).toBe(1); // A's back rank, alongside the King
+    }
+  });
+
+  it('advances currentPlacer to the other owner if they still have pieces left, otherwise stays put', () => {
+    let state = createDeploymentState(team([[KING_SIGLA, 1], ['PE', 1]]), team([[KING_SIGLA, 1], ['TO', 1]]), 'A');
+    state = autoPlaceRemaining(state, 'A');
+    expect(state.currentPlacer).toBe('B'); // B still has a Torre to place
+
+    state = autoPlaceRemaining(state, 'B');
+    expect(isDeploymentComplete(state)).toBe(true);
+  });
+
+  it('is a no-op when the owner has nothing left to place', () => {
+    const state = createDeploymentState(team([[KING_SIGLA, 1]]), team([[KING_SIGLA, 1], ['PE', 1]]), 'A');
+    const result = autoPlaceRemaining(state, 'A'); // A's roster is already empty (just the King)
+    expect(result).toEqual(state);
+  });
+});
+
+describe('autoPlaceBoth', () => {
+  it('completes the entire deployment for both players in one call', () => {
+    const state = createDeploymentState(team([[KING_SIGLA, 1], ['PE', 2]]), team([[KING_SIGLA, 1], ['TO', 1]]), 'A');
+    const result = autoPlaceBoth(state);
+    expect(isDeploymentComplete(result)).toBe(true);
   });
 });

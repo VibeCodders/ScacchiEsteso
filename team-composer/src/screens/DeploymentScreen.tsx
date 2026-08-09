@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { emptyTeam, playerLabel, useGameSetup } from '../context/gameSetup';
 import Board from '../components/Board';
 import {
+  autoPlaceBoth,
+  autoPlaceRemaining,
   createDeploymentState,
   isDeploymentComplete,
   ownDeploymentRanks,
@@ -59,6 +61,20 @@ function DeploymentScreen() {
     navigate('/game');
   };
 
+  const handleAutoPlaceMine = () => {
+    if (!deployment) return;
+    setDeployment(autoPlaceRemaining(deployment, deployment.currentPlacer));
+    setSelectedSigla(null);
+    setError(null);
+  };
+
+  const handleAutoPlaceBoth = () => {
+    if (!deployment) return;
+    setDeployment(autoPlaceBoth(deployment));
+    setSelectedSigla(null);
+    setError(null);
+  };
+
   if (!coinToss || !deployment) {
     return (
       <div className="app">
@@ -71,7 +87,7 @@ function DeploymentScreen() {
         <div className="main" style={{ gridTemplateColumns: '1fr', justifyItems: 'center', paddingTop: '2rem' }}>
           <div className="panel" style={{ maxWidth: 480, textAlign: 'center' }}>
             <h2>🪙 Tiro a sorte</h2>
-            <p>Chi vince tira a sorte decide chi schiera per primo (README §2.2).</p>
+            <p>Chi vince tira a sorte decide chi schiera per primo.</p>
             <button className="btn-save" onClick={handleCoinToss}>Tira la moneta</button>
           </div>
         </div>
@@ -90,7 +106,7 @@ function DeploymentScreen() {
           <h1>🏳️ Schieramento</h1>
           <p className="subtitle">
             Ha vinto il tiro a sorte: {playerLabel(deployment.firstPlacer, mode, humanOwner)}.
-            {' '}Le posizioni sono visibili a entrambi (README §2.4).
+            {' '}Le posizioni sono visibili a entrambi.
           </p>
         </div>
       </header>
@@ -120,6 +136,14 @@ function DeploymentScreen() {
             <>
               <h2>Turno: {currentPlacerLabel}</h2>
               <p>Seleziona (o trascina) un pezzo, poi indica una casella libera nelle tue 2 traverse.</p>
+              <div className="actions" style={{ flexDirection: 'column', marginBottom: '1rem' }}>
+                <button className="btn-auto" onClick={handleAutoPlaceMine}>
+                  🤖 Piazza automaticamente i miei pezzi
+                </button>
+                <button className="btn-auto" onClick={handleAutoPlaceBoth}>
+                  ⚡ Piazza automaticamente entrambi gli eserciti
+                </button>
+              </div>
               <div className="piece-grid" style={{ gridTemplateColumns: '1fr' }}>
                 {[...currentRoster.entries()].map(([sigla, count]) => {
                   const pieceDef = pieces.find((p) => p.sigla === sigla);

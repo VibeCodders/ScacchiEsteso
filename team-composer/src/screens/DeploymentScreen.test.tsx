@@ -110,4 +110,24 @@ describe('DeploymentScreen', () => {
     fireEvent.click(screen.getByText('Tira la moneta'));
     expect(screen.getByText(/Vai alla partita/i)).toBeInTheDocument();
   });
+
+  it('"Piazza automaticamente i miei pezzi" places only the current placer\'s roster and hands the turn to the other player', () => {
+    renderDeployment(new Map([[KING_SIGLA, 1], ['PE', 1]]), new Map([[KING_SIGLA, 1], ['TO', 1]]));
+    fireEvent.click(screen.getByText('Tira la moneta')); // Player A goes first (mocked)
+
+    fireEvent.click(screen.getByText(/Piazza automaticamente i miei pezzi/i));
+
+    // A's Pedone got placed somewhere on the board; B's Torre roster button is now offered instead
+    expect(screen.queryByText(/Schieramento completo/i)).not.toBeInTheDocument();
+    expect(screen.getByText('TO')).toBeInTheDocument();
+  });
+
+  it('"Piazza automaticamente entrambi gli eserciti" completes deployment in one click', () => {
+    renderDeployment(new Map([[KING_SIGLA, 1], ['PE', 1]]), new Map([[KING_SIGLA, 1], ['TO', 1]]));
+    fireEvent.click(screen.getByText('Tira la moneta'));
+
+    fireEvent.click(screen.getByText(/Piazza automaticamente entrambi gli eserciti/i));
+
+    expect(screen.getByText(/Schieramento completo/i)).toBeInTheDocument();
+  });
 });
