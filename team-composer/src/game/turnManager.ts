@@ -7,8 +7,9 @@ import { canSwap, getSwapTargets } from './swap';
 import { canRevive, getRevivalSquares, getRevivableSiglas } from './necromancy';
 import { getAreaDamageVictims, triggersAreaDamage } from './areaDamage';
 import { canMimic, getMimicMoves, getOrphanThreats } from './orphan';
+import { ANTI_STALEMATE_TURN_LIMIT, resolveAntiStalemateWinner } from './antiStalemate';
 
-export type GameStatus = 'ongoing' | 'check' | 'checkmate' | 'stalemate';
+export type GameStatus = 'ongoing' | 'check' | 'checkmate' | 'stalemate' | 'anti_stalemate';
 
 export interface HistoryEntry {
   turnNumber: number;
@@ -59,17 +60,39 @@ export interface GameState {
    * only accepts moves from this square while it's set; `skipExtraMove` declines it.
    */
   pendingExtraMove: Coord | null;
+  /**
+   * README §8.1 — consecutive turns (plies) with no capture and no pawn-category move. Resets to
+   * 0 on any capture, any "pedone"-category piece move, a Mistico swap, or a Necromante revival
+   * (per the user's clarification: any board-changing special action counts as progress, not just
+   * literal captures/pawn-pushes). Reaching `ANTI_STALEMATE_TURN_LIMIT` ends the game.
+   */
+  turnsSinceProgress: number;
 }
 
 export type ApplyTurnResult =
   | { ok: true; state: GameState }
   | { ok: false; reason: string };
 
-function computeStatus(board: BoardState, playerToMove: Owner): GameStatus {
+function computeStatus(board: BoardState, playerToMove: Owner, turnsSinceProgress: number): GameStatus {
   if (isCheckmate(board, playerToMove)) return 'checkmate';
   if (isStalemate(board, playerToMove)) return 'stalemate';
+  if (turnsSinceProgress >= ANTI_STALEMATE_TURN_LIMIT) return 'anti_stalemate';
   if (isKingInCheck(board, playerToMove)) return 'check';
   return 'ongoing';
+}
+
+function resolveWinner(status: GameStatus, board: BoardState, actingOwner: Owner): Owner | undefined {
+  if (status === 'checkmate') return actingOwner;
+  if (status === 'anti_stalemate') return resolveAntiStalemateWinner(board);
+  return undefined;
+}
+
+/** README §8.1 — does this history entry count as "progress" (resets the anti-stalemate counter)? */
+function isProgressEntry(entry: HistoryEntry): boolean {
+  if (entry.isCapture) return true;
+  if (entry.isSwap) return true;
+  if (entry.isRevival) return true;
+  return getPieceDef(entry.sigla).categoria === 'pedone';
 }
 
 export function createInitialGameState(board: BoardState, firstTurn: Owner = 'A'): GameState {
@@ -79,13 +102,14 @@ export function createInitialGameState(board: BoardState, firstTurn: Owner = 'A'
     turnNumber: 1,
     history: [],
     captured: { A: [], B: [] },
-    status: computeStatus(board, firstTurn),
+    status: computeStatus(board, firstTurn, 0),
     enPassantTarget: null,
     pendingExtraMove: null,
+    turnsSinceProgress: 0,
   };
 }
 
-const GAME_OVER_STATUSES: ReadonlySet<GameStatus> = new Set(['checkmate', 'stalemate']);
+const GAME_OVER_STATUSES: ReadonlySet<GameStatus> = new Set(['checkmate', 'stalemate', 'anti_stalemate']);
 
 /** README §6 — en passant is only between Pedoni (PE), not the checkers-style Pedone di Dama. */
 const EN_PASSANT_SIGLA = 'PE';
@@ -200,10 +224,16 @@ function resolveMove(state: GameState, piece: PieceInstance, move: GeneratedMove
   return { nextBoard, nextCaptured, historyEntry };
 }
 
-/** Finalizes the turn: flips whose move it is, advances the turn counter, computes status for the opponent. */
-function finalizeTurn(state: GameState, piece: PieceInstance, move: GeneratedMove, outcome: MoveOutcome): GameState {
+/**
+ * Finalizes the turn: flips whose move it is, advances the turn counter, computes status for the
+ * opponent. `forcedProgress` is true when a capture already happened earlier in this compound
+ * turn (a Berserker's bonus-move resolution) — the anti-stalemate counter resets regardless of
+ * what the final action of the turn was.
+ */
+function finalizeTurn(state: GameState, piece: PieceInstance, move: GeneratedMove, outcome: MoveOutcome, forcedProgress: boolean): GameState {
   const nextTurn: Owner = piece.owner === 'A' ? 'B' : 'A';
-  const status = computeStatus(outcome.nextBoard, nextTurn);
+  const turnsSinceProgress = forcedProgress || isProgressEntry(outcome.historyEntry) ? 0 : state.turnsSinceProgress + 1;
+  const status = computeStatus(outcome.nextBoard, nextTurn, turnsSinceProgress);
 
   return {
     board: outcome.nextBoard,
@@ -212,9 +242,10 @@ function finalizeTurn(state: GameState, piece: PieceInstance, move: GeneratedMov
     history: [...state.history, outcome.historyEntry],
     captured: outcome.nextCaptured,
     status,
-    winner: status === 'checkmate' ? piece.owner : undefined,
+    winner: resolveWinner(status, outcome.nextBoard, piece.owner),
     enPassantTarget: computeEnPassantTargetAfter(piece, move),
     pendingExtraMove: null,
+    turnsSinceProgress,
   };
 }
 
@@ -226,10 +257,11 @@ function enterExtraMovePhase(state: GameState, piece: PieceInstance, outcome: Mo
     turnNumber: state.turnNumber,
     history: [...state.history, outcome.historyEntry],
     captured: outcome.nextCaptured,
-    status: computeStatus(outcome.nextBoard, piece.owner),
+    status: computeStatus(outcome.nextBoard, piece.owner, state.turnsSinceProgress),
     winner: undefined,
     enPassantTarget: null,
     pendingExtraMove: outcome.historyEntry.to,
+    turnsSinceProgress: state.turnsSinceProgress, // the turn isn't finalized yet — resolved once the bonus move (or a skip) completes it
   };
 }
 
@@ -272,7 +304,8 @@ export function applyTurn(state: GameState, from: Coord, to: Coord, promotionCho
       return { ok: false, reason: 'Il movimento extra del Berserker non può includere una cattura.' };
     }
     const outcome = resolveMove(state, piece, move, undefined, true);
-    return { ok: true, state: finalizeTurn(state, piece, move, outcome) };
+    // forcedProgress: true — reaching pendingExtraMove already required a capture earlier this turn.
+    return { ok: true, state: finalizeTurn(state, piece, move, outcome, true) };
   }
 
   const move = getLegalMovesForTurn(state, from, orphanMimicSource).find((m) => m.to === to);
@@ -290,14 +323,14 @@ export function applyTurn(state: GameState, from: Coord, to: Coord, promotionCho
       return { ok: false, reason: `Opzione di promozione non valida: ${promotionChoice}.` };
     }
     const outcome = resolveMove(state, piece, move, promotionChoice, false);
-    return { ok: true, state: finalizeTurn(state, piece, move, outcome) };
+    return { ok: true, state: finalizeTurn(state, piece, move, outcome, false) };
   }
 
   const outcome = resolveMove(state, piece, move, undefined, false);
   if (triggersExtraMove(pieceDef, move)) {
     return { ok: true, state: enterExtraMovePhase(state, piece, outcome) };
   }
-  return { ok: true, state: finalizeTurn(state, piece, move, outcome) };
+  return { ok: true, state: finalizeTurn(state, piece, move, outcome, false) };
 }
 
 /** Declines a pending Berserker bonus move (README §4.2 makes it available, not mandatory), passing the turn. */
@@ -307,7 +340,9 @@ export function skipExtraMove(state: GameState): ApplyTurnResult {
   }
 
   const nextTurn: Owner = state.turn === 'A' ? 'B' : 'A';
-  const status = computeStatus(state.board, nextTurn);
+  // forcedProgress: the capture that opened this bonus phase already counts as progress this turn.
+  const turnsSinceProgress = 0;
+  const status = computeStatus(state.board, nextTurn, turnsSinceProgress);
 
   return {
     ok: true,
@@ -316,8 +351,9 @@ export function skipExtraMove(state: GameState): ApplyTurnResult {
       turn: nextTurn,
       turnNumber: state.turnNumber + 1,
       status,
-      winner: status === 'checkmate' ? state.turn : undefined,
+      winner: resolveWinner(status, state.board, state.turn),
       pendingExtraMove: null,
+      turnsSinceProgress,
     },
   };
 }
@@ -362,7 +398,8 @@ export function applyScocca(state: GameState, from: Coord, target: Coord): Apply
   }
 
   const nextTurn: Owner = piece.owner === 'A' ? 'B' : 'A';
-  const status = computeStatus(nextBoard, nextTurn);
+  const turnsSinceProgress = 0; // a capture — always progress
+  const status = computeStatus(nextBoard, nextTurn, turnsSinceProgress);
 
   const historyEntry: HistoryEntry = {
     turnNumber: state.turnNumber,
@@ -388,9 +425,10 @@ export function applyScocca(state: GameState, from: Coord, target: Coord): Apply
       history: [...state.history, historyEntry],
       captured: nextCaptured,
       status,
-      winner: status === 'checkmate' ? piece.owner : undefined,
+      winner: resolveWinner(status, nextBoard, piece.owner),
       enPassantTarget: null,
       pendingExtraMove: null,
+      turnsSinceProgress,
     },
   };
 }
@@ -433,7 +471,8 @@ export function applySwap(state: GameState, from: Coord, target: Coord): ApplyTu
   }
 
   const nextTurn: Owner = piece.owner === 'A' ? 'B' : 'A';
-  const status = computeStatus(nextBoard, nextTurn);
+  const turnsSinceProgress = 0; // a swap — always progress, per the user's clarification
+  const status = computeStatus(nextBoard, nextTurn, turnsSinceProgress);
 
   const historyEntry: HistoryEntry = {
     turnNumber: state.turnNumber,
@@ -454,9 +493,10 @@ export function applySwap(state: GameState, from: Coord, target: Coord): ApplyTu
       history: [...state.history, historyEntry],
       captured: state.captured,
       status,
-      winner: status === 'checkmate' ? piece.owner : undefined,
+      winner: resolveWinner(status, nextBoard, piece.owner),
       enPassantTarget: null,
       pendingExtraMove: null,
+      turnsSinceProgress,
     },
   };
 }
@@ -510,7 +550,8 @@ export function applyRevive(state: GameState, from: Coord, target: Coord, sigla:
   }
 
   const nextTurn: Owner = piece.owner === 'A' ? 'B' : 'A';
-  const status = computeStatus(nextBoard, nextTurn);
+  const turnsSinceProgress = 0; // a revival — always progress, per the user's clarification
+  const status = computeStatus(nextBoard, nextTurn, turnsSinceProgress);
 
   const historyEntry: HistoryEntry = {
     turnNumber: state.turnNumber,
@@ -532,9 +573,10 @@ export function applyRevive(state: GameState, from: Coord, target: Coord, sigla:
       history: [...state.history, historyEntry],
       captured: nextCaptured,
       status,
-      winner: status === 'checkmate' ? piece.owner : undefined,
+      winner: resolveWinner(status, nextBoard, piece.owner),
       enPassantTarget: null,
       pendingExtraMove: null,
+      turnsSinceProgress,
     },
   };
 }

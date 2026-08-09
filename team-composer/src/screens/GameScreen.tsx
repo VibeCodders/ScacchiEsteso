@@ -88,7 +88,7 @@ function GameScreen() {
     );
   }
 
-  const gameOver = gameState.status === 'checkmate' || gameState.status === 'stalemate';
+  const gameOver = gameState.status === 'checkmate' || gameState.status === 'stalemate' || gameState.status === 'anti_stalemate';
 
   const commitPlainMove = (from: Coord, to: Coord, promotionChoice?: string) => {
     const result = applyTurn(gameState, from, to, promotionChoice, orphanMimicSource ?? undefined);
@@ -259,7 +259,7 @@ function GameScreen() {
   };
 
   const handleContinueToResult = () => {
-    if (gameState.status === 'checkmate' || gameState.status === 'stalemate') {
+    if (gameState.status === 'checkmate' || gameState.status === 'stalemate' || gameState.status === 'anti_stalemate') {
       setMatchResult({ status: gameState.status, winner: gameState.winner });
     }
     navigate('/game-over');
@@ -407,7 +407,15 @@ function GameScreen() {
                 background: 'rgba(15, 15, 20, 0.85)', borderRadius: '0.5rem',
               }}
             >
-              <h2>{gameState.status === 'checkmate' ? `🏆 Scacco matto! Vince ${ownerLabel(gameState.winner!, mode)}` : '🤝 Stallo — Patta'}</h2>
+              <h2>
+                {gameState.status === 'checkmate' && `🏆 Scacco matto! Vince ${ownerLabel(gameState.winner!, mode)}`}
+                {gameState.status === 'stalemate' && '🤝 Stallo — Patta'}
+                {gameState.status === 'anti_stalemate' && (
+                  gameState.winner
+                    ? `⏱️ Limite di 20 turni senza progressi — vince ${ownerLabel(gameState.winner, mode)} per punteggio`
+                    : '⏱️ Limite di 20 turni senza progressi — Patta per punteggio pari'
+                )}
+              </h2>
               <button className="btn-save" onClick={handleContinueToResult}>Vedi risultato →</button>
             </div>
           )}

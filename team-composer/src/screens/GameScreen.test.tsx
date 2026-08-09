@@ -589,3 +589,41 @@ describe('GameScreen — Orfano mimicry', () => {
     expect(screen.getByText(/Turno: Giocatore 2/i)).toBeInTheDocument();
   });
 });
+
+describe('GameScreen — anti-stalemate (20 turns without progress)', () => {
+  it('shows the anti-stalemate banner and result after 20 consecutive non-progress moves', () => {
+    let board = place(createEmptyBoard(), 'a1', KING_SIGLA, 'A');
+    board = place(board, 'h8', KING_SIGLA, 'B');
+    board = place(board, 'b1', 'CA', 'A');
+    board = place(board, 'g8', 'CA', 'B');
+    board = place(board, 'd4', 'TO', 'A'); // extra material — A should win by score
+
+    render(
+      <MemoryRouter initialEntries={['/game']}>
+        <GameSetupProvider>
+          <Routes>
+            <Route path="/game" element={<Bootstrap board={board} />} />
+            <Route path="/game-over" element={<GameOverScreen />} />
+          </Routes>
+        </GameSetupProvider>
+      </MemoryRouter>,
+    );
+
+    const squaresA: Array<[string, string]> = [['b1', 'a3'], ['a3', 'b1']];
+    const squaresB: Array<[string, string]> = [['g8', 'h6'], ['h6', 'g8']];
+
+    for (let ply = 0; ply < 20; ply++) {
+      const isPlayerA = ply % 2 === 0;
+      const pairIndex = Math.floor(ply / 2) % 2;
+      const [from, to] = isPlayerA ? squaresA[pairIndex] : squaresB[pairIndex];
+      fireEvent.click(document.querySelector(`[data-coord="${from}"]`)!);
+      fireEvent.click(document.querySelector(`[data-coord="${to}"]`)!);
+    }
+
+    expect(screen.getByText(/Limite di 20 turni senza progressi — vince Giocatore 1 per punteggio/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText(/Vedi risultato/i));
+    expect(screen.getByText(/Fine Partita/i)).toBeInTheDocument();
+    expect(screen.getByText(/Limite di 20 turni senza progressi — vince Giocatore 1 per punteggio/i)).toBeInTheDocument();
+  });
+});

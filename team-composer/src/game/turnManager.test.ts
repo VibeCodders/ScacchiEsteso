@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createInitialGameState, applyTurn, skipExtraMove, applyScocca, applySwap, applyRevive } from './turnManager';
-import { createEmptyBoard, createPieceInstance, setPieceAt, type BoardState } from './board';
+import { createEmptyBoard, createPieceInstance, setPieceAt, type BoardState, type Coord } from './board';
 import { generatePseudoLegalMoves } from './moveEngine';
 
 function place(board: BoardState, coord: string, sigla: string, owner: 'A' | 'B' = 'A') {
@@ -839,5 +839,184 @@ describe('Orfano — copia_poteri (mimics whoever threatens it)', () => {
     // Mimicking the Rook off the pin line (e.g. straight up the d-file) would expose the King.
     const result = applyTurn(state, 'd1', 'd4', undefined, 'h1');
     expect(result.ok).toBe(false);
+  });
+});
+
+describe('turnsSinceProgress — anti-stalemate counter (README §8.1)', () => {
+  it('increments by 1 after an ordinary non-capturing, non-pawn move', () => {
+    let board = place(createEmptyBoard(), 'a1', 'RE', 'A');
+    board = place(board, 'h8', 'RE', 'B');
+    board = place(board, 'd4', 'TO', 'A');
+    const state = createInitialGameState(board, 'A');
+
+    const result = applyTurn(state, 'd4', 'd5');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.turnsSinceProgress).toBe(1);
+  });
+
+  it('resets to 0 on a capture', () => {
+    let board = place(createEmptyBoard(), 'a1', 'RE', 'A');
+    board = place(board, 'h8', 'RE', 'B');
+    board = place(board, 'd4', 'TO', 'A');
+    board = place(board, 'd5', 'PE', 'B');
+    let state = createInitialGameState(board, 'A');
+    state = { ...state, turnsSinceProgress: 5 };
+
+    const result = applyTurn(state, 'd4', 'd5');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.turnsSinceProgress).toBe(0);
+  });
+
+  it('resets to 0 on a "pedone"-category move (PE, PG, or FG), even without capturing', () => {
+    let board = place(createEmptyBoard(), 'a1', 'RE', 'A');
+    board = place(board, 'h8', 'RE', 'B');
+    board = place(board, 'd4', 'PG', 'A'); // Paggio — pedone category, not the classic PE
+    let state = createInitialGameState(board, 'A');
+    state = { ...state, turnsSinceProgress: 5 };
+
+    const result = applyTurn(state, 'd4', 'd5');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.turnsSinceProgress).toBe(0);
+  });
+
+  it('does NOT reset for the Pedone di Dama (DA) — categoria "base", not "pedone"', () => {
+    let board = place(createEmptyBoard(), 'a1', 'RE', 'A');
+    board = place(board, 'h8', 'RE', 'B');
+    board = place(board, 'd4', 'DA', 'A');
+    let state = createInitialGameState(board, 'A');
+    state = { ...state, turnsSinceProgress: 5 };
+
+    const result = applyTurn(state, 'd4', 'd5');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.turnsSinceProgress).toBe(6);
+  });
+
+  it('resets to 0 on a Mistico swap', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'MI', 'A');
+    board = place(board, 'd5', 'CA', 'A');
+    let state = createInitialGameState(board, 'A');
+    state = { ...state, turnsSinceProgress: 5 };
+
+    const result = applySwap(state, 'd4', 'd5');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.turnsSinceProgress).toBe(0);
+  });
+
+  it('resets to 0 on a Necromante revival', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'NE', 'A');
+    let state = createInitialGameState(board, 'A');
+    state = { ...state, turnsSinceProgress: 5, captured: { ...state.captured, A: [createPieceInstance('PE', 'A')] } };
+
+    const result = applyRevive(state, 'd4', 'd5', 'PE');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.turnsSinceProgress).toBe(0);
+  });
+
+  it('a Berserker\'s capture + non-capturing bonus move still resets to 0 for the whole turn', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'BE', 'A');
+    board = place(board, 'd5', 'PE', 'B');
+    let state = createInitialGameState(board, 'A');
+    state = { ...state, turnsSinceProgress: 5 };
+
+    const captureResult = applyTurn(state, 'd4', 'd5');
+    expect(captureResult.ok).toBe(true);
+    if (!captureResult.ok) return;
+
+    const bonusResult = applyTurn(captureResult.state, 'd5', 'd6');
+    expect(bonusResult.ok).toBe(true);
+    if (!bonusResult.ok) return;
+    expect(bonusResult.state.turnsSinceProgress).toBe(0);
+  });
+
+  it('skipExtraMove also resets to 0 — the triggering capture already counted as progress', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'BE', 'A');
+    board = place(board, 'd5', 'PE', 'B');
+    let state = createInitialGameState(board, 'A');
+    state = { ...state, turnsSinceProgress: 5 };
+
+    const captureResult = applyTurn(state, 'd4', 'd5');
+    expect(captureResult.ok).toBe(true);
+    if (!captureResult.ok) return;
+
+    const skipResult = skipExtraMove(captureResult.state);
+    expect(skipResult.ok).toBe(true);
+    if (!skipResult.ok) return;
+    expect(skipResult.state.turnsSinceProgress).toBe(0);
+  });
+});
+
+describe('anti-stalemate game end (README §8.1-§8.3)', () => {
+  it('ends the game after 20 consecutive non-progress turns, as a draw when material is equal', () => {
+    let board = place(createEmptyBoard(), 'a1', 'RE', 'A');
+    board = place(board, 'h8', 'RE', 'B');
+    board = place(board, 'b1', 'CA', 'A');
+    board = place(board, 'g8', 'CA', 'B');
+    let state = createInitialGameState(board, 'A');
+
+    const squaresA: [Coord, Coord][] = [['b1', 'a3'], ['a3', 'b1']];
+    const squaresB: [Coord, Coord][] = [['g8', 'h6'], ['h6', 'g8']];
+
+    for (let ply = 0; ply < 20; ply++) {
+      const isPlayerA = ply % 2 === 0;
+      const pairIndex = Math.floor(ply / 2) % 2;
+      const [from, to] = isPlayerA ? squaresA[pairIndex] : squaresB[pairIndex];
+      const result = applyTurn(state, from, to);
+      expect(result.ok, `move ${ply + 1} (${from} -> ${to}) should be legal`).toBe(true);
+      if (!result.ok) return;
+      state = result.state;
+    }
+
+    expect(state.turnsSinceProgress).toBe(20);
+    expect(state.status).toBe('anti_stalemate');
+    expect(state.winner).toBeUndefined(); // equal material (King + Cavallo on both sides)
+  });
+
+  it('awards the win to the side with more remaining material when the 20-turn limit is reached', () => {
+    let board = place(createEmptyBoard(), 'a1', 'RE', 'A');
+    board = place(board, 'h8', 'RE', 'B');
+    board = place(board, 'b1', 'CA', 'A');
+    board = place(board, 'g8', 'CA', 'B');
+    board = place(board, 'd4', 'TO', 'A'); // extra material for A, parked out of the way
+    let state = createInitialGameState(board, 'A');
+
+    const squaresA: [Coord, Coord][] = [['b1', 'a3'], ['a3', 'b1']];
+    const squaresB: [Coord, Coord][] = [['g8', 'h6'], ['h6', 'g8']];
+
+    for (let ply = 0; ply < 20; ply++) {
+      const isPlayerA = ply % 2 === 0;
+      const pairIndex = Math.floor(ply / 2) % 2;
+      const [from, to] = isPlayerA ? squaresA[pairIndex] : squaresB[pairIndex];
+      const result = applyTurn(state, from, to);
+      expect(result.ok, `move ${ply + 1} (${from} -> ${to}) should be legal`).toBe(true);
+      if (!result.ok) return;
+      state = result.state;
+    }
+
+    expect(state.status).toBe('anti_stalemate');
+    expect(state.winner).toBe('A');
+  });
+
+  it('rejects any further action once the game has ended by anti-stalemate', () => {
+    let board = place(createEmptyBoard(), 'a1', 'RE', 'A');
+    board = place(board, 'h8', 'RE', 'B');
+    board = place(board, 'b1', 'CA', 'A');
+    let state = createInitialGameState(board, 'A');
+    state = { ...state, status: 'anti_stalemate', turnsSinceProgress: 20 };
+
+    expect(applyTurn(state, 'b1', 'a3').ok).toBe(false);
   });
 });

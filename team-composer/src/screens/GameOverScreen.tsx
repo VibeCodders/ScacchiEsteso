@@ -23,9 +23,13 @@ function GameOverScreen() {
           <h1>🏁 Fine Partita</h1>
           {matchResult ? (
             <p className="subtitle">
-              {matchResult.status === 'checkmate'
-                ? `Scacco matto — vince ${ownerLabel(matchResult.winner!, mode)}`
-                : 'Stallo — partita patta'}
+              {matchResult.status === 'checkmate' && `Scacco matto — vince ${ownerLabel(matchResult.winner!, mode)}`}
+              {matchResult.status === 'stalemate' && 'Stallo — partita patta'}
+              {matchResult.status === 'anti_stalemate' && (
+                matchResult.winner
+                  ? `Limite di 20 turni senza progressi — vince ${ownerLabel(matchResult.winner, mode)} per punteggio`
+                  : 'Limite di 20 turni senza progressi — partita patta per punteggio pari'
+              )}
             </p>
           ) : (
             <p className="subtitle">Nessun risultato disponibile.</p>

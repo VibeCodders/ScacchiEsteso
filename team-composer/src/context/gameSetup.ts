@@ -12,7 +12,7 @@ export function emptyTeam(): TeamMap {
 }
 
 export interface MatchResult {
-  status: Extract<GameStatus, 'checkmate' | 'stalemate'>;
+  status: Extract<GameStatus, 'checkmate' | 'stalemate' | 'anti_stalemate'>;
   winner?: Owner;
 }
 
