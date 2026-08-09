@@ -87,6 +87,24 @@ describe('Board — Step 13c: move/capture flash', () => {
   });
 });
 
+describe('Board — capture-square highlight (piece encyclopedia)', () => {
+  it('applies the capture-highlight class only to squares listed in captureSquares', () => {
+    render(<Board pieces={createEmptyBoard()} orientation="A" captureSquares={['c5', 'e5']} />);
+
+    expect(document.querySelector('[data-coord="c5"]')).toHaveClass('board-square-capture-highlighted');
+    expect(document.querySelector('[data-coord="e5"]')).toHaveClass('board-square-capture-highlighted');
+    expect(document.querySelector('[data-coord="d5"]')).not.toHaveClass('board-square-capture-highlighted');
+  });
+
+  it('applies both the move and capture classes to a square present in both lists', () => {
+    render(<Board pieces={createEmptyBoard()} orientation="A" highlightedSquares={['d6']} captureSquares={['d6']} />);
+
+    const square = document.querySelector('[data-coord="d6"]')!;
+    expect(square).toHaveClass('board-square-highlighted');
+    expect(square).toHaveClass('board-square-capture-highlighted');
+  });
+});
+
 describe('Board drag & drop', () => {
   it('fires onPieceDragStart with the coordinate of the dragged piece', () => {
     const onPieceDragStart = vi.fn();

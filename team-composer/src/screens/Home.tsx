@@ -43,6 +43,14 @@ function Home() {
             </button>
           </div>
         </div>
+        <div className="panel" style={{ maxWidth: 480 }}>
+          <h2>📖 Impara</h2>
+          <div className="actions" style={{ flexDirection: 'column' }}>
+            <button className="btn-improve" onClick={() => navigate('/pieces')}>
+              Enciclopedia dei pezzi
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

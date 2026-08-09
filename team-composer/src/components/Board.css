@@ -43,6 +43,18 @@
   pointer-events: none;
 }
 
+/* Layered on ::before so it can coexist with the blue ::after overlay above — where both apply
+   (a square that's both a move and a capture destination) the two semi-transparent layers blend
+   visually into violet, with no need for a separate "both" class. */
+.board-square-capture-highlighted::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(239, 68, 68, 0.4);
+  pointer-events: none;
+  z-index: 1;
+}
+
 .board-square-flash {
   position: absolute;
   inset: 0;

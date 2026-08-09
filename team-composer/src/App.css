@@ -294,6 +294,71 @@
   border-radius: 3px;
 }
 
+.piece-detail-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 15, 20, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 10;
+  overflow-y: auto;
+}
+
+.piece-detail-panel {
+  max-width: 640px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.piece-detail-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.piece-detail-header h2 {
+  margin: 0;
+}
+
+.piece-detail-board {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.piece-detail-legend {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.legend-swatch {
+  display: inline-block;
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 3px;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+.legend-move { background: rgba(59, 130, 246, 0.75); }
+.legend-capture { background: rgba(239, 68, 68, 0.75); }
+.legend-both { background: linear-gradient(135deg, rgba(59, 130, 246, 0.75), rgba(239, 68, 68, 0.75)); }
+
+.piece-detail-example {
+  text-align: center;
+  color: #cbd5e1;
+  margin: 0;
+}
+
 .composer-panel {
   display: flex;
   flex-direction: column;

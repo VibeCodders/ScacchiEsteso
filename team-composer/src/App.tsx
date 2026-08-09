@@ -6,6 +6,7 @@ import PcTeamChoiceScreen from './screens/PcTeamChoiceScreen';
 import DeploymentScreen from './screens/DeploymentScreen';
 import GameScreen from './screens/GameScreen';
 import GameOverScreen from './screens/GameOverScreen';
+import PieceEncyclopediaScreen from './screens/PieceEncyclopediaScreen';
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
       <Route path="/deployment" element={<DeploymentScreen />} />
       <Route path="/game" element={<GameScreen />} />
       <Route path="/game-over" element={<GameOverScreen />} />
+      <Route path="/pieces" element={<PieceEncyclopediaScreen />} />
     </Routes>
   );
 }

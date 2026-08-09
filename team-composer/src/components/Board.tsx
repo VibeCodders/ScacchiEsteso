@@ -7,7 +7,10 @@ export interface BoardProps {
   /** Whose perspective the board is drawn from — rotates 180° so that player's own side is at the bottom. */
   orientation: Owner;
   onSquareClick?: (coord: string) => void;
+  /** Blue overlay — typically legal move destinations. Combined with captureSquares on a shared square, the overlays blend to violet. */
   highlightedSquares?: string[];
+  /** Red overlay — typically capturable squares (see the piece encyclopedia). */
+  captureSquares?: string[];
   selectedSquare?: string | null;
   /** Fired when the user starts dragging a piece that occupies a square on this board. */
   onPieceDragStart?: (coord: string) => void;
@@ -31,6 +34,7 @@ function Board({
   orientation,
   onSquareClick,
   highlightedSquares = [],
+  captureSquares = [],
   selectedSquare = null,
   onPieceDragStart,
   onSquareDrop,
@@ -39,6 +43,7 @@ function Board({
 }: BoardProps) {
   const flashing = new Set(flashSquares);
   const highlighted = new Set(highlightedSquares);
+  const captureHighlighted = new Set(captureSquares);
 
   return (
     <div className={`board-wrapper ${orientation === 'B' ? 'board-rotated' : ''}`} data-testid="board" data-orientation={orientation}>
@@ -49,6 +54,7 @@ function Board({
           const piece = pieces.get(coord);
           const isSelected = coord === selectedSquare;
           const isHighlighted = highlighted.has(coord);
+          const isCaptureHighlighted = captureHighlighted.has(coord);
 
           return (
             <button
@@ -59,6 +65,7 @@ function Board({
                 isLight ? 'board-square-light' : 'board-square-dark',
                 isSelected ? 'board-square-selected' : '',
                 isHighlighted ? 'board-square-highlighted' : '',
+                isCaptureHighlighted ? 'board-square-capture-highlighted' : '',
               ].filter(Boolean).join(' ')}
               data-coord={coord}
               onClick={() => onSquareClick?.(coord)}

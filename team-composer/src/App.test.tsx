@@ -29,6 +29,17 @@ describe('routing skeleton', () => {
     expect(screen.getByText(/Composizione Team — Giocatore 1/i)).toBeInTheDocument();
   });
 
+  it('"Enciclopedia dei pezzi" from Home navigates to the piece encyclopedia', () => {
+    renderApp('/');
+    fireEvent.click(screen.getByText(/Enciclopedia dei pezzi/i));
+    expect(screen.getByText(/Enciclopedia dei pezzi/i, { selector: 'h1' })).toBeInTheDocument();
+  });
+
+  it('mounts the piece encyclopedia directly when navigated to "/pieces"', () => {
+    renderApp('/pieces');
+    expect(screen.getByRole('heading', { name: /Enciclopedia dei pezzi/i })).toBeInTheDocument();
+  });
+
   it('completing Giocatore 1 in PvP mode navigates straight to Giocatore 2 (not the PC choice screen)', () => {
     renderApp('/');
     fireEvent.click(screen.getByText(/PvP locale/i));
