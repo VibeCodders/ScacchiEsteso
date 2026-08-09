@@ -363,6 +363,7 @@ function GameScreen() {
                     {entry.isRangedAttack && ' (scocca)'}
                     {entry.isSwap && ' (scambio)'}
                     {entry.isRevival && ` (rianimato ${entry.revivedSigla})`}
+                    {entry.areaDamageCoords && entry.areaDamageCoords.length > 0 && ` 💥 area: ${entry.areaDamageCoords.join(', ')}`}
                   </li>
                 ))}
               </ol>

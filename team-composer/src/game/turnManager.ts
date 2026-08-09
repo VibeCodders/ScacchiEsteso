@@ -5,6 +5,7 @@ import { getPromotionOptions, isPromotionMove } from './promotion';
 import { canUseScocca, getScoccaTargets } from './scocca';
 import { canSwap, getSwapTargets } from './swap';
 import { canRevive, getRevivalSquares, getRevivableSiglas } from './necromancy';
+import { getAreaDamageVictims, triggersAreaDamage } from './areaDamage';
 
 export type GameStatus = 'ongoing' | 'check' | 'checkmate' | 'stalemate';
 
@@ -29,6 +30,8 @@ export interface HistoryEntry {
   isRevival?: boolean;
   /** Sigla of the piece revived from the graveyard, when `isRevival` is true. */
   revivedSigla?: string;
+  /** Squares destroyed by a Colosso's "danno ad area" triggered by this capture, if any. */
+  areaDamageCoords?: Coord[];
 }
 
 export interface GameState {
@@ -141,6 +144,25 @@ function resolveMove(state: GameState, piece: PieceInstance, move: GeneratedMove
     nextBoard = setPieceAt(nextBoard, move.to, createPieceInstance(promotionChoice, piece.owner));
   }
 
+  const nextCaptured: Record<Owner, PieceInstance[]> = { A: state.captured.A, B: state.captured.B };
+  if (capturedPiece) {
+    nextCaptured[capturedPiece.owner] = [...nextCaptured[capturedPiece.owner], capturedPiece];
+  }
+
+  let areaDamageCoords: Coord[] | undefined;
+  const pieceDef = getPieceDef(piece.sigla);
+  if (triggersAreaDamage(pieceDef, move)) {
+    const victims = getAreaDamageVictims(nextBoard, move.to);
+    if (victims.length > 0) {
+      areaDamageCoords = victims;
+      for (const coord of victims) {
+        const victim = getPieceAt(nextBoard, coord)!;
+        nextBoard = removePieceAt(nextBoard, coord);
+        nextCaptured[victim.owner] = [...nextCaptured[victim.owner], victim];
+      }
+    }
+  }
+
   const historyEntry: HistoryEntry = {
     turnNumber: state.turnNumber,
     owner: piece.owner,
@@ -152,12 +174,8 @@ function resolveMove(state: GameState, piece: PieceInstance, move: GeneratedMove
     capturedSigla: capturedPiece?.sigla,
     promotedTo: promotionChoice,
     isExtraMove: isExtraMove || undefined,
+    areaDamageCoords,
   };
-
-  const nextCaptured: Record<Owner, PieceInstance[]> = { A: state.captured.A, B: state.captured.B };
-  if (capturedPiece) {
-    nextCaptured[capturedPiece.owner] = [...nextCaptured[capturedPiece.owner], capturedPiece];
-  }
 
   return { nextBoard, nextCaptured, historyEntry };
 }

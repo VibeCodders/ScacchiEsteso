@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createInitialGameState, applyTurn, skipExtraMove, applyScocca, applySwap, applyRevive } from './turnManager';
 import { createEmptyBoard, createPieceInstance, setPieceAt, type BoardState } from './board';
+import { generatePseudoLegalMoves } from './moveEngine';
 
 function place(board: BoardState, coord: string, sigla: string, owner: 'A' | 'B' = 'A') {
   return setPieceAt(board, coord, createPieceInstance(sigla, owner));
@@ -701,5 +702,65 @@ describe('Inquisitore Silenzio — blocks other special actions end-to-end (READ
     state = { ...state, captured: { ...state.captured, A: [createPieceInstance('PE', 'A')] } };
 
     expect(applyRevive(state, 'd4', 'd5', 'PE').ok).toBe(false);
+  });
+});
+
+describe('applyTurn — Colosso area damage (README §4/§7)', () => {
+  it('destroys allied and enemy pieces orthogonally adjacent to the landing square after a melee capture', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'CO', 'A');
+    board = place(board, 'd5', 'PE', 'B'); // captured directly
+    board = place(board, 'd6', 'CA', 'A'); // ally, north of d5 — orthogonal, destroyed by the blast
+    board = place(board, 'e5', 'RI', 'B'); // enemy, east of d5 — orthogonal, destroyed by the blast
+    board = place(board, 'e6', 'AL', 'B'); // enemy, diagonal to d5 — survives
+    const state = createInitialGameState(board, 'A');
+
+    const result = applyTurn(state, 'd4', 'd5');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.state.board.get('d5')?.sigla).toBe('CO'); // the Colosso itself
+    expect(result.state.board.has('d6')).toBe(false); // ally destroyed (orthogonal)
+    expect(result.state.board.has('e5')).toBe(false); // enemy destroyed (orthogonal)
+    expect(result.state.board.has('e6')).toBe(true); // diagonal neighbor survives
+    expect(result.state.captured.A).toHaveLength(1); // the destroyed ally
+    expect(result.state.captured.B).toHaveLength(2); // the directly-captured pawn + the blasted RI
+    expect(result.state.history[0].areaDamageCoords?.sort()).toEqual(['d6', 'e5']);
+  });
+
+  it('does not trigger on a non-capturing move', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'CO', 'A');
+    board = place(board, 'd6', 'CA', 'A'); // would be adjacent to d5, but nothing is captured
+    const state = createInitialGameState(board, 'A');
+
+    const result = applyTurn(state, 'd4', 'd5');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.board.has('d6')).toBe(true); // untouched
+    expect(result.state.history[0].areaDamageCoords).toBeUndefined();
+  });
+
+  it('the King is immune to the blast even when directly adjacent', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'd6', 'RE', 'B');
+    board = place(board, 'd4', 'CO', 'A');
+    board = place(board, 'd5', 'PE', 'B');
+    const state = createInitialGameState(board, 'A');
+
+    const result = applyTurn(state, 'd4', 'd5');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.board.has('d6')).toBe(true); // the enemy King survives
+  });
+
+  it('cannot be triggered by capturing an ally — the move engine never generates such a capture', () => {
+    // Sanity check: Colosso simply has no legal move that captures its own piece.
+    let board = place(createEmptyBoard(), 'd4', 'CO', 'A');
+    board = place(board, 'd5', 'PE', 'A');
+    const moves = generatePseudoLegalMoves(board, 'd4');
+    expect(moves.find((m) => m.to === 'd5' && m.isCapture)).toBeUndefined();
   });
 });
