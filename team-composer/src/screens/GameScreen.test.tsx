@@ -245,3 +245,67 @@ describe('GameScreen — pawn promotion', () => {
     expect(document.querySelector('[data-coord="d8"]')?.querySelector('svg')?.getAttribute('aria-label')).toBe('DM');
   });
 });
+
+describe('GameScreen — Berserker bonus move', () => {
+  it('shows the bonus-move banner and highlights the Berserker\'s square after a melee capture', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'BE', 'A');
+    board = place(board, 'd5', 'PE', 'B');
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    fireEvent.click(document.querySelector('[data-coord="d5"]')!);
+
+    expect(screen.getByText(/Movimento extra Berserker disponibile/i)).toBeInTheDocument();
+    expect(document.querySelector('[data-coord="d5"]')).toHaveClass('board-square-selected');
+    expect(screen.getByText(/Turno: Giocatore 1/i)).toBeInTheDocument(); // turn hasn't passed yet
+  });
+
+  it('completing the bonus move passes the turn and hides the banner', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'BE', 'A');
+    board = place(board, 'd5', 'PE', 'B');
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    fireEvent.click(document.querySelector('[data-coord="d5"]')!);
+    fireEvent.click(document.querySelector('[data-coord="d6"]')!);
+
+    expect(screen.queryByText(/Movimento extra Berserker disponibile/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/Turno: Giocatore 2/i)).toBeInTheDocument();
+    expect(document.querySelector('[data-coord="d6"]')?.querySelector('svg')).not.toBeNull();
+  });
+
+  it('"Salta movimento extra" declines the bonus and passes the turn', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'BE', 'A');
+    board = place(board, 'd5', 'PE', 'B');
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    fireEvent.click(document.querySelector('[data-coord="d5"]')!);
+    fireEvent.click(screen.getByText(/Salta movimento extra/i));
+
+    expect(screen.getByText(/Turno: Giocatore 2/i)).toBeInTheDocument();
+    expect(document.querySelector('[data-coord="d5"]')?.querySelector('svg')?.getAttribute('aria-label')).toBe('BE');
+  });
+
+  it('ignores clicks on other pieces while a bonus move is pending', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'BE', 'A');
+    board = place(board, 'd5', 'PE', 'B');
+    board = place(board, 'a1', 'TO', 'A');
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    fireEvent.click(document.querySelector('[data-coord="d5"]')!);
+    fireEvent.click(document.querySelector('[data-coord="a1"]')!); // try to select the rook instead
+
+    expect(screen.getByText(/Movimento extra Berserker disponibile/i)).toBeInTheDocument();
+    expect(document.querySelector('[data-coord="d5"]')).toHaveClass('board-square-selected');
+  });
+});

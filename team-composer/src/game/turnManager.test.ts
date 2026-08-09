@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createInitialGameState, applyTurn } from './turnManager';
+import { createInitialGameState, applyTurn, skipExtraMove } from './turnManager';
 import { createEmptyBoard, createPieceInstance, setPieceAt, type BoardState } from './board';
 
 function place(board: BoardState, coord: string, sigla: string, owner: 'A' | 'B' = 'A') {
@@ -309,5 +309,106 @@ describe('applyTurn — en passant (README §6)', () => {
     state = (applyTurn(state, 'd2', 'd4') as { ok: true; state: typeof state }).state;
     const attempt = applyTurn(state, 'e4', 'd3');
     expect(attempt.ok).toBe(false);
+  });
+});
+
+describe('applyTurn — Berserker bonus move (README §4.2)', () => {
+  it('after a melee capture, keeps the turn with the same player and marks a pending extra move', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'BE', 'A');
+    board = place(board, 'd5', 'PE', 'B');
+    const state = createInitialGameState(board, 'A');
+
+    const result = applyTurn(state, 'd4', 'd5');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.state.turn).toBe('A'); // turn has NOT passed yet
+    expect(result.state.turnNumber).toBe(1); // the compound action is still turn 1
+    expect(result.state.pendingExtraMove).toBe('d5');
+  });
+
+  it('does not trigger a pending extra move for a non-capturing Berserker move', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'BE', 'A');
+    const state = createInitialGameState(board, 'A');
+
+    const result = applyTurn(state, 'd4', 'd5');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.pendingExtraMove).toBeNull();
+    expect(result.state.turn).toBe('B');
+  });
+
+  it('only accepts the bonus move from the Berserker that just captured, not any other piece', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'BE', 'A');
+    board = place(board, 'd5', 'PE', 'B');
+    board = place(board, 'a1', 'TO', 'A');
+    let state = createInitialGameState(board, 'A');
+    state = (applyTurn(state, 'd4', 'd5') as { ok: true; state: typeof state }).state;
+
+    const result = applyTurn(state, 'a1', 'a4');
+    expect(result.ok).toBe(false);
+  });
+
+  it('rejects a capturing bonus move — the extra move must be non-capturing', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'BE', 'A');
+    board = place(board, 'd5', 'PE', 'B');
+    board = place(board, 'c5', 'PE', 'B');
+    let state = createInitialGameState(board, 'A');
+    state = (applyTurn(state, 'd4', 'd5') as { ok: true; state: typeof state }).state;
+
+    const result = applyTurn(state, 'd5', 'c5'); // adjacent enemy — would be a capture
+    expect(result.ok).toBe(false);
+  });
+
+  it('completing a valid non-capturing bonus move finally passes the turn', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'BE', 'A');
+    board = place(board, 'd5', 'PE', 'B');
+    let state = createInitialGameState(board, 'A');
+    state = (applyTurn(state, 'd4', 'd5') as { ok: true; state: typeof state }).state;
+
+    const result = applyTurn(state, 'd5', 'd6');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.pendingExtraMove).toBeNull();
+    expect(result.state.turn).toBe('B');
+    expect(result.state.turnNumber).toBe(2);
+    expect(result.state.history).toHaveLength(2);
+    expect(result.state.history[1].isExtraMove).toBe(true);
+  });
+
+  it('skipExtraMove declines the bonus move and passes the turn without moving again', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'BE', 'A');
+    board = place(board, 'd5', 'PE', 'B');
+    let state = createInitialGameState(board, 'A');
+    state = (applyTurn(state, 'd4', 'd5') as { ok: true; state: typeof state }).state;
+
+    const result = skipExtraMove(state);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.turn).toBe('B');
+    expect(result.state.turnNumber).toBe(2);
+    expect(result.state.pendingExtraMove).toBeNull();
+    expect(result.state.board.get('d5')?.sigla).toBe('BE'); // no extra move happened
+  });
+
+  it('skipExtraMove is rejected when there is no pending bonus move', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    const state = createInitialGameState(board, 'A');
+
+    const result = skipExtraMove(state);
+    expect(result.ok).toBe(false);
   });
 });

@@ -57,7 +57,6 @@
 ## 6. En Passant
 
 1. È consentito solo tra Pedoni.
-2. Non può essere usato per aggirare, amplificare o sfruttare l'effetto di spinta dell'Ariete.
 
 ## 7. Linea di tiro e interposizione
 

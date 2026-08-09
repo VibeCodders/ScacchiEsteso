@@ -16,6 +16,8 @@ export interface HistoryEntry {
   capturedSigla?: string;
   /** Set when this move promoted the piece (e.g. PE → AL, or DA → DM). */
   promotedTo?: string;
+  /** True for a Berserker's bonus non-capturing move after a melee capture (README §4.2). */
+  isExtraMove?: boolean;
 }
 
 export interface GameState {
@@ -36,6 +38,12 @@ export interface GameState {
    * itself is a fresh double step.
    */
   enPassantTarget: Coord | null;
+  /**
+   * README §4.2 — set right after a Berserker's melee capture: that same piece (now at this
+   * square) may make one more non-capturing move before the turn actually passes. `applyTurn`
+   * only accepts moves from this square while it's set; `skipExtraMove` declines it.
+   */
+  pendingExtraMove: Coord | null;
 }
 
 export type ApplyTurnResult =
@@ -58,6 +66,7 @@ export function createInitialGameState(board: BoardState, firstTurn: Owner = 'A'
     captured: { A: [], B: [] },
     status: computeStatus(board, firstTurn),
     enPassantTarget: null,
+    pendingExtraMove: null,
   };
 }
 
@@ -99,13 +108,93 @@ export function getLegalMovesForTurn(state: GameState, from: Coord): GeneratedMo
   return [...baseMoves, enPassantMove];
 }
 
+function computeEnPassantTargetAfter(piece: PieceInstance, move: GeneratedMove): Coord | null {
+  if (piece.sigla !== EN_PASSANT_SIGLA || move.isCapture) return null;
+  const { file: fromFile, rank: fromRank } = coordToFileRank(move.from);
+  const { rank: toRank } = coordToFileRank(move.to);
+  if (Math.abs(toRank - fromRank) !== 2) return null;
+  return fileRankToCoord(fromFile, (fromRank + toRank) / 2);
+}
+
+interface MoveOutcome {
+  nextBoard: BoardState;
+  nextCaptured: Record<Owner, PieceInstance[]>;
+  historyEntry: HistoryEntry;
+}
+
+function resolveMove(state: GameState, piece: PieceInstance, move: GeneratedMove, promotionChoice: string | undefined, isExtraMove: boolean): MoveOutcome {
+  const capturedPiece = move.capturedCoord ? getPieceAt(state.board, move.capturedCoord) : undefined;
+  let nextBoard = applyMove(state.board, move);
+
+  if (promotionChoice) {
+    nextBoard = setPieceAt(nextBoard, move.to, createPieceInstance(promotionChoice, piece.owner));
+  }
+
+  const historyEntry: HistoryEntry = {
+    turnNumber: state.turnNumber,
+    owner: piece.owner,
+    from: move.from,
+    to: move.to,
+    sigla: piece.sigla,
+    isCapture: move.isCapture,
+    capturedCoord: move.capturedCoord,
+    capturedSigla: capturedPiece?.sigla,
+    promotedTo: promotionChoice,
+    isExtraMove: isExtraMove || undefined,
+  };
+
+  const nextCaptured: Record<Owner, PieceInstance[]> = { A: state.captured.A, B: state.captured.B };
+  if (capturedPiece) {
+    nextCaptured[capturedPiece.owner] = [...nextCaptured[capturedPiece.owner], capturedPiece];
+  }
+
+  return { nextBoard, nextCaptured, historyEntry };
+}
+
+/** Finalizes the turn: flips whose move it is, advances the turn counter, computes status for the opponent. */
+function finalizeTurn(state: GameState, piece: PieceInstance, move: GeneratedMove, outcome: MoveOutcome): GameState {
+  const nextTurn: Owner = piece.owner === 'A' ? 'B' : 'A';
+  const status = computeStatus(outcome.nextBoard, nextTurn);
+
+  return {
+    board: outcome.nextBoard,
+    turn: nextTurn,
+    turnNumber: state.turnNumber + 1,
+    history: [...state.history, outcome.historyEntry],
+    captured: outcome.nextCaptured,
+    status,
+    winner: status === 'checkmate' ? piece.owner : undefined,
+    enPassantTarget: computeEnPassantTargetAfter(piece, move),
+    pendingExtraMove: null,
+  };
+}
+
+/** README §4.2 — the acting player keeps the move (turn doesn't pass yet); the Berserker owes a bonus move. */
+function enterExtraMovePhase(state: GameState, piece: PieceInstance, outcome: MoveOutcome): GameState {
+  return {
+    board: outcome.nextBoard,
+    turn: piece.owner,
+    turnNumber: state.turnNumber,
+    history: [...state.history, outcome.historyEntry],
+    captured: outcome.nextCaptured,
+    status: computeStatus(outcome.nextBoard, piece.owner),
+    winner: undefined,
+    enPassantTarget: null,
+    pendingExtraMove: outcome.historyEntry.to,
+  };
+}
+
+function triggersExtraMove(pieceDef: ReturnType<typeof getPieceDef>, move: GeneratedMove): boolean {
+  return Boolean(pieceDef.secondoMovimentoPostCattura) && move.isCapture && move.captureMode === 'melee';
+}
+
 /**
- * Attempts to play one move as the current player's single action for the turn (README §4.1 —
- * only piece movement/capture for now; special abilities arrive with `alternativeActions` in a
- * later step). Rejects moves from the wrong player, illegal moves, and any move once the game
- * has already ended. If the move promotes the piece, `promotionChoice` (one of the piece's
- * `promotionTypes`) is required — omitting it when promotion applies returns a rejection asking
- * the caller to collect a choice (e.g. via a UI dialog) and retry.
+ * Attempts to play one move as the current player's action for the turn (README §4.1 — normally
+ * a single movement/capture; the Berserker's bonus move after a melee capture, README §4.2, is
+ * the one built-in exception, tracked via `pendingExtraMove`). Rejects moves from the wrong
+ * player, illegal moves, and any move once the game has already ended. If the move promotes the
+ * piece, `promotionChoice` (one of the piece's `promotionTypes`) is required — omitting it when
+ * promotion applies returns a rejection asking the caller to collect a choice and retry.
  */
 export function applyTurn(state: GameState, from: Coord, to: Coord, promotionChoice?: string): ApplyTurnResult {
   if (GAME_OVER_STATUSES.has(state.status)) {
@@ -118,6 +207,21 @@ export function applyTurn(state: GameState, from: Coord, to: Coord, promotionCho
   }
   if (piece.owner !== state.turn) {
     return { ok: false, reason: 'Non è il turno di questo giocatore.' };
+  }
+
+  if (state.pendingExtraMove) {
+    if (from !== state.pendingExtraMove) {
+      return { ok: false, reason: 'Devi prima completare (o saltare) il movimento extra del Berserker.' };
+    }
+    const move = getLegalMovesForTurn(state, from).find((m) => m.to === to);
+    if (!move) {
+      return { ok: false, reason: `Mossa non legale: ${from} → ${to}.` };
+    }
+    if (move.isCapture) {
+      return { ok: false, reason: 'Il movimento extra del Berserker non può includere una cattura.' };
+    }
+    const outcome = resolveMove(state, piece, move, undefined, true);
+    return { ok: true, state: finalizeTurn(state, piece, move, outcome) };
   }
 
   const move = getLegalMovesForTurn(state, from).find((m) => m.to === to);
@@ -134,56 +238,35 @@ export function applyTurn(state: GameState, from: Coord, to: Coord, promotionCho
     if (!options.includes(promotionChoice)) {
       return { ok: false, reason: `Opzione di promozione non valida: ${promotionChoice}.` };
     }
-    return { ok: true, state: commitMove(state, piece, move, promotionChoice) };
+    const outcome = resolveMove(state, piece, move, promotionChoice, false);
+    return { ok: true, state: finalizeTurn(state, piece, move, outcome) };
   }
 
-  return { ok: true, state: commitMove(state, piece, move) };
+  const outcome = resolveMove(state, piece, move, undefined, false);
+  if (triggersExtraMove(pieceDef, move)) {
+    return { ok: true, state: enterExtraMovePhase(state, piece, outcome) };
+  }
+  return { ok: true, state: finalizeTurn(state, piece, move, outcome) };
 }
 
-function computeEnPassantTargetAfter(piece: PieceInstance, move: GeneratedMove): Coord | null {
-  if (piece.sigla !== EN_PASSANT_SIGLA || move.isCapture) return null;
-  const { file: fromFile, rank: fromRank } = coordToFileRank(move.from);
-  const { rank: toRank } = coordToFileRank(move.to);
-  if (Math.abs(toRank - fromRank) !== 2) return null;
-  return fileRankToCoord(fromFile, (fromRank + toRank) / 2);
-}
-
-function commitMove(state: GameState, piece: PieceInstance, move: GeneratedMove, promotionChoice?: string): GameState {
-  const capturedPiece = move.capturedCoord ? getPieceAt(state.board, move.capturedCoord) : undefined;
-  let nextBoard = applyMove(state.board, move);
-  const nextTurn: Owner = piece.owner === 'A' ? 'B' : 'A';
-
-  if (promotionChoice) {
-    nextBoard = setPieceAt(nextBoard, move.to, createPieceInstance(promotionChoice, piece.owner));
+/** Declines a pending Berserker bonus move (README §4.2 makes it available, not mandatory), passing the turn. */
+export function skipExtraMove(state: GameState): ApplyTurnResult {
+  if (!state.pendingExtraMove) {
+    return { ok: false, reason: 'Nessun movimento extra da saltare.' };
   }
 
-  const historyEntry: HistoryEntry = {
-    turnNumber: state.turnNumber,
-    owner: piece.owner,
-    from: move.from,
-    to: move.to,
-    sigla: piece.sigla,
-    isCapture: move.isCapture,
-    capturedCoord: move.capturedCoord,
-    capturedSigla: capturedPiece?.sigla,
-    promotedTo: promotionChoice,
-  };
-
-  const nextCaptured: Record<Owner, PieceInstance[]> = { A: state.captured.A, B: state.captured.B };
-  if (capturedPiece) {
-    nextCaptured[capturedPiece.owner] = [...nextCaptured[capturedPiece.owner], capturedPiece];
-  }
-
-  const status = computeStatus(nextBoard, nextTurn);
+  const nextTurn: Owner = state.turn === 'A' ? 'B' : 'A';
+  const status = computeStatus(state.board, nextTurn);
 
   return {
-    board: nextBoard,
-    turn: nextTurn,
-    turnNumber: state.turnNumber + 1,
-    history: [...state.history, historyEntry],
-    captured: nextCaptured,
-    status,
-    winner: status === 'checkmate' ? piece.owner : undefined,
-    enPassantTarget: computeEnPassantTargetAfter(piece, move),
+    ok: true,
+    state: {
+      ...state,
+      turn: nextTurn,
+      turnNumber: state.turnNumber + 1,
+      status,
+      winner: status === 'checkmate' ? state.turn : undefined,
+      pendingExtraMove: null,
+    },
   };
 }
