@@ -3,12 +3,18 @@ import { absolutePromotionRank, getPromotionOptions, isPromotionMove } from './p
 import { getPieceDef } from './moveEngine';
 
 describe('absolutePromotionRank', () => {
-  it('is the piece\'s own promotionRank for Player A', () => {
+  it("is the board's own far rank (its height) for Player A", () => {
     expect(absolutePromotionRank('A', 8)).toBe(8);
   });
 
-  it('is mirrored (9 - rank) for Player B', () => {
+  it('is always rank 1 for Player B, whatever the height', () => {
     expect(absolutePromotionRank('B', 8)).toBe(1);
+  });
+
+  it('scales with a custom board height instead of assuming 8', () => {
+    expect(absolutePromotionRank('A', 12)).toBe(12);
+    expect(absolutePromotionRank('B', 12)).toBe(1);
+    expect(absolutePromotionRank('A', 4)).toBe(4); // the minimum playable height
   });
 });
 
@@ -28,6 +34,14 @@ describe('isPromotionMove', () => {
   it('is false for a non-promotable piece even on the back rank', () => {
     const rook = getPieceDef('TO');
     expect(isPromotionMove(rook, 'A', 'e8')).toBe(false);
+  });
+
+  it('promotes at the true far rank of a custom board height, not the default 8', () => {
+    const pe = getPieceDef('PE');
+    const dims = { width: 8, height: 12 };
+    expect(isPromotionMove(pe, 'A', 'e12', dims)).toBe(true);
+    expect(isPromotionMove(pe, 'A', 'e8', dims)).toBe(false); // the old 8×8 far rank — no longer special here
+    expect(isPromotionMove(pe, 'B', 'e1', dims)).toBe(true);
   });
 });
 
