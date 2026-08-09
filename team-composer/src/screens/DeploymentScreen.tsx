@@ -95,8 +95,8 @@ function DeploymentScreen() {
         </div>
       </header>
 
-      <div className="main" style={{ gridTemplateColumns: '1fr 320px', paddingTop: '1rem' }}>
-        <div className="panel" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+      <div className="main main-board-layout" style={{ paddingTop: '1rem' }}>
+        <div className="panel" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', overflowX: 'auto' }}>
           <Board
             pieces={deployment.board}
             orientation={orientation}

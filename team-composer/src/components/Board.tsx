@@ -17,6 +17,13 @@ export interface BoardProps {
    * care which; the caller already tracks what's "held" (mirroring its click-selection state).
    */
   onSquareDrop?: (coord: string) => void;
+  /**
+   * Squares touched by the last move/action — briefly flashed to draw the eye. Covers plain moves,
+   * captures, a scocca's (stationary) attacker plus its target, and area-damage victims.
+   */
+  flashSquares?: string[];
+  /** Bumped by the caller on every move/action so the flash replays even if it lands on the same squares again. */
+  flashVersion?: number;
 }
 
 function Board({
@@ -27,7 +34,10 @@ function Board({
   selectedSquare = null,
   onPieceDragStart,
   onSquareDrop,
+  flashSquares = [],
+  flashVersion = 0,
 }: BoardProps) {
+  const flashing = new Set(flashSquares);
   const highlighted = new Set(highlightedSquares);
 
   return (
@@ -69,6 +79,7 @@ function Board({
                     />
                   </span>
                 )}
+                {flashing.has(coord) && <span key={flashVersion} className="board-square-flash" />}
                 {col === 0 && <span className="board-rank-label">{8 - row}</span>}
                 {row === 7 && <span className="board-file-label">{FILES[col]}</span>}
               </span>

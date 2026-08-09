@@ -150,6 +150,16 @@ describe('GameScreen — playable match', () => {
     expect(document.querySelector('[data-coord="d8"]')).not.toHaveClass('board-square-highlighted');
   });
 
+  it('uses the responsive board-layout class instead of an inline grid override (Step 13d — an inline style would out-rank the layout\'s media query)', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    renderGame(board);
+
+    const main = document.querySelector('.main')!;
+    expect(main).toHaveClass('main-board-layout');
+    expect(main.getAttribute('style') ?? '').not.toContain('grid-template-columns');
+  });
+
   it('shows the manual rotation toggle and lets the player flip perspective at will', () => {
     let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
     board = place(board, 'e8', KING_SIGLA, 'B');
@@ -315,6 +325,7 @@ describe('GameScreen — Arciere scocca', () => {
     let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
     board = place(board, 'e8', KING_SIGLA, 'B');
     board = place(board, 'd4', 'AR', 'A');
+    board = place(board, 'd7', 'PE', 'B'); // a valid scocca target, so the button has something to show
     board = place(board, 'a1', 'TO', 'A');
     renderGame(board);
 
@@ -379,6 +390,7 @@ describe('GameScreen — Mistico swap', () => {
     let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
     board = place(board, 'e8', KING_SIGLA, 'B');
     board = place(board, 'd4', 'MI', 'A');
+    board = place(board, 'd5', 'PE', 'A'); // adjacent ally, so the button has a valid target to show
     board = place(board, 'a1', 'TO', 'A');
     renderGame(board);
 
@@ -693,5 +705,121 @@ describe('GameScreen — PvC bot auto-play', () => {
     // of its pieces must not select it for the human — selection stays a no-op until it's B's turn.
     fireEvent.click(document.querySelector('[data-coord="a1"]')!);
     expect(document.querySelector('[data-coord="a1"]')).not.toHaveClass('board-square-selected');
+  });
+});
+
+describe('GameScreen — Step 13b: turn and check indicators', () => {
+  it('shows a "Scacco!" badge right after a checking move, and it disappears once the check is resolved', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'd8', KING_SIGLA, 'B');
+    board = place(board, 'd1', 'TO', 'A');
+    board = place(board, 'a8', 'AL', 'B'); // gives Black a harmless reply move
+    renderGame(board);
+
+    expect(screen.queryByText(/Scacco!/i)).not.toBeInTheDocument();
+
+    fireEvent.click(document.querySelector('[data-coord="d1"]')!); // Torre d1 -> d5: clear line to d8
+    fireEvent.click(document.querySelector('[data-coord="d5"]')!);
+    expect(screen.getByText(/Scacco!/i)).toBeInTheDocument();
+
+    fireEvent.click(document.querySelector('[data-coord="d8"]')!); // King steps out of check
+    fireEvent.click(document.querySelector('[data-coord="c7"]')!);
+    expect(screen.queryByText(/Scacco!/i)).not.toBeInTheDocument();
+  });
+
+  it('flashes the origin and destination squares of the last move', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'TO', 'A');
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    fireEvent.click(document.querySelector('[data-coord="d6"]')!);
+
+    expect(document.querySelector('[data-coord="d4"] .board-square-flash')).not.toBeNull();
+    expect(document.querySelector('[data-coord="d6"] .board-square-flash')).not.toBeNull();
+  });
+
+  it('shows a "Turno: X" badge that tracks the current player', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'TO', 'A');
+    renderGame(board);
+
+    expect(screen.getByText(/Turno: Giocatore 1/i)).toHaveClass('turn-badge-human');
+
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    fireEvent.click(document.querySelector('[data-coord="d6"]')!);
+    expect(screen.getByText(/Turno: Giocatore 2/i)).toHaveClass('turn-badge-human');
+  });
+
+  it('shows the turn badge as "human" and no thinking indicator once the PC\'s automatic turn resolves back to the player', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'a1', 'TO', 'A');
+    board = place(board, 'h8', 'TO', 'B');
+    renderPvcGame(board, 'B'); // the PC (owner A) plays first, automatically
+
+    expect(screen.getByText(/Turno: Giocatore 1/i)).toHaveClass('turn-badge-human'); // it's the human's (B's) turn now
+    expect(screen.queryByText(/Il PC sta pensando/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('GameScreen — Step 13a: special-ability buttons hidden when there is nothing to target', () => {
+  it('hides "Scoccare" when the Arciere is silenced by an adjacent enemy Inquisitore', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'AR', 'A');
+    board = place(board, 'd7', 'PE', 'B'); // would otherwise be a valid scocca target
+    board = place(board, 'e4', 'IQ', 'B'); // adjacent to d4 — silences the Arciere
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    expect(screen.queryByText(/Scoccare/i)).not.toBeInTheDocument();
+  });
+
+  it('hides "Scambia posizione" when the Mistico is silenced by an adjacent enemy Inquisitore', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'MI', 'A');
+    board = place(board, 'd5', 'TO', 'A'); // would otherwise be a valid swap target
+    board = place(board, 'e4', 'IQ', 'B'); // adjacent to d4 — silences the Mistico
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    expect(screen.queryByText(/Scambia posizione/i)).not.toBeInTheDocument();
+  });
+
+  it('hides "Rianima alleato" when the Necromante is silenced by an adjacent enemy Inquisitore, even with a non-empty graveyard', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'NE', 'A');
+    board = place(board, 'e4', 'IQ', 'B'); // adjacent to d4 — silences the Necromante
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    expect(screen.queryByText(/Rianima alleato/i)).not.toBeInTheDocument();
+  });
+
+  it('hides "Rianima alleato" when the graveyard has revivable pieces but there is no empty adjacent square', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'NE', 'A');
+    board = place(board, 'h1', 'CR', 'A'); // makes a harmless move so B gets a turn
+    board = place(board, 'a4', 'PE', 'A'); // sacrificed to populate the graveyard
+    board = place(board, 'a8', 'TO', 'B');
+    // surround the Necromante entirely so no adjacent square is empty
+    for (const coord of ['c3', 'c4', 'c5', 'd3', 'd5', 'e3', 'e4', 'e5']) {
+      board = place(board, coord, 'AL', 'A');
+    }
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="h1"]')!); // A: harmless move
+    fireEvent.click(document.querySelector('[data-coord="h3"]')!);
+    fireEvent.click(document.querySelector('[data-coord="a8"]')!); // B: captures A's pawn, populating the graveyard
+    fireEvent.click(document.querySelector('[data-coord="a4"]')!);
+
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!); // select the fully-surrounded Necromante
+    expect(screen.queryByText(/Rianima alleato/i)).not.toBeInTheDocument();
   });
 });

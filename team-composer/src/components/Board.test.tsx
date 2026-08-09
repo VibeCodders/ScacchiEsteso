@@ -72,6 +72,21 @@ describe('Board rendering', () => {
   });
 });
 
+describe('Board — Step 13c: move/capture flash', () => {
+  it('renders a flash overlay only on the squares listed in flashSquares', () => {
+    render(<Board pieces={createEmptyBoard()} orientation="A" flashSquares={['d4', 'e5']} flashVersion={1} />);
+
+    expect(document.querySelector('[data-coord="d4"] .board-square-flash')).not.toBeNull();
+    expect(document.querySelector('[data-coord="e5"] .board-square-flash')).not.toBeNull();
+    expect(document.querySelector('[data-coord="d5"] .board-square-flash')).toBeNull();
+  });
+
+  it('renders no flash overlay when flashSquares is omitted', () => {
+    render(<Board pieces={createEmptyBoard()} orientation="A" />);
+    expect(document.querySelectorAll('.board-square-flash')).toHaveLength(0);
+  });
+});
+
 describe('Board drag & drop', () => {
   it('fires onPieceDragStart with the coordinate of the dragged piece', () => {
     const onPieceDragStart = vi.fn();

@@ -43,6 +43,19 @@
   pointer-events: none;
 }
 
+.board-square-flash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: rgba(250, 204, 21, 0.55);
+  animation: board-square-flash 0.5s ease-out;
+}
+
+@keyframes board-square-flash {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
 .board-square-content {
   position: relative;
   display: block;

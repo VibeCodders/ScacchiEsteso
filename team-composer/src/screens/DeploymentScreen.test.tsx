@@ -55,6 +55,15 @@ describe('DeploymentScreen', () => {
     expect(e8.querySelector('svg')).not.toBeNull();
   });
 
+  it('uses the responsive board-layout class instead of an inline grid override (Step 13d — an inline style would out-rank the layout\'s media query)', () => {
+    renderDeployment(new Map([[KING_SIGLA, 1]]), new Map([[KING_SIGLA, 1]]));
+    fireEvent.click(screen.getByText('Tira la moneta'));
+
+    const main = document.querySelector('.main')!;
+    expect(main).toHaveClass('main-board-layout');
+    expect(main.getAttribute('style') ?? '').not.toContain('grid-template-columns');
+  });
+
   it('completes immediately and offers to continue when both rosters only had the King', () => {
     renderDeployment(new Map([[KING_SIGLA, 1]]), new Map([[KING_SIGLA, 1]]));
     fireEvent.click(screen.getByText('Tira la moneta'));

@@ -107,6 +107,11 @@ function GameScreen() {
 
   const gameOver = gameState.status === 'checkmate' || gameState.status === 'stalemate' || gameState.status === 'anti_stalemate';
 
+  const lastHistoryEntry = gameState.history.at(-1);
+  const lastMoveFlashSquares = lastHistoryEntry
+    ? [...new Set([lastHistoryEntry.from, lastHistoryEntry.to, lastHistoryEntry.capturedCoord, ...(lastHistoryEntry.areaDamageCoords ?? [])].filter((c): c is Coord => Boolean(c)))]
+    : [];
+
   const commitPlainMove = (from: Coord, to: Coord, promotionChoice?: string) => {
     const result = applyTurn(gameState, from, to, promotionChoice, orphanMimicSource ?? undefined);
     if (result.ok) {
@@ -287,16 +292,19 @@ function GameScreen() {
       <header className="header">
         <div>
           <h1>♟️ Partita</h1>
-          <p className="subtitle">
-            Modalità: {mode === 'pvc' ? 'PvC' : 'PvP locale'} — Turno: {ownerLabel(gameState.turn)}
-            {gameState.status === 'check' && ' — Scacco!'}
-            {isBotTurn && ' — 🤖 Il PC sta pensando...'}
-          </p>
+          <p className="subtitle">Modalità: {mode === 'pvc' ? 'PvC' : 'PvP locale'}</p>
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <span className={`turn-badge ${isBotTurn ? 'turn-badge-bot' : 'turn-badge-human'}`}>
+            Turno: {ownerLabel(gameState.turn)}
+          </span>
+          {gameState.status === 'check' && <span className="status-badge status-badge-check">⚠️ Scacco!</span>}
+          {isBotTurn && <span className="status-badge status-badge-thinking">🤖 Il PC sta pensando...</span>}
         </div>
       </header>
 
-      <div className="main" style={{ gridTemplateColumns: '1fr 320px', paddingTop: '1rem' }}>
-        <div className="panel" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', position: 'relative' }}>
+      <div className="main main-board-layout" style={{ paddingTop: '1rem' }}>
+        <div className="panel" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', position: 'relative', overflowX: 'auto' }}>
           <Board
             pieces={gameState.board}
             orientation={orientation}
@@ -305,23 +313,28 @@ function GameScreen() {
             selectedSquare={effectiveSelected}
             onPieceDragStart={gameOver || isBotTurn || pendingPromotion || pendingRevival || pendingMimicChoice || gameState.pendingExtraMove || actionMode ? undefined : handleDragStart}
             onSquareDrop={gameOver || isBotTurn || pendingPromotion || pendingRevival || pendingMimicChoice || actionMode ? undefined : handleSquareClick}
+            flashSquares={lastMoveFlashSquares}
+            flashVersion={gameState.history.length}
           />
           <div className="actions">
             <button className="btn-improve" onClick={() => setOrientation((o) => (o === 'A' ? 'B' : 'A'))}>
               🔄 Gira scacchiera (vista: {ownerLabel(orientation)})
             </button>
-            {selected && !gameState.pendingExtraMove && canUseScocca(getPieceDef(gameState.board.get(selected)!.sigla)) && (
+            {selected && !gameState.pendingExtraMove && canUseScocca(getPieceDef(gameState.board.get(selected)!.sigla))
+              && getScoccaTargets(gameState.board, selected, gameState.board.get(selected)!.owner).length > 0 && (
               <button className="btn-auto" onClick={() => setActionMode((m) => (m === 'scocca' ? null : 'scocca'))}>
                 {actionMode === 'scocca' ? '↩️ Annulla Scoccare' : '🏹 Scoccare'}
               </button>
             )}
-            {selected && !gameState.pendingExtraMove && canSwap(getPieceDef(gameState.board.get(selected)!.sigla)) && (
+            {selected && !gameState.pendingExtraMove && canSwap(getPieceDef(gameState.board.get(selected)!.sigla))
+              && getSwapTargets(gameState.board, selected, gameState.board.get(selected)!.owner).length > 0 && (
               <button className="btn-auto" onClick={() => setActionMode((m) => (m === 'swap' ? null : 'swap'))}>
                 {actionMode === 'swap' ? '↩️ Annulla Scambio' : '🔀 Scambia posizione'}
               </button>
             )}
             {selected && !gameState.pendingExtraMove && canRevive(getPieceDef(gameState.board.get(selected)!.sigla))
-              && getRevivableSiglas(gameState.captured[gameState.board.get(selected)!.owner]).length > 0 && (
+              && getRevivableSiglas(gameState.captured[gameState.board.get(selected)!.owner]).length > 0
+              && getRevivalSquares(gameState.board, selected, gameState.board.get(selected)!.owner).length > 0 && (
               <button className="btn-auto" onClick={() => setActionMode((m) => (m === 'revive' ? null : 'revive'))}>
                 {actionMode === 'revive' ? '↩️ Annulla Rianimazione' : '🧟 Rianima alleato'}
               </button>

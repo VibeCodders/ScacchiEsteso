@@ -12,6 +12,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .header {
+    padding: 16px;
+  }
 }
 
 .header h1 {
@@ -51,6 +59,53 @@
 .budget-badge .value.warn { color: #fbbf24; }
 .budget-badge .value.err { color: #f87171; }
 
+.turn-badge {
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.turn-badge-human {
+  background: #1e293b;
+  border-color: #334155;
+  color: #4ade80;
+}
+
+.turn-badge-bot {
+  background: #1e293b;
+  border-color: #3b2e1a;
+  color: #fbbf24;
+}
+
+.status-badge {
+  display: flex;
+  align-items: center;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.status-badge-check {
+  background: #3b1a1a;
+  color: #f87171;
+  border: 1px solid #7f1d1d;
+  animation: check-pulse 1s ease-in-out infinite;
+}
+
+.status-badge-thinking {
+  background: #3b2e1a;
+  color: #fbbf24;
+  border: 1px solid #78350f;
+}
+
+@keyframes check-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
 .main {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -62,6 +117,19 @@
 
 @media (max-width: 900px) {
   .main {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Board + side panel layouts (Deployment, Game) fix the sidebar to 320px via an inline style
+   normally, but that would out-rank the media query above (inline styles always beat stylesheet
+   rules) — this class carries the same two-column layout so the responsive collapse still applies. */
+.main-board-layout {
+  grid-template-columns: 1fr 320px;
+}
+
+@media (max-width: 900px) {
+  .main-board-layout {
     grid-template-columns: 1fr;
   }
 }
