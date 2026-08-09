@@ -5,6 +5,7 @@ export type CaptureMode = 'melee' | 'leap' | 'ranged' | 'none' | 'area';
 export type ColorRestriction = 'chiare' | 'scure' | 'nessuna' | 'forward' | 'backward';
 export type LeapPattern = 'L' | 'grasshopper' | 'custom';
 export type ActionModalita = 'alternativa' | 'aggiuntiva' | 'passiva' | 'sul_cattura';
+export type Categoria = 'base' | 'pedone';
 
 export interface Move {
   directions: Direction[];
@@ -34,8 +35,7 @@ export interface Piece {
   sigla: string;
   descrizione: string;
   punti: number;
-  costoMinimo?: number;
-  costoMassimo?: number;
+  categoria: Categoria;
   classico: boolean;
   regole: string;
   moves: Move[];
@@ -54,6 +54,7 @@ export interface Piece {
   rianimaPedoni?: boolean;
   silenzioAttacchiADistanza?: boolean;
   armatura?: boolean;
+  armaturaMaxCosto?: number;
   scambiaPosizioneConAlleato?: boolean;
   scocca?: boolean;
   egida?: boolean;
@@ -75,6 +76,16 @@ export interface BudgetResult {
   spent: number;
   remaining: number;
   exact: boolean;
+}
+
+export interface Rules {
+  budget: number;
+  minPiecesTotal: number;
+  maxPiecesTotal: number;
+  kingSigla: string;
+  maxIdenticalDefault: number;
+  maxIdenticalByCategory: Record<string, number>;
+  maxCountByCategory: Record<string, number>;
 }
 
 export interface ValidationResult {

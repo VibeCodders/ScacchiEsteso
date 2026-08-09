@@ -1,0 +1,13 @@
+{
+  "budget": 154,
+  "minPiecesTotal": 4,
+  "maxPiecesTotal": 16,
+  "kingSigla": "RE",
+  "maxIdenticalDefault": 5,
+  "maxIdenticalByCategory": {
+    "pedone": 8
+  },
+  "maxCountByCategory": {
+    "pedone": 8
+  }
+}

@@ -1,35 +1,21 @@
 import type { Piece } from '../types';
-import { pieces, BUDGET, MAX_PIECES_TOTAL, MIN_PIECES_TOTAL, MAX_IDENTICAL, MAX_PAWNS, KING_SIGLA, PAWN_SIGLE } from './pieces';
-
-function isPawn(sigla: string): boolean {
-  return PAWN_SIGLE.includes(sigla as 'PG' | 'FG' | 'PE');
-}
+import { pieces, rules, KING_SIGLA } from './pieces';
+import { getMaxIdenticalBySigla, countByCategory, computeBudgetSpent, computeTotalPieces } from './validators';
 
 function getMaxIdenticalFor(sigla: string): number {
-  return isPawn(sigla) ? MAX_PAWNS : MAX_IDENTICAL;
+  return getMaxIdenticalBySigla(sigla, pieces, rules);
 }
 
 function calcCost(team: Map<string, number>): number {
-  let cost = 0;
-  team.forEach((count, sigla) => {
-    const piece = pieces.find((p: Piece) => p.sigla === sigla);
-    if (piece) cost += piece.punti * count;
-  });
-  return cost;
+  return computeBudgetSpent(team, pieces);
 }
 
 function calcTotalPieces(team: Map<string, number>): number {
-  let total = 0;
-  team.forEach((count) => { total += count; });
-  return total;
+  return computeTotalPieces(team);
 }
 
 function calcTotalPawns(team: Map<string, number>): number {
-  let total = 0;
-  team.forEach((count, sigla) => {
-    if (isPawn(sigla)) total += count;
-  });
-  return total;
+  return countByCategory(team, pieces, 'pedone');
 }
 
 function cloneTeam(team: Map<string, number>): Map<string, number> {
@@ -46,19 +32,20 @@ export function autoFillTeam(currentTeam: Map<string, number>): OptimizerResult 
   const team = cloneTeam(currentTeam);
   const currentCost = calcCost(team);
   const currentTotal = calcTotalPieces(team);
-  const remainingBudget = BUDGET - currentCost;
-  const slotsNeeded = Math.max(0, MIN_PIECES_TOTAL - currentTotal);
+  const remainingBudget = rules.budget - currentCost;
+  const slotsNeeded = Math.max(0, rules.minPiecesTotal - currentTotal);
 
   if (remainingBudget <= 0) {
     return { team, changed: false, message: 'Budget esaurito, non è possibile aggiungere pezzi.' };
   }
 
-  if (slotsNeeded <= 0 && currentTotal >= MAX_PIECES_TOTAL) {
+  if (slotsNeeded <= 0 && currentTotal >= rules.maxPiecesTotal) {
     return { team, changed: false, message: 'Team già completo (numero massimo di pezzi raggiunto).' };
   }
 
   let added = 0;
   let budgetLeft = remainingBudget;
+  const maxPawns = rules.maxCountByCategory.pedone ?? rules.maxIdenticalDefault;
 
   for (let i = 0; i < slotsNeeded; i++) {
     let bestPiece: Piece | null = null;
@@ -68,7 +55,7 @@ export function autoFillTeam(currentTeam: Map<string, number>): OptimizerResult 
       if (piece.sigla === KING_SIGLA) continue;
       const currentCount = team.get(piece.sigla) ?? 0;
       if (currentCount >= getMaxIdenticalFor(piece.sigla)) continue;
-      if (isPawn(piece.sigla) && calcTotalPawns(team) + 1 > MAX_PAWNS) continue;
+      if (piece.categoria === 'pedone' && calcTotalPawns(team) + 1 > maxPawns) continue;
       if (piece.punti > budgetLeft) continue;
 
       const slotsAfter = slotsNeeded - i - 1;
@@ -79,7 +66,7 @@ export function autoFillTeam(currentTeam: Map<string, number>): OptimizerResult 
         score = budgetLeft > 0 ? (piece.punti / budgetLeft) * 100 : 0;
       } else {
         const minPieceCost = Math.min(...pieces
-          .filter((p: Piece) => p.sigla !== KING_SIGLA && p.punti <= budgetAfter && (team.get(p.sigla) ?? 0) < getMaxIdenticalFor(p.sigla) && !(isPawn(p.sigla) && calcTotalPawns(team) + 1 > MAX_PAWNS))
+          .filter((p: Piece) => p.sigla !== KING_SIGLA && p.punti <= budgetAfter && (team.get(p.sigla) ?? 0) < getMaxIdenticalFor(p.sigla) && !(p.categoria === 'pedone' && calcTotalPawns(team) + 1 > maxPawns))
           .map((p: Piece) => p.punti));
         if (minPieceCost > budgetAfter) {
           score = piece.punti / budgetLeft;
@@ -106,12 +93,12 @@ export function autoFillTeam(currentTeam: Map<string, number>): OptimizerResult 
   }
 
   const newTotal = calcTotalPieces(team);
-  const budgetUsed = BUDGET - budgetLeft;
+  const budgetUsed = rules.budget - budgetLeft;
 
   return {
     team,
     changed: true,
-    message: `Aggiunti ${added} pezzo/i. Costo: ${budgetUsed}/${BUDGET} (${budgetLeft} rimanenti). Totale: ${newTotal} pezzi.`,
+    message: `Aggiunti ${added} pezzo/i. Costo: ${budgetUsed}/${rules.budget} (${budgetLeft} rimanenti). Totale: ${newTotal} pezzi.`,
   };
 }
 
@@ -120,15 +107,16 @@ export function improveTeam(currentTeam: Map<string, number>): OptimizerResult {
   let improved = true;
   let iterations = 0;
   const maxIterations = 50;
+  const maxPawns = rules.maxCountByCategory.pedone ?? rules.maxIdenticalDefault;
 
   while (improved && iterations < maxIterations) {
     improved = false;
     iterations++;
 
     const currentCost = calcCost(team);
-    const currentDiff = Math.abs(BUDGET - currentCost);
+    const currentDiff = Math.abs(rules.budget - currentCost);
 
-    if (currentCost === BUDGET) {
+    if (currentCost === rules.budget) {
       return { team, changed: false, message: 'Il team è già perfettamente in budget!' };
     }
 
@@ -145,9 +133,9 @@ export function improveTeam(currentTeam: Map<string, number>): OptimizerResult {
         teamWithout.set(sigla, count - 1);
       }
       const costWithout = calcCost(teamWithout);
-      const diffWithout = Math.abs(BUDGET - costWithout);
+      const diffWithout = Math.abs(rules.budget - costWithout);
 
-      if (diffWithout < bestDiff && costWithout <= BUDGET) {
+      if (diffWithout < bestDiff && costWithout <= rules.budget) {
         bestDiff = diffWithout;
         bestTeam = teamWithout;
         improved = true;
@@ -159,12 +147,12 @@ export function improveTeam(currentTeam: Map<string, number>): OptimizerResult {
 
         const newCount = teamWithout.get(piece.sigla) ?? 0;
         if (newCount >= getMaxIdenticalFor(piece.sigla)) continue;
-        if (isPawn(piece.sigla) && calcTotalPawns(teamWithout) + 1 > MAX_PAWNS) continue;
+        if (piece.categoria === 'pedone' && calcTotalPawns(teamWithout) + 1 > maxPawns) continue;
 
         const costWithSwap = costWithout + piece.punti;
-        if (costWithSwap > BUDGET) continue;
+        if (costWithSwap > rules.budget) continue;
 
-        const diffSwap = Math.abs(BUDGET - costWithSwap);
+        const diffSwap = Math.abs(rules.budget - costWithSwap);
         if (diffSwap < bestDiff) {
           bestDiff = diffSwap;
           const swappedTeam = cloneTeam(teamWithout);
@@ -179,14 +167,14 @@ export function improveTeam(currentTeam: Map<string, number>): OptimizerResult {
       if (piece.sigla === KING_SIGLA) continue;
       const currentCount = team.get(piece.sigla) ?? 0;
       if (currentCount >= getMaxIdenticalFor(piece.sigla)) continue;
-      if (isPawn(piece.sigla) && calcTotalPawns(team) + 1 > MAX_PAWNS) continue;
+      if (piece.categoria === 'pedone' && calcTotalPawns(team) + 1 > maxPawns) continue;
 
       const costAdd = currentCost + piece.punti;
-      if (costAdd > BUDGET) continue;
+      if (costAdd > rules.budget) continue;
       const totalAdd = calcTotalPieces(team) + 1;
-      if (totalAdd > MAX_PIECES_TOTAL) continue;
+      if (totalAdd > rules.maxPiecesTotal) continue;
 
-      const diffAdd = Math.abs(BUDGET - costAdd);
+      const diffAdd = Math.abs(rules.budget - costAdd);
       if (diffAdd < bestDiff) {
         bestDiff = diffAdd;
         const addedTeam = cloneTeam(team);
@@ -203,15 +191,15 @@ export function improveTeam(currentTeam: Map<string, number>): OptimizerResult {
   }
 
   const finalCost = calcCost(team);
-  const finalDiff = Math.abs(BUDGET - finalCost);
+  const finalDiff = Math.abs(rules.budget - finalCost);
 
-  if (finalCost === BUDGET) {
-    return { team, changed: true, message: `Team ottimizzato! Budget esatto: ${BUDGET}/${BUDGET}.` };
+  if (finalCost === rules.budget) {
+    return { team, changed: true, message: `Team ottimizzato! Budget esatto: ${rules.budget}/${rules.budget}.` };
   }
 
   return {
     team,
     changed: true,
-    message: `Team migliorato. Budget: ${finalCost}/${BUDGET} (differenza: ${finalDiff}).`,
+    message: `Team migliorato. Budget: ${finalCost}/${rules.budget} (differenza: ${finalDiff}).`,
   };
 }

@@ -1,12 +1,11 @@
 import piecesRaw from './pieces.json';
-import type { Piece } from '../types';
+import rulesRaw from './rules.json';
+import type { Piece, Rules } from '../types';
 
 export const pieces: Piece[] = piecesRaw as Piece[];
+export const rules: Rules = rulesRaw as Rules;
 
-export const BUDGET = 154;
-export const MAX_PIECES_TOTAL = 16;
-export const MIN_PIECES_TOTAL = 4;
-export const MAX_IDENTICAL = 5;
-export const MAX_PAWNS = 8;
-export const KING_SIGLA = 'RE';
-export const PAWN_SIGLE = ['PG', 'FG', 'PE'] as const;
+export const BUDGET = rules.budget;
+export const MAX_PIECES_TOTAL = rules.maxPiecesTotal;
+export const MIN_PIECES_TOTAL = rules.minPiecesTotal;
+export const KING_SIGLA = rules.kingSigla;

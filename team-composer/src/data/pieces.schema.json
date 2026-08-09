@@ -31,6 +31,10 @@
       "type": "string",
       "enum": ["alternativa", "aggiuntiva", "passiva", "sul_cattura"]
     },
+    "categoria": {
+      "type": "string",
+      "enum": ["base", "pedone"]
+    },
     "move": {
       "type": "object",
       "required": ["directions", "minSteps", "maxSteps", "capture", "captureMode", "movementType"],
@@ -139,7 +143,7 @@
     },
     "piece": {
       "type": "object",
-      "required": ["sigla", "descrizione", "punti", "classico", "regole", "moves", "resistance", "immunityTypes", "alternativeActions"],
+      "required": ["sigla", "descrizione", "punti", "categoria", "classico", "regole", "moves", "resistance", "immunityTypes", "alternativeActions"],
       "properties": {
         "sigla": {
           "type": "string",
@@ -153,13 +157,8 @@
           "type": "integer",
           "minimum": 0
         },
-        "costoMinimo": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "costoMassimo": {
-          "type": "integer",
-          "minimum": 0
+        "categoria": {
+          "$ref": "#/$defs/categoria"
         },
         "classico": {
           "type": "boolean"
@@ -222,6 +221,10 @@
         },
         "armatura": {
           "type": "boolean"
+        },
+        "armaturaMaxCosto": {
+          "type": "integer",
+          "minimum": 0
         },
         "scambiaPosizioneConAlleato": {
           "type": "boolean"

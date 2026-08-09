@@ -6,7 +6,7 @@
 - **Pezzi per tipo:** massimo 5 pezzi identici.
 - **Pedoni:** massimo 8.
 - **Re:** obbligatoriamente 1 (costo gratuito, incluso nel conteggio dei pezzi ma non nel budget).
-- **Totale pezzi:** compreso tra 10 e 16.
+- **Totale pezzi:** compreso tra 4 e 16.
 
 ## 2. Schieramento
 
@@ -32,8 +32,7 @@
 - Il Re può essere catturato solo tramite **cattura in mischia** (spostamento su casella adiacente).
 - È immune a:
   - attacchi a distanza (es. Scoccare dell'Arciere),
-  - danni collaterali (es. Colosso),
-  - la trapassatura della lancia del Lanciere se dietro di lui è presente un'altra pedina valida.
+  - danni collaterali (es. Colosso).
 
 ### 3.4 Vittoria
 - Si vince catturando il Re avversario.

@@ -1,11 +1,12 @@
 import { useState, useCallback, useMemo } from 'react';
-import { pieces, BUDGET, MAX_PIECES_TOTAL, MIN_PIECES_TOTAL, MAX_IDENTICAL, MAX_PAWNS, KING_SIGLA, PAWN_SIGLE } from './data/pieces';
+import { pieces, rules, BUDGET, MAX_PIECES_TOTAL, MIN_PIECES_TOTAL, KING_SIGLA } from './data/pieces';
 import { autoFillTeam, improveTeam } from './data/optimizer';
-import type { Piece, ValidationResult, TeamMember } from './types';
+import { getMaxIdenticalBySigla, countByCategory, computeValidation } from './data/validators';
+import type { Piece, TeamMember } from './types';
 import './App.css';
 
 function getMaxIdentical(sigla: string): number {
-  return PAWN_SIGLE.includes(sigla as 'PG' | 'FG' | 'PE') ? MAX_PAWNS : MAX_IDENTICAL;
+  return getMaxIdenticalBySigla(sigla, pieces, rules);
 }
 
 type ToastType = 'info' | 'success' | 'warning' | 'error';
@@ -104,13 +105,7 @@ function App() {
     return total;
   }, [team]);
 
-  const totalPawns = useMemo(() => {
-    let total = 0;
-    team.forEach((count, sigla) => {
-      if (sigla === 'PG' || sigla === 'FG' || sigla === 'PE') total += count;
-    });
-    return total;
-  }, [team]);
+  const totalPawns = useMemo(() => countByCategory(team, pieces, 'pedone'), [team]);
 
   const budgetSpent = useMemo(() => {
     let spent = 0;
@@ -127,63 +122,7 @@ function App() {
   const kingCount = team.get(KING_SIGLA) ?? 0;
   const hasKing = kingCount === 1;
 
-  const maxIdenticalViolated = useMemo(() => {
-    let violated = false;
-    team.forEach((count, sigla) => {
-      if (count > getMaxIdentical(sigla)) violated = true;
-    });
-    return violated;
-  }, [team]);
-
-  const maxPawnsViolated = totalPawns > MAX_PAWNS;
-
-  const validation = useMemo((): ValidationResult => {
-    const budgetOk = budgetSpent === BUDGET;
-    const budgetMsg = budgetOk
-      ? `Budget esatto: ${budgetSpent}/${BUDGET}`
-      : budgetSpent > BUDGET
-        ? `Budget superato: ${budgetSpent}/${BUDGET} (+${budgetSpent - BUDGET})`
-        : `Budget: ${budgetSpent}/${BUDGET} (${budgetRemaining} rimanenti)`;
-
-    const totalPiecesOk = totalPieces >= MIN_PIECES_TOTAL && totalPieces <= MAX_PIECES_TOTAL;
-    const totalPiecesMsg = totalPiecesOk
-      ? `Pezzi totali: ${totalPieces} (${MIN_PIECES_TOTAL}–${MAX_PIECES_TOTAL})`
-      : totalPieces < MIN_PIECES_TOTAL
-        ? `Pezzi insufficienti: ${totalPieces}/${MIN_PIECES_TOTAL} min`
-        : `Pezzi in eccesso: ${totalPieces}/${MAX_PIECES_TOTAL} max`;
-
-    const maxFiveOk = !maxIdenticalViolated;
-    const maxFiveMsg = maxFiveOk
-      ? 'Nessun pezzo supera il proprio limite'
-      : 'Alcuni pezzi superano il proprio limite';
-
-    const maxPawnsOk = !maxPawnsViolated;
-    const pawnsMsg = maxPawnsOk
-      ? `Pedoni: ${totalPawns}/${MAX_PAWNS} max`
-      : `Pedoni in eccesso: ${totalPawns}/${MAX_PAWNS}`;
-
-    const hasKingOk = hasKing;
-    const kingMsg = hasKingOk ? 'Re presente (1 richiesto)' : 'Re mancante (obbligatorio 1)';
-
-    const kingCountOk = kingCount === 1;
-    const kingCountMsg = kingCountOk
-      ? 'Esattamente 1 Re'
-      : kingCount === 0
-        ? 'Nessun Re presente'
-        : `Troppi Re: ${kingCount} (1 obbligatorio)`;
-
-    const overall = budgetOk && totalPiecesOk && maxFiveOk && maxPawnsOk && hasKingOk && kingCountOk;
-
-    return {
-      budget: { valid: budgetSpent <= BUDGET && budgetExact, message: budgetMsg, level: budgetSpent > BUDGET ? 'error' : budgetExact ? 'success' : 'warning' },
-      totalPieces: { valid: totalPiecesOk, message: totalPiecesMsg, level: totalPiecesOk ? 'success' : 'error' },
-      maxFive: { valid: maxFiveOk, message: maxFiveMsg, level: maxFiveOk ? 'success' : 'error' },
-      maxPawns: { valid: maxPawnsOk, message: pawnsMsg, level: maxPawnsOk ? 'success' : 'error' },
-      hasKing: { valid: hasKingOk, message: kingMsg, level: hasKingOk ? 'success' : 'error' },
-      kingCount: { valid: kingCountOk, message: kingCountMsg, level: kingCountOk ? 'success' : 'error' },
-      overall,
-    };
-  }, [budgetSpent, budgetRemaining, budgetExact, totalPieces, totalPawns, maxIdenticalViolated, maxPawnsViolated, hasKing, kingCount]);
+  const validation = useMemo(() => computeValidation(team, pieces, rules), [team]);
 
   const filteredPieces = filter === 'all' ? pieces : pieces.filter((p: Piece) => p.classico === (filter === 'classico'));
 
@@ -337,7 +276,7 @@ function App() {
                 </div>
                 <div className="summary-row">
                   <span className="label">Pedoni</span>
-                  <span className={`value ${totalPawns <= MAX_PAWNS ? 'ok' : 'err'}`}>{totalPawns}/{MAX_PAWNS}</span>
+                  <span className={`value ${validation.maxPawns.valid ? 'ok' : 'err'}`}>{totalPawns}/{rules.maxCountByCategory.pedone}</span>
                 </div>
                 <div className="summary-row">
                   <span className="label">Re</span>
