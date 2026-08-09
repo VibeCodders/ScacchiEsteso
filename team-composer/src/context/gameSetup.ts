@@ -1,6 +1,7 @@
 import { createContext, useContext } from 'react';
 import { KING_SIGLA } from '../data/pieces';
-import type { BoardState } from '../game/board';
+import type { BoardState, Owner } from '../game/board';
+import type { GameStatus } from '../game/turnManager';
 
 export type GameMode = 'pvp' | 'pvc';
 
@@ -10,11 +11,17 @@ export function emptyTeam(): TeamMap {
   return new Map([[KING_SIGLA, 1]]);
 }
 
+export interface MatchResult {
+  status: Extract<GameStatus, 'checkmate' | 'stalemate'>;
+  winner?: Owner;
+}
+
 export interface GameSetupState {
   mode: GameMode | null;
   teamA: TeamMap | null;
   teamB: TeamMap | null;
   deployedBoard: BoardState | null;
+  matchResult: MatchResult | null;
 }
 
 export interface GameSetupContextValue extends GameSetupState {
@@ -22,6 +29,7 @@ export interface GameSetupContextValue extends GameSetupState {
   setTeamA: (team: TeamMap) => void;
   setTeamB: (team: TeamMap) => void;
   setDeployedBoard: (board: BoardState) => void;
+  setMatchResult: (result: MatchResult) => void;
   reset: () => void;
 }
 

@@ -2,9 +2,14 @@ import { useNavigate } from 'react-router-dom';
 import { useGameSetup } from '../context/gameSetup';
 import '../App.css';
 
+function ownerLabel(owner: 'A' | 'B', mode: 'pvp' | 'pvc' | null): string {
+  if (owner === 'A') return 'Giocatore 1';
+  return mode === 'pvc' ? 'PC' : 'Giocatore 2';
+}
+
 function GameOverScreen() {
   const navigate = useNavigate();
-  const { reset } = useGameSetup();
+  const { mode, matchResult, reset } = useGameSetup();
 
   const backToHome = () => {
     reset();
@@ -16,7 +21,15 @@ function GameOverScreen() {
       <header className="header">
         <div>
           <h1>🏁 Fine Partita</h1>
-          <p className="subtitle">Schermata di vittoria/pareggio in arrivo (Step 5+ del piano)</p>
+          {matchResult ? (
+            <p className="subtitle">
+              {matchResult.status === 'checkmate'
+                ? `Scacco matto — vince ${ownerLabel(matchResult.winner!, mode)}`
+                : 'Stallo — partita patta'}
+            </p>
+          ) : (
+            <p className="subtitle">Nessun risultato disponibile.</p>
+          )}
         </div>
       </header>
       <div className="actions" style={{ justifyContent: 'center', padding: '1rem' }}>
