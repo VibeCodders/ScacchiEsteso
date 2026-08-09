@@ -529,3 +529,63 @@ describe('GameScreen — Necromante revival', () => {
     expect(document.querySelector('[data-coord="d5"]')).not.toHaveClass('board-square-highlighted');
   });
 });
+
+describe('GameScreen — Orfano mimicry', () => {
+  it('highlights its normal 1-square moves when not under threat', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'OR', 'A');
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    expect(document.querySelector('[data-coord="d5"]')).toHaveClass('board-square-highlighted');
+    expect(screen.queryByText(/L'Orfano è sotto scacco/i)).not.toBeInTheDocument();
+  });
+
+  it('auto-selects the single threat and highlights the mimicked piece\'s moves', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'OR', 'A');
+    board = place(board, 'd8', 'TO', 'B'); // threatens d4 along the d-file — Torre-style moves
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    expect(screen.getByText(/imita TO da d8/i)).toBeInTheDocument();
+    expect(document.querySelector('[data-coord="a4"]')).toHaveClass('board-square-highlighted'); // reachable only by sliding
+    expect(document.querySelector('[data-coord="d5"]')).toHaveClass('board-square-highlighted'); // also reachable via the d-file
+  });
+
+  it('shows a choice dialog with multiple threats and applies the chosen mimicry', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'OR', 'A');
+    board = place(board, 'd8', 'TO', 'B'); // slide threat
+    board = place(board, 'c6', 'CA', 'B'); // knight threat
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    expect(screen.getByText(/Chi imitare/i)).toBeInTheDocument();
+    expect(screen.getByText(/TO — Torre \(d8\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/CA — Cavallo \(c6\)/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText(/CA — Cavallo \(c6\)/i));
+    expect(screen.queryByText(/Chi imitare/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/imita CA da c6/i)).toBeInTheDocument();
+    expect(document.querySelector('[data-coord="b5"]')).toHaveClass('board-square-highlighted'); // a knight-shaped destination
+    expect(document.querySelector('[data-coord="d5"]')).not.toHaveClass('board-square-highlighted'); // not reachable by a knight jump
+  });
+
+  it('completing a mimicked move moves the Orfano and passes the turn', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'OR', 'A');
+    board = place(board, 'd8', 'TO', 'B');
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    fireEvent.click(document.querySelector('[data-coord="a4"]')!);
+
+    expect(document.querySelector('[data-coord="a4"]')?.querySelector('svg')?.getAttribute('aria-label')).toBe('OR');
+    expect(screen.getByText(/Turno: Giocatore 2/i)).toBeInTheDocument();
+  });
+});
