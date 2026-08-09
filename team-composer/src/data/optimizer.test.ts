@@ -16,6 +16,12 @@ describe('autoFillTeam — fills up without requiring an exact budget match', ()
     expect(total).toBeLessThanOrEqual(rules.maxPiecesTotal);
   });
 
+  it('never picks Damone (DM) — it is obtainable only via in-game promotion, not team-building', () => {
+    const start = new Map<string, number>([[KING_SIGLA, 1]]);
+    const result = autoFillTeam(start);
+    expect(result.team.has('DM')).toBe(false);
+  });
+
   it('does not treat "under budget" as a failure — a partial fill is still a valid changed result', () => {
     const start = new Map<string, number>([[KING_SIGLA, 1]]);
     const result = autoFillTeam(start);

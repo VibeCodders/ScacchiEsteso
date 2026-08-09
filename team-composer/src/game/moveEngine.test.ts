@@ -250,6 +250,22 @@ describe('Paladino (PA) — union of a 1-step move and a knight-pattern leap', (
   });
 });
 
+describe('Damone (DM) — like DA but omnidirectional (obtained only via promotion)', () => {
+  it('has 4 destinations from d4 on an empty board (one diagonal step each way)', () => {
+    const board = place(createEmptyBoard(), 'd4', 'DM');
+    expect(destinations(board, 'd4')).toHaveLength(4);
+  });
+
+  it('jumps over an adjacent diagonal enemy in any direction, not just forward', () => {
+    let board = place(createEmptyBoard(), 'd4', 'DM', 'A');
+    board = place(board, 'c3', 'PE', 'B'); // sw of d4 — "backward" for a Player A pawn, fine for Damone
+    const moves = generatePseudoLegalMoves(board, 'd4');
+    const jump = moves.find((m) => m.to === 'b2');
+    expect(jump?.isCapture).toBe(true);
+    expect(jump?.capturedCoord).toBe('c3');
+  });
+});
+
 describe('Remaining pieces — destination count from d4 on an empty board', () => {
   it.each([
     ['PG', 2], // Paggio: 1-step, n/s only, no capture

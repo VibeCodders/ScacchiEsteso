@@ -2,14 +2,26 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGameSetup } from '../context/gameSetup';
 import Board from '../components/Board';
-import { getLegalMoves } from '../game/check';
-import { createInitialGameState, applyTurn, type GameState } from '../game/turnManager';
+import { getPieceDef } from '../game/moveEngine';
+import { getPromotionOptions, isPromotionMove } from '../game/promotion';
+import { createInitialGameState, applyTurn, getLegalMovesForTurn, type GameState } from '../game/turnManager';
+import { pieces } from '../data/pieces';
 import type { Coord, Owner } from '../game/board';
 import '../App.css';
 
 function ownerLabel(owner: Owner, mode: 'pvp' | 'pvc' | null): string {
   if (owner === 'A') return 'Giocatore 1';
   return mode === 'pvc' ? 'PC' : 'Giocatore 2';
+}
+
+function pieceDescription(sigla: string): string {
+  return pieces.find((p) => p.sigla === sigla)?.descrizione ?? sigla;
+}
+
+interface PendingPromotion {
+  from: Coord;
+  to: Coord;
+  options: string[];
 }
 
 function GameScreen() {
@@ -20,10 +32,11 @@ function GameScreen() {
   const [selected, setSelected] = useState<Coord | null>(null);
   const [orientation, setOrientation] = useState<Owner>('A');
   const [error, setError] = useState<string | null>(null);
+  const [pendingPromotion, setPendingPromotion] = useState<PendingPromotion | null>(null);
 
   const legalDestinations = useMemo(() => {
     if (!gameState || !selected) return [];
-    return getLegalMoves(gameState.board, selected).map((m) => m.to);
+    return getLegalMovesForTurn(gameState, selected).map((m) => m.to);
   }, [gameState, selected]);
 
   if (!deployedBoard || !gameState) {
@@ -46,20 +59,43 @@ function GameScreen() {
 
   const gameOver = gameState.status === 'checkmate' || gameState.status === 'stalemate';
 
+  const commitPlainMove = (from: Coord, to: Coord, promotionChoice?: string) => {
+    const result = applyTurn(gameState, from, to, promotionChoice);
+    if (result.ok) {
+      setGameState(result.state);
+      setOrientation(result.state.turn);
+      setSelected(null);
+      setError(null);
+      setPendingPromotion(null);
+    } else {
+      setError(result.reason);
+    }
+  };
+
+  const attemptMove = (from: Coord, to: Coord) => {
+    const mover = gameState.board.get(from);
+    if (!mover) return;
+    const pieceDef = getPieceDef(mover.sigla);
+
+    if (isPromotionMove(pieceDef, mover.owner, to)) {
+      const options = getPromotionOptions(pieceDef);
+      if (options.length === 1) {
+        commitPlainMove(from, to, options[0]);
+      } else {
+        setPendingPromotion({ from, to, options });
+      }
+      return;
+    }
+
+    commitPlainMove(from, to);
+  };
+
   const handleSquareClick = (coord: Coord) => {
-    if (gameOver) return;
+    if (gameOver || pendingPromotion) return;
     const pieceHere = gameState.board.get(coord);
 
     if (selected && legalDestinations.includes(coord)) {
-      const result = applyTurn(gameState, selected, coord);
-      if (result.ok) {
-        setGameState(result.state);
-        setOrientation(result.state.turn);
-        setSelected(null);
-        setError(null);
-      } else {
-        setError(result.reason);
-      }
+      attemptMove(selected, coord);
       return;
     }
 
@@ -73,7 +109,7 @@ function GameScreen() {
   };
 
   const handleDragStart = (coord: Coord) => {
-    if (gameOver) return;
+    if (gameOver || pendingPromotion) return;
     const pieceHere = gameState.board.get(coord);
     if (pieceHere && pieceHere.owner === gameState.turn) {
       setSelected(coord);
@@ -108,13 +144,36 @@ function GameScreen() {
             onSquareClick={handleSquareClick}
             highlightedSquares={legalDestinations}
             selectedSquare={selected}
-            onPieceDragStart={gameOver ? undefined : handleDragStart}
-            onSquareDrop={gameOver ? undefined : handleSquareClick}
+            onPieceDragStart={gameOver || pendingPromotion ? undefined : handleDragStart}
+            onSquareDrop={gameOver || pendingPromotion ? undefined : handleSquareClick}
           />
           <button className="btn-improve" onClick={() => setOrientation((o) => (o === 'A' ? 'B' : 'A'))}>
             🔄 Gira scacchiera (vista: {ownerLabel(orientation, mode)})
           </button>
           {error && <p style={{ color: '#f87171' }}>{error}</p>}
+
+          {pendingPromotion && (
+            <div
+              style={{
+                position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center', gap: '1rem',
+                background: 'rgba(15, 15, 20, 0.85)', borderRadius: '0.5rem',
+              }}
+            >
+              <h2>🎖️ Scegli la promozione</h2>
+              <div className="actions" style={{ flexDirection: 'column' }}>
+                {pendingPromotion.options.map((sigla) => (
+                  <button
+                    key={sigla}
+                    className="btn-save"
+                    onClick={() => commitPlainMove(pendingPromotion.from, pendingPromotion.to, sigla)}
+                  >
+                    {sigla} — {pieceDescription(sigla)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {gameOver && (
             <div
@@ -141,6 +200,7 @@ function GameScreen() {
                   <li key={idx}>
                     {ownerLabel(entry.owner, mode)}: {entry.sigla} {entry.from} → {entry.to}
                     {entry.isCapture && ` (cattura ${entry.capturedSigla})`}
+                    {entry.promotedTo && ` → promosso a ${entry.promotedTo}`}
                   </li>
                 ))}
               </ol>

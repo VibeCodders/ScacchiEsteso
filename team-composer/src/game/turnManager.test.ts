@@ -171,3 +171,143 @@ describe('applyTurn — game status transitions', () => {
     expect(result.state.winner).toBe('B');
   });
 });
+
+describe('applyTurn — promotion', () => {
+  it('requires a promotionChoice when a Pawn reaches the promotion rank, without mutating state', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd7', 'PE', 'A');
+    const state = createInitialGameState(board, 'A');
+
+    const result = applyTurn(state, 'd7', 'd8');
+    expect(result.ok).toBe(false);
+    expect(state.turn).toBe('A');
+  });
+
+  it('rejects a promotionChoice outside the piece\'s allowed options', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd7', 'PE', 'A');
+    const state = createInitialGameState(board, 'A');
+
+    const result = applyTurn(state, 'd7', 'd8', 'RA'); // RA (Regina) is not one of PE's ≤20pt options
+    expect(result.ok).toBe(false);
+  });
+
+  it('replaces the Pawn with the chosen piece and records promotedTo in history', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd7', 'PE', 'A');
+    const state = createInitialGameState(board, 'A');
+
+    const result = applyTurn(state, 'd7', 'd8', 'AL');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.state.board.get('d8')?.sigla).toBe('AL');
+    expect(result.state.board.get('d8')?.owner).toBe('A');
+    expect(result.state.board.has('d7')).toBe(false);
+    expect(result.state.history[0]).toMatchObject({ sigla: 'PE', promotedTo: 'AL' });
+  });
+
+  it('promotes the Pedone di Dama only to Damone', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd7', 'DA', 'A');
+    const state = createInitialGameState(board, 'A');
+
+    const rejected = applyTurn(state, 'd7', 'd8', 'AL');
+    expect(rejected.ok).toBe(false);
+
+    const result = applyTurn(state, 'd7', 'd8', 'DM');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.board.get('d8')?.sigla).toBe('DM');
+  });
+
+  it('does not require a promotion choice for a non-promotable piece reaching the back rank', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd1', 'TO', 'A');
+    const state = createInitialGameState(board, 'A');
+
+    const result = applyTurn(state, 'd1', 'd8');
+    expect(result.ok).toBe(true);
+  });
+
+  it('mirrors the promotion rank for Player B (rank 1)', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd2', 'PE', 'B');
+    const state = createInitialGameState(board, 'B');
+
+    const result = applyTurn(state, 'd2', 'd1', 'CA');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.board.get('d1')?.sigla).toBe('CA');
+  });
+});
+
+describe('applyTurn — en passant (README §6)', () => {
+  it('records the passed-over square after a Pawn\'s double first move', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd2', 'PE', 'A');
+    const state = createInitialGameState(board, 'A');
+
+    const result = applyTurn(state, 'd2', 'd4');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.enPassantTarget).toBe('d3');
+  });
+
+  it('lets an adjacent enemy Pawn capture en passant immediately after the double step', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd2', 'PE', 'A');
+    board = place(board, 'e4', 'PE', 'B');
+    let state = createInitialGameState(board, 'A');
+
+    const doubleStep = applyTurn(state, 'd2', 'd4');
+    expect(doubleStep.ok).toBe(true);
+    if (!doubleStep.ok) return;
+    state = doubleStep.state;
+
+    const enPassant = applyTurn(state, 'e4', 'd3');
+    expect(enPassant.ok).toBe(true);
+    if (!enPassant.ok) return;
+
+    expect(enPassant.state.board.get('d3')?.sigla).toBe('PE');
+    expect(enPassant.state.board.get('d3')?.owner).toBe('B');
+    expect(enPassant.state.board.has('d4')).toBe(false); // the captured pawn, not on the destination square
+    expect(enPassant.state.captured.A).toHaveLength(1);
+  });
+
+  it('expires after one move — the option disappears once the opponent plays something else', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd2', 'PE', 'A');
+    board = place(board, 'e4', 'PE', 'B');
+    board = place(board, 'a7', 'PE', 'B');
+    let state = createInitialGameState(board, 'A');
+
+    state = (applyTurn(state, 'd2', 'd4') as { ok: true; state: typeof state }).state;
+    state = (applyTurn(state, 'a7', 'a6') as { ok: true; state: typeof state }).state; // B plays something else
+    expect(state.enPassantTarget).toBeNull();
+
+    const lateEnPassant = applyTurn(state, 'e4', 'd3');
+    expect(lateEnPassant.ok).toBe(false);
+  });
+
+  it('is not available to the Pedone di Dama (en passant is only between classic Pawns)', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd2', 'PE', 'A');
+    board = place(board, 'e4', 'DA', 'B');
+    let state = createInitialGameState(board, 'A');
+
+    state = (applyTurn(state, 'd2', 'd4') as { ok: true; state: typeof state }).state;
+    const attempt = applyTurn(state, 'e4', 'd3');
+    expect(attempt.ok).toBe(false);
+  });
+});

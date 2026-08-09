@@ -1,5 +1,5 @@
 import type { Piece } from '../types';
-import { pieces, rules, KING_SIGLA } from './pieces';
+import { pieces, pickablePieces, rules, KING_SIGLA } from './pieces';
 import { getMaxIdenticalBySigla, countByCategory, computeBudgetSpent, computeTotalPieces } from './validators';
 
 function getMaxIdenticalFor(sigla: string): number {
@@ -50,7 +50,7 @@ export function autoFillTeam(currentTeam: Map<string, number>): OptimizerResult 
     let bestPiece: Piece | null = null;
     let bestScore = -Infinity;
 
-    for (const piece of pieces) {
+    for (const piece of pickablePieces) {
       if (piece.sigla === KING_SIGLA) continue;
       const currentCount = team.get(piece.sigla) ?? 0;
       if (currentCount >= getMaxIdenticalFor(piece.sigla)) continue;
@@ -58,7 +58,7 @@ export function autoFillTeam(currentTeam: Map<string, number>): OptimizerResult 
       if (piece.punti > budgetLeft) continue;
 
       const budgetAfter = budgetLeft - piece.punti;
-      const minPieceCost = Math.min(...pieces
+      const minPieceCost = Math.min(...pickablePieces
         .filter((p: Piece) => p.sigla !== KING_SIGLA && p.punti <= budgetAfter && (team.get(p.sigla) ?? 0) < getMaxIdenticalFor(p.sigla) && !(p.categoria === 'pedone' && calcTotalPawns(team) + 1 > maxPawns))
         .map((p: Piece) => p.punti));
 
@@ -135,7 +135,7 @@ export function improveTeam(currentTeam: Map<string, number>): OptimizerResult {
         improved = true;
       }
 
-      for (const piece of pieces) {
+      for (const piece of pickablePieces) {
         if (piece.sigla === KING_SIGLA) continue;
         if (piece.sigla === sigla) continue;
 
@@ -157,7 +157,7 @@ export function improveTeam(currentTeam: Map<string, number>): OptimizerResult {
       }
     }
 
-    for (const piece of pieces) {
+    for (const piece of pickablePieces) {
       if (piece.sigla === KING_SIGLA) continue;
       const currentCount = team.get(piece.sigla) ?? 0;
       if (currentCount >= getMaxIdenticalFor(piece.sigla)) continue;

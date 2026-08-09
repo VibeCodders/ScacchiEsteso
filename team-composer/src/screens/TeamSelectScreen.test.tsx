@@ -53,4 +53,9 @@ describe('TeamSelectScreen — parametrized team selection', () => {
     expect(teamA.get('PE')).toBe(1);
     expect(teamB.has('PE')).toBe(false);
   });
+
+  it('never offers Damone (DM) in the roster — it is obtainable only via promotion', () => {
+    render(<TeamSelectScreen title="Test" onComplete={() => {}} />);
+    expect(screen.queryByText('DM')).not.toBeInTheDocument();
+  });
 });

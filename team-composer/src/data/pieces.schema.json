@@ -237,6 +237,9 @@
         },
         "noteCondizionali": {
           "type": "string"
+        },
+        "obtainableOnlyViaPromotion": {
+          "type": "boolean"
         }
       },
       "additionalProperties": false

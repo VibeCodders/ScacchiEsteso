@@ -59,6 +59,8 @@ export interface Piece {
   scocca?: boolean;
   egida?: boolean;
   noteCondizionali?: string;
+  /** True for pieces obtainable only via in-game promotion (e.g. Damone) — excluded from team-building rosters. */
+  obtainableOnlyViaPromotion?: boolean;
 }
 
 export interface TeamMember {

@@ -195,3 +195,53 @@ describe('GameScreen — game over banner', () => {
     expect(screen.getByText(/Scacco matto — vince Giocatore 2/i)).toBeInTheDocument();
   });
 });
+
+describe('GameScreen — pawn promotion', () => {
+  it('shows a promotion dialog with the Pawn\'s options when it reaches the back rank', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd7', 'PE', 'A');
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="d7"]')!);
+    fireEvent.click(document.querySelector('[data-coord="d8"]')!);
+
+    expect(screen.getByText(/Scegli la promozione/i)).toBeInTheDocument();
+    expect(screen.getByText(/PE — Pedone/)).toBeInTheDocument();
+    expect(screen.getByText(/AL — Alfiere/)).toBeInTheDocument();
+    expect(screen.getByText(/CA — Cavallo/)).toBeInTheDocument();
+    expect(screen.getByText(/SP — Spettro/)).toBeInTheDocument();
+
+    // the move is not committed yet — the pawn is still on d7 until a choice is made
+    expect(document.querySelector('[data-coord="d7"]')?.querySelector('svg')).not.toBeNull();
+  });
+
+  it('replaces the pawn with the chosen piece once an option is picked', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd7', 'PE', 'A');
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="d7"]')!);
+    fireEvent.click(document.querySelector('[data-coord="d8"]')!);
+    fireEvent.click(screen.getByText(/AL — Alfiere/));
+
+    expect(screen.queryByText(/Scegli la promozione/i)).not.toBeInTheDocument();
+    expect(document.querySelector('[data-coord="d7"]')?.querySelector('svg')).toBeNull();
+    expect(document.querySelector('[data-coord="d8"]')?.querySelector('svg')?.getAttribute('aria-label')).toBe('AL');
+    expect(screen.getByText(/promosso a AL/i)).toBeInTheDocument();
+  });
+
+  it('auto-promotes the Pedone di Dama to Damone without showing a dialog (only one option)', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd7', 'DA', 'A');
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="d7"]')!);
+    fireEvent.click(document.querySelector('[data-coord="d8"]')!);
+
+    expect(screen.queryByText(/Scegli la promozione/i)).not.toBeInTheDocument();
+    expect(document.querySelector('[data-coord="d8"]')?.querySelector('svg')?.getAttribute('aria-label')).toBe('DM');
+  });
+});

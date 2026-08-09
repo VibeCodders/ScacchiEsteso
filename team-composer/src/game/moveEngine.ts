@@ -58,11 +58,11 @@ const KNIGHT_OFFSETS: Vector[] = [
   { df: -1, dr: -2 }, { df: -2, dr: -1 }, { df: -2, dr: 1 }, { df: -1, dr: 2 },
 ];
 
-function coordToFileRank(coord: Coord): { file: number; rank: number } {
+export function coordToFileRank(coord: Coord): { file: number; rank: number } {
   return { file: FILES.indexOf(coord[0] as (typeof FILES)[number]), rank: Number(coord[1]) };
 }
 
-function fileRankToCoord(file: number, rank: number): Coord | null {
+export function fileRankToCoord(file: number, rank: number): Coord | null {
   if (file < 0 || file > 7 || rank < 1 || rank > 8) return null;
   return `${FILES[file]}${rank}`;
 }

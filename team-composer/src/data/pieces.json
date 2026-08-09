@@ -58,7 +58,7 @@
     ],
     "movimentoTipo": "step",
     "promotable": true,
-    "promotionTypes": ["RA", "TO", "AL", "CA"],
+    "promotionTypes": ["PE", "AL", "CA", "SP"],
     "promotionRank": 8,
     "resistance": 0,
     "immunityTypes": [],
@@ -361,7 +361,7 @@
     ],
     "movimentoTipo": "speciale",
     "promotable": true,
-    "promotionTypes": ["RA"],
+    "promotionTypes": ["DM"],
     "promotionRank": 8,
     "resistance": 0,
     "immunityTypes": [],
@@ -398,5 +398,22 @@
     "alternativeActions": [
       { "type": "copia_poteri", "modalita": "passiva", "params": { "condizioni": ["in_scacco"], "fallback": "muovi_1_cella" } }
     ]
+  },
+  {
+    "sigla": "DM",
+    "descrizione": "Damone",
+    "punti": 25,
+    "categoria": "base",
+    "classico": false,
+    "regole": "Ottenuto solo tramite promozione del Pedone di Dama. Si muove di una casella in diagonale in qualsiasi direzione. Cattura saltando un nemico adiacente in diagonale e atterrando sulla casella libera successiva.",
+    "moves": [
+      { "directions": ["ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 1, "capture": false, "captureMode": "none", "movementType": "step" },
+      { "directions": ["ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 0, "capture": true, "captureMode": "leap", "movementType": "leap", "jump": true, "multiJump": true }
+    ],
+    "movimentoTipo": "speciale",
+    "resistance": 0,
+    "immunityTypes": [],
+    "alternativeActions": [],
+    "obtainableOnlyViaPromotion": true
   }
 ]
