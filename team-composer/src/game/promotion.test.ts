@@ -32,8 +32,8 @@ describe('isPromotionMove', () => {
 });
 
 describe('getPromotionOptions', () => {
-  it('returns the classic Pawn\'s README-specified options (≤20pt base pieces)', () => {
-    expect(getPromotionOptions(getPieceDef('PE'))).toEqual(['PE', 'AL', 'CA', 'SP']);
+  it('returns the classic Pawn\'s README-specified options (≤20pt base pieces), sorted by point cost', () => {
+    expect(getPromotionOptions(getPieceDef('PE'))).toEqual(['PE', 'AL', 'CA', 'SP']); // 4, 10, 12, 15
   });
 
   it('returns only Damone for the Pedone di Dama (no player choice)', () => {
@@ -42,6 +42,11 @@ describe('getPromotionOptions', () => {
 
   it('returns an empty list for a non-promotable piece', () => {
     expect(getPromotionOptions(getPieceDef('TO'))).toEqual([]);
+  });
+
+  it('sorts by point cost ascending even when promotionTypes is declared out of order', () => {
+    const pieceDef = { ...getPieceDef('PE'), promotionTypes: ['SP', 'PE', 'CA', 'AL'] };
+    expect(getPromotionOptions(pieceDef)).toEqual(['PE', 'AL', 'CA', 'SP']);
   });
 });
 

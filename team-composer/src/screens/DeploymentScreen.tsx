@@ -12,7 +12,7 @@ import {
   type DeploymentState,
 } from '../game/deployment';
 import { allCoords, type Owner } from '../game/board';
-import { pieces } from '../data/pieces';
+import { pieces, sortSiglasByPunti } from '../data/pieces';
 import '../App.css';
 
 function pickCoinToss(): Owner {
@@ -145,7 +145,8 @@ function DeploymentScreen() {
                 </button>
               </div>
               <div className="piece-grid" style={{ gridTemplateColumns: '1fr' }}>
-                {[...currentRoster.entries()].map(([sigla, count]) => {
+                {sortSiglasByPunti([...currentRoster.keys()]).map((sigla) => {
+                  const count = currentRoster.get(sigla)!;
                   const pieceDef = pieces.find((p) => p.sigla === sigla);
                   return (
                     <div

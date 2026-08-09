@@ -10,7 +10,7 @@ import { canRevive, getRevivalSquares, getRevivableSiglas } from '../game/necrom
 import { canMimic, getOrphanThreats } from '../game/orphan';
 import { createInitialGameState, applyTurn, applyScocca, applySwap, applyRevive, getLegalMovesForTurn, skipExtraMove, type GameState } from '../game/turnManager';
 import { chooseBotAction, applyBotAction } from '../game/bot';
-import { pieces } from '../data/pieces';
+import { pieces, sortSiglasByPunti } from '../data/pieces';
 import type { Coord, Owner } from '../game/board';
 import '../App.css';
 
@@ -411,7 +411,9 @@ function GameScreen() {
             >
               <h2>🎭 Chi imitare?</h2>
               <div className="actions" style={{ flexDirection: 'column' }}>
-                {pendingMimicChoice.threats.map((threatCoord) => {
+                {[...pendingMimicChoice.threats]
+                  .sort((a, b) => getPieceDef(gameState.board.get(a)!.sigla).punti - getPieceDef(gameState.board.get(b)!.sigla).punti)
+                  .map((threatCoord) => {
                   const threatSigla = gameState.board.get(threatCoord)?.sigla ?? '?';
                   return (
                     <button
@@ -476,8 +478,8 @@ function GameScreen() {
           </div>
 
           <h2>💀 Pezzi catturati</h2>
-          <p><strong>{ownerLabel('A')}:</strong> {gameState.captured.A.map((p) => p.sigla).join(', ') || '—'}</p>
-          <p><strong>{ownerLabel('B')}:</strong> {gameState.captured.B.map((p) => p.sigla).join(', ') || '—'}</p>
+          <p><strong>{ownerLabel('A')}:</strong> {sortSiglasByPunti(gameState.captured.A.map((p) => p.sigla)).join(', ') || '—'}</p>
+          <p><strong>{ownerLabel('B')}:</strong> {sortSiglasByPunti(gameState.captured.B.map((p) => p.sigla)).join(', ') || '—'}</p>
         </div>
       </div>
     </div>

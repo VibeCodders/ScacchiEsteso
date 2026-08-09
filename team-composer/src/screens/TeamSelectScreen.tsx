@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { pieces, pickablePieces, rules, BUDGET, MAX_PIECES_TOTAL, KING_SIGLA } from '../data/pieces';
+import { pieces, pickablePieces, rules, sortByPunti, BUDGET, MAX_PIECES_TOTAL, KING_SIGLA } from '../data/pieces';
 import { autoFillTeam, improveTeam } from '../data/optimizer';
 import { getMaxIdenticalBySigla, countByCategory, computeValidation } from '../data/validators';
 import { emptyTeam, type TeamMap } from '../context/gameSetup';
@@ -105,7 +105,7 @@ function TeamSelectScreen({ title, subtitle, initialTeam, completeButtonLabel, o
         members.push({ piece, count });
       }
     });
-    return members;
+    return members.sort((a, b) => a.piece.punti - b.piece.punti);
   }, [team]);
 
   const totalPieces = useMemo(() => {
@@ -133,7 +133,9 @@ function TeamSelectScreen({ title, subtitle, initialTeam, completeButtonLabel, o
 
   const validation = useMemo(() => computeValidation(team, pieces, rules), [team]);
 
-  const filteredPieces = filter === 'all' ? pickablePieces : pickablePieces.filter((p: Piece) => p.classico === (filter === 'classico'));
+  const filteredPieces = sortByPunti(
+    filter === 'all' ? pickablePieces : pickablePieces.filter((p: Piece) => p.classico === (filter === 'classico')),
+  );
 
   const getCostClass = (cost: number) => {
     if (cost === 0) return 'cost-free';

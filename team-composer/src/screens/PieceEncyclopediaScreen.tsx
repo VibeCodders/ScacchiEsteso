@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Board from '../components/Board';
-import { pieces } from '../data/pieces';
+import { pieces, sortByPunti } from '../data/pieces';
 import { computePieceRangeSquares } from '../game/pieceInfo';
 import { createEmptyBoard, createPieceInstance, setPieceAt, type Coord } from '../game/board';
 import type { Piece } from '../types';
@@ -77,7 +77,7 @@ function PieceEncyclopediaScreen() {
       <div className="main" style={{ gridTemplateColumns: '1fr' }}>
         <div className="panel">
           <div className="piece-grid">
-            {pieces.map((piece) => (
+            {sortByPunti(pieces).map((piece) => (
               <div key={piece.sigla} className="piece-card">
                 <div className="piece-header">
                   <span className="sigla">{piece.sigla}</span>

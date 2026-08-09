@@ -130,4 +130,13 @@ describe('DeploymentScreen', () => {
 
     expect(screen.getByText(/Schieramento completo/i)).toBeInTheDocument();
   });
+
+  it('lists the roster panel sorted by point cost, ascending, regardless of the order pieces were added to the team', () => {
+    // Regina (48pt) declared before Pedone (4pt) and Torre (15pt) in the source map — the display must not follow that.
+    renderDeployment(new Map([[KING_SIGLA, 1], ['RA', 1], ['PE', 1], ['TO', 1]]), new Map([[KING_SIGLA, 1]]));
+    fireEvent.click(screen.getByText('Tira la moneta'));
+
+    const renderedSiglas = [...document.querySelectorAll('.piece-grid .piece-card .sigla')].map((el) => el.textContent);
+    expect(renderedSiglas).toEqual(['PE', 'TO', 'RA']);
+  });
 });

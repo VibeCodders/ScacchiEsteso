@@ -1,4 +1,5 @@
 import type { Piece } from '../types';
+import { sortSiglasByPunti } from '../data/pieces';
 import { coordToFileRank, type Coord, type Owner } from './board';
 
 /**
@@ -16,7 +17,7 @@ export function isPromotionMove(pieceDef: Piece, owner: Owner, to: Coord): boole
   return coordToFileRank(to).rank === absolutePromotionRank(owner, pieceDef.promotionRank);
 }
 
-/** The siglas a piece may promote into. Empty if the piece isn't promotable. */
+/** The siglas a piece may promote into, sorted by point cost. Empty if the piece isn't promotable. */
 export function getPromotionOptions(pieceDef: Piece): string[] {
-  return pieceDef.promotionTypes ?? [];
+  return sortSiglasByPunti(pieceDef.promotionTypes ?? []);
 }

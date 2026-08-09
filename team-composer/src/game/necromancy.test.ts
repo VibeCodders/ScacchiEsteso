@@ -45,13 +45,13 @@ describe('getRevivalSquares', () => {
 });
 
 describe('getRevivableSiglas', () => {
-  it('includes every distinct "pedone"-category sigla in the graveyard (PE, PG, FG — not just PE)', () => {
+  it('includes every distinct "pedone"-category sigla in the graveyard (PE, PG, FG — not just PE), sorted by point cost', () => {
     const graveyard = [
-      createPieceInstance('PE', 'A'),
-      createPieceInstance('PG', 'A'),
-      createPieceInstance('FG', 'A'),
+      createPieceInstance('PE', 'A'), // 4pt — captured/listed first, but not the cheapest
+      createPieceInstance('PG', 'A'), // 2pt
+      createPieceInstance('FG', 'A'), // 3pt
     ];
-    expect(getRevivableSiglas(graveyard).sort()).toEqual(['FG', 'PE', 'PG'].sort());
+    expect(getRevivableSiglas(graveyard)).toEqual(['PG', 'FG', 'PE']); // ascending by point cost, not graveyard order
   });
 
   it('excludes non-"pedone"-category pieces even if captured', () => {

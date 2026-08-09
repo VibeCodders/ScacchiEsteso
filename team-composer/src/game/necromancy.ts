@@ -1,4 +1,5 @@
 import type { Piece } from '../types';
+import { sortSiglasByPunti } from '../data/pieces';
 import { coordToFileRank, fileRankToCoord, getPieceAt, type BoardState, type Coord, type Owner, type PieceInstance } from './board';
 import { getPieceDef } from './moveEngine';
 import { isSilenced } from './auras';
@@ -39,5 +40,5 @@ export function getRevivableSiglas(captured: PieceInstance[]): string[] {
   for (const piece of captured) {
     if (getPieceDef(piece.sigla).categoria === 'pedone') siglas.add(piece.sigla);
   }
-  return [...siglas];
+  return sortSiglasByPunti([...siglas]);
 }

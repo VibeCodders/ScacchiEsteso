@@ -19,6 +19,13 @@ describe('PieceEncyclopediaScreen', () => {
     expect(screen.getByText('DM')).toBeInTheDocument();
   });
 
+  it('lists every piece sorted by point cost, ascending', () => {
+    renderScreen();
+    const renderedSiglas = [...document.querySelectorAll('.piece-card .sigla')].map((el) => el.textContent);
+    const expectedSiglas = [...pieces].sort((a, b) => a.punti - b.punti).map((p) => p.sigla);
+    expect(renderedSiglas).toEqual(expectedSiglas);
+  });
+
   it('shows no detail board before any "più info" button is clicked', () => {
     renderScreen();
     expect(screen.queryByTestId('board')).not.toBeInTheDocument();

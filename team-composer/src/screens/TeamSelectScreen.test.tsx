@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import TeamSelectScreen from './TeamSelectScreen';
-import { KING_SIGLA } from '../data/pieces';
+import { KING_SIGLA, pickablePieces } from '../data/pieces';
 import type { TeamMap } from '../context/gameSetup';
 
 describe('TeamSelectScreen — parametrized team selection', () => {
@@ -57,5 +57,22 @@ describe('TeamSelectScreen — parametrized team selection', () => {
   it('never offers Damone (DM) in the roster — it is obtainable only via promotion', () => {
     render(<TeamSelectScreen title="Test" onComplete={() => {}} />);
     expect(screen.queryByText('DM')).not.toBeInTheDocument();
+  });
+
+  it('lists the roster grid sorted by point cost, ascending', () => {
+    render(<TeamSelectScreen title="Test" onComplete={() => {}} />);
+    const renderedSiglas = [...document.querySelectorAll('.piece-card .sigla')].map((el) => el.textContent);
+    const expectedSiglas = [...pickablePieces].sort((a, b) => a.punti - b.punti).map((p) => p.sigla);
+    expect(renderedSiglas).toEqual(expectedSiglas);
+  });
+
+  it('lists "Team Attuale" sorted by point cost, ascending, regardless of the order pieces were added', () => {
+    render(<TeamSelectScreen title="Test" onComplete={() => {}} />);
+    // Add a higher-cost piece before a cheaper one — the display order must not follow click order.
+    fireEvent.click(screen.getByLabelText('Aggiungi Regina')); // 48pt — added first
+    fireEvent.click(screen.getByLabelText('Aggiungi Pedone')); // 4pt — added second
+
+    const memberSiglas = [...document.querySelectorAll('.team-member .member-sigla')].map((el) => el.textContent);
+    expect(memberSiglas).toEqual(['RE', 'PE', 'RA']); // King (0pt) always first, then ascending
   });
 });

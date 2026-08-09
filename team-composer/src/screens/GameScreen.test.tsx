@@ -138,6 +138,27 @@ describe('GameScreen — playable match', () => {
     expect(screen.getByText((_, el) => el?.textContent === 'Giocatore 2: PE')).toBeInTheDocument();
   });
 
+  it('lists captured pieces sorted by point cost, ascending, regardless of the order they were captured in', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'TO', 'A'); // 15pt — captured first
+    board = place(board, 'a4', 'PE', 'A'); // 4pt — captured second
+    board = place(board, 'd8', 'TO', 'B');
+    board = place(board, 'b6', 'CA', 'B');
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="e1"]')!); // A: harmless King shuffle
+    fireEvent.click(document.querySelector('[data-coord="f1"]')!);
+    fireEvent.click(document.querySelector('[data-coord="d8"]')!); // B: captures the Torre (15pt)
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    fireEvent.click(document.querySelector('[data-coord="f1"]')!); // A: King back
+    fireEvent.click(document.querySelector('[data-coord="e1"]')!);
+    fireEvent.click(document.querySelector('[data-coord="b6"]')!); // B: captures the Pedone (4pt)
+    fireEvent.click(document.querySelector('[data-coord="a4"]')!);
+
+    expect(screen.getByText((_, el) => el?.textContent === 'Giocatore 1: PE, TO')).toBeInTheDocument();
+  });
+
   it('deselects when clicking the already-selected square again', () => {
     let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
     board = place(board, 'e8', KING_SIGLA, 'B');
@@ -224,6 +245,19 @@ describe('GameScreen — pawn promotion', () => {
 
     // the move is not committed yet — the pawn is still on d7 until a choice is made
     expect(document.querySelector('[data-coord="d7"]')?.querySelector('svg')).not.toBeNull();
+  });
+
+  it('lists the promotion options sorted by point cost, ascending', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd7', 'PE', 'A');
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="d7"]')!);
+    fireEvent.click(document.querySelector('[data-coord="d8"]')!);
+
+    const optionSiglas = [...document.querySelectorAll('.btn-save')].map((el) => el.textContent?.split(' — ')[0]);
+    expect(optionSiglas).toEqual(['PE', 'AL', 'CA', 'SP']); // 4pt, 10pt, 12pt, 15pt
   });
 
   it('replaces the pawn with the chosen piece once an option is picked', () => {
@@ -515,6 +549,10 @@ describe('GameScreen — Necromante revival', () => {
     expect(screen.getByText(/PE — Pedone/i)).toBeInTheDocument();
     expect(screen.getByText(/PG — Paggio/i)).toBeInTheDocument();
 
+    // sorted by point cost, ascending: Paggio (2pt) before Pedone (4pt), not insertion/capture order
+    const optionSiglas = [...document.querySelectorAll('.btn-save')].map((el) => el.textContent?.split(' — ')[0]);
+    expect(optionSiglas).toEqual(['PG', 'PE']);
+
     fireEvent.click(screen.getByText(/PG — Paggio/i));
     expect(document.querySelector('[data-coord="d5"]')?.querySelector('svg')?.getAttribute('aria-label')).toBe('PG');
   });
@@ -579,6 +617,10 @@ describe('GameScreen — Orfano mimicry', () => {
     expect(screen.getByText(/Chi imitare/i)).toBeInTheDocument();
     expect(screen.getByText(/TO — Torre \(d8\)/i)).toBeInTheDocument();
     expect(screen.getByText(/CA — Cavallo \(c6\)/i)).toBeInTheDocument();
+
+    // sorted by point cost, ascending: Cavallo (12pt) before Torre (15pt)
+    const optionSiglas = [...document.querySelectorAll('.btn-save')].map((el) => el.textContent?.split(' — ')[0]);
+    expect(optionSiglas).toEqual(['CA', 'TO']);
 
     fireEvent.click(screen.getByText(/CA — Cavallo \(c6\)/i));
     expect(screen.queryByText(/Chi imitare/i)).not.toBeInTheDocument();
