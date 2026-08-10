@@ -31,7 +31,9 @@ const PRESET_DEFS: PresetTeamDef[] = [
     id: 'difensivo',
     label: 'Difensivo',
     description: 'Muro di pedoni con Golem, Paladino e Inquisitore a protezione.',
-    composition: [[KING_SIGLA, 1], ['PE', 8], ['GL', 1], ['PA', 1], ['IQ', 1], ['TO', 1], ['CR', 1]],
+    // CR (Corriere) swapped for RI (Ricognitore) to stay within budget after a punti rebalance —
+    // same short-range flavor, 2 points cheaper, neither mentioned in the preset's own description.
+    composition: [[KING_SIGLA, 1], ['PE', 8], ['GL', 1], ['PA', 1], ['IQ', 1], ['TO', 1], ['RI', 1]],
   },
 ];
 
