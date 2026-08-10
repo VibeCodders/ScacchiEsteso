@@ -1,4 +1,4 @@
-import { allCoords, coordToFileRank, getPieceAt, type Coord, type Owner } from './board';
+import { allCoords, coordToFileRank, getPieceAt, type Coord, type Owner, type PieceInstance } from './board';
 import { getPieceDef } from './moveEngine';
 import { findKingCoord } from './check';
 import { getPromotionOptions, isPromotionMove } from './promotion';
@@ -242,17 +242,28 @@ function orderActions(state: GameState, owner: Owner, actions: BotAction[]): Bot
   return [...actions].sort((a, b) => estimateActionGain(state, owner, b) - estimateActionGain(state, owner, a));
 }
 
+/** A cached alpha-beta result for one board position: valid for searches of at least `depth`
+ *  plies; `score` is in the perspective of the side to move; `bound` says whether it is exact or
+ *  only a bound (fail-high → 'lower', fail-low → 'upper'). */
+export interface TTEntry {
+  depth: number;
+  score: number;
+  bound: 'exact' | 'lower' | 'upper';
+}
+
 /**
  * Per-search state shared across the minimax recursion: the wall-clock deadline, the killer-move
- * table (up to 2 moves that caused a cutoff, per depth) and the history heuristic (cutoff moves
- * accumulate a score). Both tables only REORDER moves — alpha-beta results are unaffected — but
- * good ordering lets alpha-beta prune far more branches, which is what lets the deepest iterative
+ * table (up to 2 moves that caused a cutoff, per depth), the history heuristic (cutoff moves
+ * accumulate a score) and the transposition table keyed by the Zobrist hash of the position.
+ * Killers/history only REORDER moves — alpha-beta results are unaffected — and the TT reuses
+ * already-computed subtree scores; together they cut enough branches that the deepest iterative
  * deepening iterations finish inside the time budget.
  */
 export interface SearchContext {
   deadline: number;
   killers: Map<number, string[]>;
   history: Map<string, number>;
+  transpositions: Map<bigint, TTEntry>;
 }
 
 /** Stable string identity for a bot action — the key for killer moves and the history heuristic.
@@ -286,6 +297,107 @@ export function recordCutoff(ctx: SearchContext, depth: number, action: BotActio
     killers.unshift(key);
   }
   ctx.history.set(key, (ctx.history.get(key) ?? 0) + depth * depth);
+}
+
+/* --------------------------------------------------------------------------
+ * Transposition table (Zobrist hashing)
+ * ------------------------------------------------------------------------ */
+
+// 64-bit random keys, cached per identity. Hashes never need to be deterministic across runs.
+const PIECE_KEYS = new Map<string, bigint>();
+const COORD_KEYS = new Map<string, bigint>();
+const RABBIT_KEYS = new Map<string, bigint>();
+const CAPTURED_KEYS = new Map<string, bigint>();
+const TURN_A_KEY = random64();
+const TURN_B_KEY = random64();
+const EXTRA_MOVE_FLAG = random64();
+const RABBIT_FLAG = random64();
+/** Odd constant — multiplying by it is a bijection mod 2⁶⁴, so distinct progress counters can't
+ *  collide after the multiply-mix. */
+const PROGRESS_MIX = random64() | 1n;
+/** Size cap — beyond it the table is wiped rather than grown without bound (a fresh table is
+ *  built per chooseBotAction call anyway). */
+const TT_MAX_ENTRIES = 100_000;
+
+function random64(): bigint {
+  let h = 0n;
+  for (let i = 0; i < 2; i++) {
+    h = (h << 32n) | BigInt((Math.random() * 0x1_0000_0000) >>> 0);
+  }
+  return h;
+}
+
+function keyOf(cache: Map<string, bigint>, identity: string): bigint {
+  let v = cache.get(identity);
+  if (v === undefined) {
+    v = random64();
+    cache.set(identity, v);
+  }
+  return v;
+}
+
+/** Random 64-bit key for a piece on a square. Owner and the Miraggio clone flag are included, so
+ *  a real and its clone hash differently; the raw mirage id is deliberately NOT hashed — two
+ *  layouts that differ only in id values behave identically, and different link structures always
+ *  show up as different layouts (the clone/real squares are part of the layout). */
+function pieceKey(sigla: string, owner: Owner, isClone: boolean, coord: Coord): bigint {
+  return keyOf(PIECE_KEYS, `${sigla}|${owner}|${isClone ? 1 : 0}|${coord}`);
+}
+
+function coordKey(coord: Coord): bigint {
+  return keyOf(COORD_KEYS, coord);
+}
+
+function rabbitKey(at: Coord, lastHurdle: Coord): bigint {
+  return keyOf(RABBIT_KEYS, `${at}>${lastHurdle}`);
+}
+
+function capturedKey(sigla: string, owner: Owner): bigint {
+  return keyOf(CAPTURED_KEYS, `${sigla}|${owner}`);
+}
+
+/** Order-independent hash of the captured sets (which side holds which fallen siglas) — the
+ *  Necromante's revive options depend on them, so they're part of the position identity. */
+function hashCaptured(captured: Record<Owner, PieceInstance[]>): bigint {
+  let h = 0n;
+  for (const owner of ['A', 'B'] as const) {
+    for (const sigla of captured[owner].map((p) => p.sigla).sort()) {
+      h = (h * 0x1_0000_0000_0000_01b3n) ^ capturedKey(sigla, owner); // FNV-1a-style mixing
+    }
+  }
+  return h;
+}
+
+/**
+ * Zobrist hash of everything that can affect the minimax result of a position: the board layout
+ * (piece, owner, clone flag, square), board size, side to move, the en-passant target, pending
+ * Berserker/Coniglio state, the anti-stalemate progress counter (it decides whether a position is
+ * terminal) and the captured sets (they decide the Necromante's revive options). Terminal
+ * positions are never stored in the TT, so status/winner don't need to be hashed.
+ */
+export function hashPosition(state: GameState): bigint {
+  let h = 0n;
+  for (const [coord, piece] of state.board) {
+    h ^= pieceKey(piece.sigla, piece.owner, Boolean(piece.mirage?.isClone), coord);
+  }
+  h ^= BigInt(state.dimensions.width * 97 + state.dimensions.height * 31);
+  h ^= state.turn === 'A' ? TURN_A_KEY : TURN_B_KEY;
+  if (state.enPassantTarget) h ^= coordKey(state.enPassantTarget);
+  if (state.pendingExtraMove) h ^= coordKey(state.pendingExtraMove) ^ EXTRA_MOVE_FLAG;
+  if (state.pendingRabbitChain) {
+    h ^= rabbitKey(state.pendingRabbitChain.at, state.pendingRabbitChain.lastHurdle) ^ RABBIT_FLAG;
+  }
+  h ^= BigInt(state.turnsSinceProgress + 1) * PROGRESS_MIX;
+  h ^= hashCaptured(state.captured);
+  return h;
+}
+
+/** Depth-preferred store: a deeper result replaces a shallower one, never the other way around. */
+function storeTT(ctx: SearchContext, key: bigint, depth: number, score: number, bound: TTEntry['bound']): void {
+  const existing = ctx.transpositions.get(key);
+  if (existing && existing.depth > depth) return;
+  if (ctx.transpositions.size >= TT_MAX_ENTRIES) ctx.transpositions.clear();
+  ctx.transpositions.set(key, { depth, score, bound });
 }
 
 /** Orders a node's actions for alpha-beta: captures first (by value), then the killer moves for
@@ -347,11 +459,27 @@ function minimax(
   }
 
   const toMove = state.turn;
+  const maximizing = toMove === botOwner;
+
+  // Transposition lookup: the stored score is in side-to-move perspective, so flip it when this
+  // node's side to move is the opponent. Reuse the entry when it can decide the node outright
+  // (exact value, or a bound that cuts the window).
+  const key = hashPosition(state);
+  const entry = ctx.transpositions.get(key);
+  if (entry && entry.depth >= depth) {
+    const score = maximizing ? entry.score : -entry.score;
+    if (entry.bound === 'exact') return score;
+    if (entry.bound === 'lower' && score >= beta) return score;
+    if (entry.bound === 'upper' && score <= alpha) return score;
+  }
+  const originalAlpha = alpha;
+  const originalBeta = beta;
+
   const actions = orderMoves(state, toMove, generateBotActions(state, toMove), depth, ctx);
   if (actions.length === 0) return evaluate(state, botOwner);
 
-  const maximizing = toMove === botOwner;
   let best = maximizing ? -Infinity : Infinity;
+  let interrupted = false;
 
   for (const action of actions) {
     const result = applyBotAction(state, action);
@@ -369,7 +497,21 @@ function minimax(
       recordCutoff(ctx, depth, action);
       break;
     }
-    if (Date.now() >= ctx.deadline) break;
+    if (Date.now() >= ctx.deadline) {
+      interrupted = true;
+      break;
+    }
+  }
+
+  // Store the result in side-to-move perspective unless the deadline cut this node short — a
+  // partial best is not a trustworthy bound. Bound classification against the ORIGINAL window:
+  // fail-high (score at/above the window's high edge) → 'lower', fail-low → 'upper', else 'exact'.
+  if (!interrupted) {
+    const storedScore = maximizing ? best : -best;
+    const lo = maximizing ? originalAlpha : -originalBeta;
+    const hi = maximizing ? originalBeta : -originalAlpha;
+    const bound: TTEntry['bound'] = storedScore <= lo ? 'upper' : storedScore >= hi ? 'lower' : 'exact';
+    storeTT(ctx, key, depth, storedScore, bound);
   }
 
   return best;
@@ -394,6 +536,7 @@ export function chooseBotAction(state: GameState, owner: Owner, difficulty: BotD
     deadline: Date.now() + difficultyTimeBudgetMs(difficulty),
     killers: new Map(),
     history: new Map(),
+    transpositions: new Map(),
   };
 
   // Difficulty 1 = 0 plies: no lookahead at all — pick the action whose resulting position scores

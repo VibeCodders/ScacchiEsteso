@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chooseBotAction, generateBotActions, applyBotAction, difficultyToDepth, difficultyTimeBudgetMs, actionKey, recordCutoff, type SearchContext } from './bot';
+import { chooseBotAction, generateBotActions, applyBotAction, difficultyToDepth, difficultyTimeBudgetMs, actionKey, recordCutoff, hashPosition, type SearchContext } from './bot';
 import { createInitialGameState } from './turnManager';
 import { createEmptyBoard, createPieceInstance, setPieceAt, type BoardState } from './board';
 import { buildClassicStartingBoard } from './samplePositions';
@@ -322,7 +322,7 @@ describe('chooseBotAction — max difficulty performance', () => {
 
 describe('killer moves and history heuristic', () => {
   function ctx(): SearchContext {
-    return { deadline: Number.MAX_SAFE_INTEGER, killers: new Map(), history: new Map() };
+    return { deadline: Number.MAX_SAFE_INTEGER, killers: new Map(), history: new Map(), transpositions: new Map() };
   }
 
   it('actionKey is stable and distinct across different actions', () => {
@@ -347,6 +347,47 @@ describe('killer moves and history heuristic', () => {
     recordCutoff(c, 3, { kind: 'move', from: 'd4', to: 'd5' });
     expect(c.killers.get(3)).toEqual(['move:d4:d5::']);
     expect(c.history.get('move:d4:d5::')).toBe(13); // 4 + 3²
+  });
+});
+
+describe('transposition table — Zobrist position hashing', () => {
+  function baseState() {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'TO', 'A');
+    return createInitialGameState(board, 'A');
+  }
+
+  it('hashes two identical states to the same key', () => {
+    expect(hashPosition(baseState())).toBe(hashPosition(baseState()));
+  });
+
+  it('changes the hash when a piece moves or the side to move flips', () => {
+    const base = baseState();
+
+    let movedBoard = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    movedBoard = place(movedBoard, 'e8', 'RE', 'B');
+    movedBoard = place(movedBoard, 'd5', 'TO', 'A'); // rook one square up
+    expect(hashPosition(createInitialGameState(movedBoard, 'A'))).not.toBe(hashPosition(base));
+
+    expect(hashPosition(createInitialGameState(base.board, 'B'))).not.toBe(hashPosition(base));
+  });
+
+  it('changes when the anti-stalemate progress counter differs', () => {
+    const base = baseState();
+    expect(hashPosition({ ...base, turnsSinceProgress: base.turnsSinceProgress + 1 })).not.toBe(hashPosition(base));
+  });
+
+  it('changes when the captured sets differ (Necromante revive options)', () => {
+    const base = baseState();
+    const withCapture = { ...base, captured: { A: [...base.captured.A], B: [...base.captured.B, createPieceInstance('PE', 'B')] } };
+    expect(hashPosition(withCapture)).not.toBe(hashPosition(base));
+  });
+
+  it('changes when a Berserker bonus move or an en-passant target is pending', () => {
+    const base = baseState();
+    expect(hashPosition({ ...base, pendingExtraMove: 'd5' })).not.toBe(hashPosition(base));
+    expect(hashPosition({ ...base, enPassantTarget: 'd6' })).not.toBe(hashPosition(base));
   });
 });
 
