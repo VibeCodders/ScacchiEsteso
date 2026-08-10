@@ -1,7 +1,14 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { pieces, sortByPunti } from '../data/pieces';
-import { estimatePunti, estimatorFitQuality, type PuntiEstimate } from '../data/estimatePunti';
+import {
+  estimatePunti,
+  estimatorFitQuality,
+  stage1ModelSummary,
+  mechanicBonusSummary,
+  confidenceForSampleCount,
+  type PuntiEstimate,
+} from '../data/estimatePunti';
 import type { Piece } from '../types';
 import '../App.css';
 
@@ -18,6 +25,85 @@ function diffStatus(actual: number, suggested: number): DiffStatus {
 
 function diffBadgeClass(actual: number, suggested: number): string {
   return `punti-diff-${diffStatus(actual, suggested)}`;
+}
+
+const CONFIDENCE_LABEL: Record<'low' | 'medium' | 'high', string> = {
+  low: 'bassa',
+  medium: 'media',
+  high: 'alta',
+};
+
+/**
+ * Collapsible panel exposing the fitted stage-1 coefficients (incl. the ridge penalty chosen by
+ * leave-one-out cross-validation) and the stage-2 mechanic bonus table (raw vs. shrunk toward the
+ * global average) — makes the model's reasoning inspectable instead of only its final numbers.
+ */
+function ModelTransparencyPanel() {
+  const summary = useMemo(() => stage1ModelSummary(), []);
+  const mechanicTable = useMemo(() => mechanicBonusSummary(), []);
+
+  return (
+    <details className="model-transparency">
+      <summary>Come funziona il modello (coefficienti e bonus)</summary>
+
+      <div className="model-transparency-body">
+        <div>
+          <h3>Stage 1 — mobilità e durabilità</h3>
+          <p className="model-transparency-note">
+            Regressione ridge (penalità λ = {summary.lambda}, scelta minimizzando l'errore leave-one-out) contro i
+            pezzi di puro movimento del roster. Errore leave-one-out attuale:{' '}
+            <strong>{summary.looMeanAbsoluteError.toFixed(1)} pt</strong>.
+          </p>
+          <table className="model-coefficients-table">
+            <thead>
+              <tr>
+                <th>Feature</th>
+                <th>Coefficiente</th>
+              </tr>
+            </thead>
+            <tbody>
+              {summary.features.map((f) => (
+                <tr key={f.name}>
+                  <td>{f.name}</td>
+                  <td>{f.coefficient.toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div>
+          <h3>Stage 2 — bonus per meccanica speciale</h3>
+          <p className="model-transparency-note">
+            Ogni bonus grezzo (media di punti reali − stima stage 1 sui pezzi con quella meccanica) è tirato verso
+            la media globale delle meccaniche speciali, tanto più quanti meno esempi lo sostengono.
+          </p>
+          <table className="model-coefficients-table">
+            <thead>
+              <tr>
+                <th>Meccanica</th>
+                <th>Bonus grezzo</th>
+                <th>Bonus applicato</th>
+                <th>Esempi</th>
+                <th>Confidenza</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(mechanicTable).map(([type, entry]) => (
+                <tr key={type}>
+                  <td>{type}</td>
+                  <td>{entry.rawValue > 0 ? '+' : ''}{entry.rawValue.toFixed(1)}</td>
+                  <td>{entry.value > 0 ? '+' : ''}{entry.value.toFixed(1)}</td>
+                  <td>{entry.sampleCount}</td>
+                  <td>{CONFIDENCE_LABEL[confidenceForSampleCount(entry.sampleCount)]}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+  );
 }
 
 function formatDiff(actual: number, suggested: number): string {
@@ -224,11 +310,15 @@ function PuntiEstimatorScreen() {
             </span>
           </div>
           <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '16px' }}>
-            L'algoritmo è un modello statistico (regressione ai minimi quadrati) calibrato sul roster attuale.
-            È un punto di partenza per la revisione manuale, non un valore definitivo — i pezzi con meccaniche
-            speciali (aure, danno ad area, ecc.) hanno una sola voce di esempio nel roster, quindi la loro
-            stima è meno affidabile di quella dei pezzi di puro movimento (vedi badge "⚠ 1 esempio" in tabella).
+            L'algoritmo è un modello statistico (regressione ridge, con penalità scelta per validazione incrociata
+            leave-one-out) calibrato sul roster attuale. È un punto di partenza per la revisione manuale, non un
+            valore definitivo — i pezzi con meccaniche speciali (aure, danno ad area, ecc.) hanno una sola voce di
+            esempio nel roster, quindi il loro bonus viene tirato verso la media globale delle meccaniche
+            (shrinkage) e resta meno affidabile di quello dei pezzi di puro movimento (vedi badge "⚠ 1 esempio" in
+            tabella e il pannello di trasparenza qui sotto).
           </p>
+
+          <ModelTransparencyPanel />
 
           <PuntiScatterChart rows={allRows} />
 
@@ -275,7 +365,9 @@ function PuntiEstimatorScreen() {
                       </span>
                     </td>
                     <td className="breakdown-cell">
-                      mobilità: {estimate.breakdown.mobilityContribution.toFixed(1)}
+                      mobilità mossa: {(estimate.breakdown.stepSlideMoveMobility + estimate.breakdown.leapMoveMobility).toFixed(1)}
+                      {' · '}mobilità cattura: {(estimate.breakdown.stepSlideCaptureMobility + estimate.breakdown.leapCaptureMobility).toFixed(1)}
+                      {' · '}contributo: {estimate.breakdown.mobilityContribution.toFixed(1)}
                       {estimate.breakdown.compoundContribution > 0 && <> · composto: +{estimate.breakdown.compoundContribution.toFixed(1)}</>}
                       {estimate.breakdown.specialMechanicBonus !== 0 && <> · meccanica: {estimate.breakdown.specialMechanicBonus > 0 ? '+' : ''}{estimate.breakdown.specialMechanicBonus.toFixed(1)}</>}
                       {estimate.breakdown.mechanicConfidence === 'low' && (
