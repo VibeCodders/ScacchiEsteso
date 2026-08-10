@@ -362,7 +362,7 @@ function GameScreen() {
             )}
           </div>
           {actionMode === 'scocca' && <p>🏹 Modalità Scoccare: seleziona un bersaglio nemico a 3-4 caselle.</p>}
-          {actionMode === 'swap' && <p>🔀 Modalità Scambio: seleziona un alleato adiacente.</p>}
+          {actionMode === 'swap' && <p>🔀 Modalità Scambio: seleziona un alleato in linea di vista libera (riga, colonna o diagonale).</p>}
           {actionMode === 'revive' && <p>🧟 Modalità Rianimazione: seleziona una casella vuota adiacente.</p>}
           {orphanMimicSource && (
             <p>🎭 L'Orfano è sotto scacco: imita {gameState.board.get(orphanMimicSource)?.sigla} da {orphanMimicSource}.</p>
