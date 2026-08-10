@@ -181,6 +181,9 @@
         "sdoppiamento": {
           "type": "boolean"
         },
+        "riunione": {
+          "type": "boolean"
+        },
         "promotable": {
           "type": "boolean"
         },

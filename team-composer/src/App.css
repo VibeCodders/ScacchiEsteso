@@ -980,6 +980,39 @@
   margin: 0;
 }
 
+/* "Azioni speciali" section in the piece encyclopedia — lists a piece's alternative actions
+   (e.g. the Miraggio's sdoppiamento/riunione) with a human-readable label and description. */
+.piece-detail-actions {
+  width: 100%;
+  text-align: left;
+}
+
+.piece-detail-actions h3 {
+  margin: 0 0 0.4rem;
+  font-size: 0.95rem;
+  color: #f8fafc;
+}
+
+.piece-detail-actions-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: #cbd5e1;
+}
+
+.piece-detail-actions-list li strong {
+  color: #93c5fd;
+}
+
+.piece-detail-action-modalita {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-left: 0.3rem;
+}
+
 .composer-panel {
   display: flex;
   flex-direction: column;

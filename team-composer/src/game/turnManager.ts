@@ -27,10 +27,13 @@ import { isSilenced } from './auras';
 import { ANTI_STALEMATE_TURN_LIMIT, resolveAntiStalemateWinner } from './antiStalemate';
 import {
   canSdoppiare,
+  canRiunire,
   getSdoppiamentoSquares,
+  getRiunioneSquares,
   isMirageClone,
   isRealMirage,
   findCloneOf,
+  findRealOf,
   removeWithMirageFallout,
 } from './mirage';
 
@@ -70,6 +73,9 @@ export interface HistoryEntry {
   isSdoppiamento?: boolean;
   cloneSquare?: Coord;
   realSquare?: Coord;
+  /** True for a Miraggio's "riunione": real and clone reconstitute into a single piece on
+   *  `to` (either half's square, chosen by the player); the other half dissipates. */
+  isMerge?: boolean;
   /** True when the captured piece was a Miraggio's illusion clone — it leaves the board but has
    *  no material value (the opponent gained nothing: the real Miraggio survives). */
   isCloneCapture?: boolean;
@@ -145,7 +151,8 @@ function isProgressEntry(entry: HistoryEntry): boolean {
   if (entry.isSwap) return true;
   if (entry.isRevival) return true;
   if (entry.isSwapperSwap) return true;
-  if (entry.isSdoppiamento) return true; // a board-changing special action, like swap/revival
+  if (entry.isSdoppiamento) return true; // board-changing special actions, like swap/revival
+  if (entry.isMerge) return true;
   return getPieceDef(entry.sigla).categoria === 'pedone';
 }
 
@@ -1011,6 +1018,96 @@ export function applySdoppiamento(state: GameState, from: Coord, cloneSquare: Co
     isSdoppiamento: true,
     cloneSquare,
     realSquare,
+  };
+
+  return {
+    ok: true,
+    state: {
+      board: nextBoard,
+      dimensions: state.dimensions,
+      turn: nextTurn,
+      turnNumber: state.turnNumber + 1,
+      history: [...state.history, historyEntry],
+      captured: state.captured,
+      status,
+      winner: resolveWinner(status, nextBoard, piece.owner, state.dimensions),
+      enPassantTarget: null,
+      pendingExtraMove: null,
+      pendingRabbitChain: null,
+      turnsSinceProgress,
+    },
+  };
+}
+
+/**
+ * Plays a Miraggio's "riunione" as the turn's action — the reverse of sdoppiamento: real and
+ * clone reconstitute into a single (unsplit) Miraggio on `mergeSquare`, which may be either half's
+ * square, chosen by the player. The real piece survives and the clone dissipates (no punti, and it
+ * never enters the graveyard). Only possible while both halves are alive, from either half (they're
+ * indistinguishable on the board), and blocked by an enemy Stunner like every other action. Unlike
+ * sdoppiamento (which only ever ADDS a piece), merging can expose the acting player's own King —
+ * the clone may be blocking a line, or the real may move off its current square — so the merge is
+ * rejected when it would leave the King in check (README §3.2).
+ */
+export function applyRiunione(state: GameState, from: Coord, mergeSquare: Coord): ApplyTurnResult {
+  if (GAME_OVER_STATUSES.has(state.status)) {
+    return { ok: false, reason: 'La partita è terminata.' };
+  }
+  if (state.pendingExtraMove) {
+    return { ok: false, reason: 'Devi prima completare (o saltare) il movimento extra del Berserker.' };
+  }
+  if (state.pendingRabbitChain) {
+    return { ok: false, reason: 'Devi prima continuare (o fermare) la catena di salti del Coniglio.' };
+  }
+
+  const piece = getPieceAt(state.board, from);
+  if (!piece) {
+    return { ok: false, reason: `Nessun pezzo in ${from}.` };
+  }
+  if (piece.owner !== state.turn) {
+    return { ok: false, reason: 'Non è il turno di questo giocatore.' };
+  }
+
+  const pieceDef = getPieceDef(piece.sigla);
+  if (!canRiunire(pieceDef)) {
+    return { ok: false, reason: 'Questo pezzo non può riunirsi.' };
+  }
+
+  const squares = getRiunioneSquares(state.board, from, piece.owner, getPieceDef, state.dimensions);
+  if (!squares.includes(mergeSquare)) {
+    return { ok: false, reason: `Casella non valida per la riunione: ${mergeSquare}.` };
+  }
+
+  const groupId = piece.mirage!.id;
+  const real = piece.mirage!.isClone ? findRealOf(state.board, groupId) : { coord: from, piece };
+  const clone = piece.mirage!.isClone ? { coord: from, piece } : findCloneOf(state.board, groupId);
+  if (!real || !clone) {
+    return { ok: false, reason: 'Coppia di Miraggi incompleta: impossibile riunirsi.' };
+  }
+
+  // The real reconstitutes at the chosen square with its mirage marker cleared (it's a single,
+  // unsplit Miraggio again and may split afresh); both old squares empty out and the clone simply
+  // dissipates.
+  let nextBoard = removePieceAt(state.board, clone.coord);
+  nextBoard = removePieceAt(nextBoard, real.coord);
+  nextBoard = setPieceAt(nextBoard, mergeSquare, { ...real.piece, hasMoved: true, mirage: undefined });
+
+  if (isKingInCheck(nextBoard, piece.owner, state.dimensions)) {
+    return { ok: false, reason: 'Questa azione lascerebbe il tuo Re sotto scacco.' };
+  }
+
+  const nextTurn: Owner = piece.owner === 'A' ? 'B' : 'A';
+  const turnsSinceProgress = 0; // a board-changing special action — always progress (mirrors applySdoppiamento)
+  const status = computeStatus(nextBoard, nextTurn, turnsSinceProgress, state.dimensions);
+
+  const historyEntry: HistoryEntry = {
+    turnNumber: state.turnNumber,
+    owner: piece.owner,
+    from,
+    to: mergeSquare,
+    sigla: piece.sigla,
+    isCapture: false,
+    isMerge: true,
   };
 
   return {

@@ -6,7 +6,7 @@ import { canSwap, getSwapTargets } from './swap';
 import { canSwapperSwap, getSwapperCandidatePairs } from './swapper';
 import { canRevive, getRevivalSquares, getRevivableSiglas } from './necromancy';
 import { canMimic, getOrphanThreats } from './orphan';
-import { canSdoppiare, getSdoppiamentoSquares } from './mirage';
+import { canSdoppiare, getSdoppiamentoSquares, canRiunire, getRiunioneSquares } from './mirage';
 import { computeMaterialScore } from './antiStalemate';
 import {
   applyTurn,
@@ -15,6 +15,7 @@ import {
   applySwapperSwap,
   applyRevive,
   applySdoppiamento,
+  applyRiunione,
   skipExtraMove,
   stopRabbitChain,
   getLegalMovesForTurn,
@@ -43,6 +44,7 @@ export type BotAction =
   | { kind: 'swapperSwap'; from: Coord; squareA: Coord; squareB: Coord }
   | { kind: 'revive'; from: Coord; target: Coord; sigla: string }
   | { kind: 'sdoppiamento'; from: Coord; cloneSquare: Coord; realSquare: Coord }
+  | { kind: 'riunione'; from: Coord; mergeSquare: Coord }
   | { kind: 'skipExtraMove' }
   | { kind: 'stopRabbitChain' };
 
@@ -60,6 +62,8 @@ export function applyBotAction(state: GameState, action: BotAction): ApplyTurnRe
       return applyRevive(state, action.from, action.target, action.sigla);
     case 'sdoppiamento':
       return applySdoppiamento(state, action.from, action.cloneSquare, action.realSquare);
+    case 'riunione':
+      return applyRiunione(state, action.from, action.mergeSquare);
     case 'skipExtraMove':
       return skipExtraMove(state);
     case 'stopRabbitChain':
@@ -150,6 +154,12 @@ export function generateBotActions(state: GameState, owner: Owner): BotAction[] 
         for (const realSquare of [from, cloneSquare]) {
           actions.push({ kind: 'sdoppiamento', from, cloneSquare, realSquare });
         }
+      }
+    }
+
+    if (canRiunire(pieceDef)) {
+      for (const mergeSquare of getRiunioneSquares(state.board, from, owner, getPieceDef, state.dimensions)) {
+        actions.push({ kind: 'riunione', from, mergeSquare });
       }
     }
   }

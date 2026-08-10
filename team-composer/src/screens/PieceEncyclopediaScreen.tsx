@@ -4,10 +4,70 @@ import Board from '../components/Board';
 import { pieces, sortByPunti } from '../data/pieces';
 import { computePieceRangeSquares } from '../game/pieceInfo';
 import { createEmptyBoard, createPieceInstance, setPieceAt, type Coord } from '../game/board';
-import type { Piece } from '../types';
+import type { ActionModalita, Piece } from '../types';
 import '../App.css';
 
 const DEMO_ENEMY_SIGLA = 'PE';
+
+/** Human-readable name for every alternative-action type in pieces.json, so the encyclopedia can
+ *  surface each piece's special abilities (sdoppiamento/riunione included) instead of showing raw
+ *  type keys. Unknown types fall back to the raw key. */
+const ACTION_LABELS: Record<string, string> = {
+  furia_bellica: 'Furia bellica',
+  rianimazione_pedone: 'Rianimazione',
+  silenzio_aura: 'Silenzio',
+  scambio_posizione: 'Scambio di posizione',
+  scocca: 'Scoccare',
+  egida: 'Egida',
+  danno_ad_area: 'Danno ad area',
+  copia_poteri: 'Copia poteri',
+  congelamento: 'Congelamento',
+  scambio_due_alleati: 'Scambio di due alleati',
+  sdoppiamento: 'Sdoppiamento',
+  riunione: 'Riunione',
+};
+
+const MODALITA_LABELS: Record<ActionModalita, string> = {
+  alternativa: 'azione alternativa al movimento',
+  aggiuntiva: 'azione aggiuntiva',
+  passiva: 'abilità passiva',
+  sul_cattura: 'si attiva dopo una cattura',
+};
+
+/** One-line description per action type — the encyclopedia's summary, kept in sync with each
+ *  piece's `regole` prose in pieces.json. */
+const ACTION_DESCRIPTIONS: Record<string, string> = {
+  furia_bellica: 'dopo una cattura in mischia ottiene un secondo movimento extra (senza cattura)',
+  rianimazione_pedone: 'rianima un Pedone alleato eliminato su una casella vuota adiacente',
+  silenzio_aura: 'i pezzi nemici adiacenti perdono gli attacchi a distanza',
+  scambio_posizione: 'scambia istantaneamente la posizione con un alleato in linea di vista libera',
+  scocca: 'elimina un nemico a 3-4 caselle in linea retta con traiettoria libera, senza muoversi',
+  egida: 'protegge gli alleati adiacenti dagli attacchi a distanza',
+  danno_ad_area: 'dopo una cattura distrugge i pezzi ortogonalmente adiacenti alla casella di arrivo',
+  copia_poteri: 'assume i poteri del pezzo che lo tiene in scacco',
+  congelamento: 'congela i nemici adiacenti (mai il Re): nessuna mossa o azione, tranne catturare lo Stunner',
+  scambio_due_alleati: 'scambia le posizioni di due alleati adiacenti allo Swapper',
+  sdoppiamento: 'crea un clone illusorio su una casella vuota adiacente e sceglie quale dei due è quello vero',
+  riunione: 'ricostituisce vero e clone in un unico pezzo, scegliendo la casella in cui ricompare',
+};
+
+/** Special abilities a piece carries, in display order: every `alternativeActions` entry, plus
+ *  `armatura` (a separate boolean field on Piece, normalized into the same shape). */
+function specialAbilitiesOf(piece: Piece): Array<{ label: string; modalita: ActionModalita; description: string }> {
+  const abilities = piece.alternativeActions.map((action) => ({
+    label: ACTION_LABELS[action.type] ?? action.type,
+    modalita: action.modalita,
+    description: ACTION_DESCRIPTIONS[action.type] ?? '',
+  }));
+  if (piece.armatura) {
+    abilities.push({
+      label: 'Armatura naturale',
+      modalita: 'passiva',
+      description: `non può essere catturato da pezzi con costo pari o inferiore a ${piece.armaturaMaxCosto ?? 0} punti`,
+    });
+  }
+  return abilities;
+}
 
 /** d4 is the default demo square; a few pieces (color-restricted entries) have nothing to show there, so fall back to d5. */
 function pickDemoSquare(piece: Piece): Coord {
@@ -19,6 +79,7 @@ function pickDemoSquare(piece: Piece): Coord {
 function PieceDetail({ piece, onClose }: { piece: Piece; onClose: () => void }) {
   const from = pickDemoSquare(piece);
   const { moveSquares, captureSquares, exampleCapture } = computePieceRangeSquares(piece, 'A', from);
+  const abilities = specialAbilitiesOf(piece);
 
   let board = setPieceAt(createEmptyBoard(), from, createPieceInstance(piece.sigla, 'A'));
   if (exampleCapture) {
@@ -53,6 +114,20 @@ function PieceDetail({ piece, onClose }: { piece: Piece; onClose: () => void }) 
           </p>
         ) : (
           <p className="piece-detail-example">Questo pezzo non ha mosse di cattura di base.</p>
+        )}
+        {abilities.length > 0 && (
+          <div className="piece-detail-actions">
+            <h3>🎭 Azioni speciali</h3>
+            <ul className="piece-detail-actions-list">
+              {abilities.map((ability, idx) => (
+                <li key={`${ability.label}-${idx}`}>
+                  <strong>{ability.label}</strong>
+                  <span className="piece-detail-action-modalita">({MODALITA_LABELS[ability.modalita]})</span>
+                  {ability.description && <span> — {ability.description}</span>}
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </div>
     </div>

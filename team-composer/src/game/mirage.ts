@@ -22,6 +22,10 @@ export function canSdoppiare(pieceDef: Piece): boolean {
   return Boolean(pieceDef.sdoppiamento);
 }
 
+export function canRiunire(pieceDef: Piece): boolean {
+  return Boolean(pieceDef.riunione);
+}
+
 /** True for the illusion copy of a split Miraggio (`mirage.isClone`), never for the real one. */
 export function isMirageClone(piece: PieceInstance): boolean {
   return Boolean(piece.mirage?.isClone);
@@ -36,6 +40,14 @@ export function isRealMirage(piece: PieceInstance): boolean {
 export function findCloneOf(board: BoardState, mirageId: string): { coord: Coord; piece: PieceInstance } | null {
   for (const [coord, piece] of board) {
     if (piece.mirage?.id === mirageId && piece.mirage.isClone) return { coord, piece };
+  }
+  return null;
+}
+
+/** The real half of a split Miraggio, when still on the board. */
+export function findRealOf(board: BoardState, mirageId: string): { coord: Coord; piece: PieceInstance } | null {
+  for (const [coord, piece] of board) {
+    if (piece.mirage?.id === mirageId && !piece.mirage.isClone) return { coord, piece };
   }
   return null;
 }
@@ -78,6 +90,31 @@ export function getSdoppiamentoSquares(
     if (!getPieceAt(board, coord)) results.push(coord);
   }
   return results;
+}
+
+/**
+ * Squares where a split Miraggio (real OR clone — they're indistinguishable, so the player may
+ * select either half) could reconstitute into a single piece: the two squares the pair currently
+ * occupies, letting the player choose where the merged Miraggio reappears. Returns [] for an
+ * unsplit Miraggio, when the pair is incomplete (e.g. the clone was already killed), and when the
+ * piece is frozen by an enemy Stunner's aura (stun blocks every action). `getDef` is injected
+ * rather than imported from moveEngine.ts for the same circular-import reason as
+ * `getSdoppiamentoSquares`.
+ */
+export function getRiunioneSquares(
+  board: BoardState,
+  from: Coord,
+  owner: Owner,
+  getDef: (sigla: string) => { stunAura?: boolean },
+  dimensions: BoardDimensions = DEFAULT_BOARD_DIMENSIONS,
+): Coord[] {
+  const piece = getPieceAt(board, from);
+  if (!piece || !piece.mirage) return []; // only a split Miraggio can merge
+  if (isAdjacentToEnemyStunner(board, from, owner, getDef, dimensions)) return [];
+
+  const partner = piece.mirage.isClone ? findRealOf(board, piece.mirage.id) : findCloneOf(board, piece.mirage.id);
+  if (!partner) return []; // the other half is gone — nothing to merge
+  return [from, partner.coord];
 }
 
 /**

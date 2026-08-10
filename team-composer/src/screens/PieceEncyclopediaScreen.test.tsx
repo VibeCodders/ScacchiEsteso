@@ -72,6 +72,38 @@ describe('PieceEncyclopediaScreen', () => {
     expect(document.querySelectorAll('.board-square svg[aria-label="PE"]')).toHaveLength(2); // the Pedone itself + the demo enemy
   });
 
+  it('lists the Miraggio\'s special actions (sdoppiamento and riunione) in the detail panel', () => {
+    renderScreen();
+    const mgCard = screen.getByText('MG').closest('.piece-card')!;
+    fireEvent.click(mgCard.querySelector('button')!);
+
+    // The same phrases appear in the piece's `regole` prose, so assert inside the actions panel only.
+    const actionsPanel = document.querySelector('.piece-detail-actions')!;
+    expect(actionsPanel.textContent).toContain('Sdoppiamento');
+    expect(actionsPanel.textContent).toContain('Riunione');
+    expect(actionsPanel.textContent).toContain('clone illusorio su una casella vuota adiacente');
+    expect(actionsPanel.textContent).toContain('ricostituisce vero e clone');
+    expect(actionsPanel.textContent).toContain('azione alternativa al movimento');
+  });
+
+  it('hides the "Azioni speciali" section for a piece with no special abilities (e.g. the Re)', () => {
+    renderScreen();
+    const reCard = screen.getByText('RE').closest('.piece-card')!;
+    fireEvent.click(reCard.querySelector('button')!);
+
+    expect(screen.queryByText(/Azioni speciali/i)).not.toBeInTheDocument();
+  });
+
+  it('shows the Golem\'s armatura among its special abilities', () => {
+    renderScreen();
+    const glCard = screen.getByText('GL').closest('.piece-card')!;
+    fireEvent.click(glCard.querySelector('button')!);
+
+    const actionsPanel = document.querySelector('.piece-detail-actions')!;
+    expect(actionsPanel.textContent).toContain('Armatura naturale');
+    expect(actionsPanel.textContent).toContain('costo pari o inferiore a 14 punti');
+  });
+
   it('closes the detail board when "Chiudi" is clicked', () => {
     renderScreen();
     const reCard = screen.getByText('RE').closest('.piece-card')!;

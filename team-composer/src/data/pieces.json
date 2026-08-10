@@ -551,10 +551,10 @@
   {
     "sigla": "MG",
     "descrizione": "Miraggio",
-    "punti": 23,
+    "punti": 27,
     "categoria": "base",
     "classico": false,
-    "regole": "Si muove come il Re (una casella in qualsiasi direzione). Sdoppiamento: al posto del movimento può creare un clone illusorio su una casella vuota adiacente, scegliendo quale dei due è quello vero. L'avversario deve catturare quello vero: se cattura il clone, l'illusione si dissolve e il Miraggio vero sopravvive; se cattura quello vero, sparisce anche il clone (che non assegna punti). Massimo 1 Miraggio per composizione (in gioco diventano 2 contando il clone).",
+    "regole": "Si muove come il Re (una casella in qualsiasi direzione). Sdoppiamento: al posto del movimento può creare un clone illusorio su una casella vuota adiacente, scegliendo quale dei due è quello vero. L'avversario deve catturare quello vero: se cattura il clone, l'illusione si dissolve e il Miraggio vero sopravvive; se cattura quello vero, sparisce anche il clone (che non assegna punti). Riunione: finché il clone è vivo, può invece ricostituire vero e clone in un unico pezzo, scegliendo la casella in cui ricompare. Massimo 1 Miraggio per composizione (in gioco diventano 2 contando il clone).",
     "moves": [
       { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step" }
     ],
@@ -563,8 +563,10 @@
     "resistance": 0,
     "immunityTypes": [],
     "alternativeActions": [
-      { "type": "sdoppiamento", "modalita": "alternativa", "params": { "target": "casella_adiacente_vuota", "raggio": 1 } }
+      { "type": "sdoppiamento", "modalita": "alternativa", "params": { "target": "casella_adiacente_vuota", "raggio": 1 } },
+      { "type": "riunione", "modalita": "alternativa", "params": { "target": "vero_e_clone", "raggio": 1 } }
     ],
-    "sdoppiamento": true
+    "sdoppiamento": true,
+    "riunione": true
   }
 ]

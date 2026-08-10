@@ -9,8 +9,8 @@ import { canSwap, getSwapTargets } from '../game/swap';
 import { canSwapperSwap, getSwapperCandidateSquares } from '../game/swapper';
 import { canRevive, getRevivalSquares, getRevivableSiglas } from '../game/necromancy';
 import { canMimic, getOrphanThreats } from '../game/orphan';
-import { canSdoppiare, getSdoppiamentoSquares, isRealMirage } from '../game/mirage';
-import { createInitialGameState, applyTurn, applyScocca, applySwap, applySwapperSwap, applyRevive, applySdoppiamento, getLegalMovesForTurn, skipExtraMove, stopRabbitChain, type GameState } from '../game/turnManager';
+import { canSdoppiare, canRiunire, getSdoppiamentoSquares, getRiunioneSquares, isRealMirage } from '../game/mirage';
+import { createInitialGameState, applyTurn, applyScocca, applySwap, applySwapperSwap, applyRevive, applySdoppiamento, applyRiunione, getLegalMovesForTurn, skipExtraMove, stopRabbitChain, type GameState } from '../game/turnManager';
 import { chooseBotAction, applyBotAction } from '../game/bot';
 import { pieces, sortSiglasByPunti } from '../data/pieces';
 import type { Coord, Owner } from '../game/board';
@@ -55,7 +55,7 @@ function GameScreen() {
   const [pendingRevival, setPendingRevival] = useState<PendingRevival | null>(null);
   const [pendingMimicChoice, setPendingMimicChoice] = useState<PendingMimicChoice | null>(null);
   const [orphanMimicSource, setOrphanMimicSource] = useState<Coord | null>(null);
-  const [actionMode, setActionMode] = useState<'scocca' | 'swap' | 'revive' | 'swapperSwap' | 'sdoppiamento' | null>(null);
+  const [actionMode, setActionMode] = useState<'scocca' | 'swap' | 'revive' | 'swapperSwap' | 'sdoppiamento' | 'riunione' | null>(null);
   const [swapperFirstSquare, setSwapperFirstSquare] = useState<Coord | null>(null);
   const [pendingSdoppiamento, setPendingSdoppiamento] = useState<PendingSdoppiamento | null>(null);
   const [revealRealMirage, setRevealRealMirage] = useState(false);
@@ -104,6 +104,11 @@ function GameScreen() {
     if (actionMode === 'sdoppiamento') {
       return mover && canSdoppiare(getPieceDef(mover.sigla))
         ? getSdoppiamentoSquares(gameState.board, effectiveSelected, mover.owner, getPieceDef, gameState.dimensions)
+        : [];
+    }
+    if (actionMode === 'riunione') {
+      return mover && canRiunire(getPieceDef(mover.sigla))
+        ? getRiunioneSquares(gameState.board, effectiveSelected, mover.owner, getPieceDef, gameState.dimensions)
         : [];
     }
     return getLegalMovesForTurn(gameState, effectiveSelected, orphanMimicSource ?? undefined).map((m) => m.to);
@@ -282,6 +287,21 @@ function GameScreen() {
     }
   };
 
+  const commitRiunione = (from: Coord, mergeSquare: Coord) => {
+    const result = applyRiunione(gameState, from, mergeSquare);
+    if (result.ok) {
+      setGameState(result.state);
+      setOrientation(result.state.turn);
+      setSelected(null);
+      setActionMode(null);
+      setSwapperFirstSquare(null);
+      setPendingSdoppiamento(null);
+      setError(null);
+    } else {
+      setError(result.reason);
+    }
+  };
+
   const handleSquareClick = (coord: Coord) => {
     if (gameOver || isBotTurn || pendingPromotion || pendingRevival || pendingMimicChoice || pendingSdoppiamento) return;
 
@@ -315,6 +335,7 @@ function GameScreen() {
         if (actionMode === 'scocca') commitScocca(selected, coord);
         else if (actionMode === 'swap') commitSwap(selected, coord);
         else if (actionMode === 'sdoppiamento') setPendingSdoppiamento({ from: selected, cloneSquare: coord });
+        else if (actionMode === 'riunione') commitRiunione(selected, coord);
         else attemptRevive(selected, coord);
       }
       return;
@@ -459,6 +480,12 @@ function GameScreen() {
                 {actionMode === 'sdoppiamento' ? '↩️ Annulla Sdoppiamento' : '🌫️ Sdoppia'}
               </button>
             )}
+            {selected && !gameState.pendingExtraMove && !gameState.pendingRabbitChain && canRiunire(getPieceDef(gameState.board.get(selected)!.sigla))
+              && getRiunioneSquares(gameState.board, selected, gameState.board.get(selected)!.owner, getPieceDef, gameState.dimensions).length > 0 && (
+              <button className="btn-auto" onClick={() => setActionMode((m) => (m === 'riunione' ? null : 'riunione'))}>
+                {actionMode === 'riunione' ? '↩️ Annulla Riunione' : '🔗 Riunisci'}
+              </button>
+            )}
           </div>
           {actionMode === 'scocca' && <p>🏹 Modalità Scoccare: seleziona un bersaglio nemico a 3-4 caselle.</p>}
           {actionMode === 'swap' && <p>🔀 Modalità Scambio: seleziona un alleato in linea di vista libera (riga, colonna o diagonale).</p>}
@@ -466,6 +493,7 @@ function GameScreen() {
           {actionMode === 'swapperSwap' && !swapperFirstSquare && <p>🔁 Scambio: seleziona la prima casella (un alleato adiacente, o lo Swapper stesso).</p>}
           {actionMode === 'swapperSwap' && swapperFirstSquare && <p>🔁 Scambio: seleziona la seconda casella da scambiare con {swapperFirstSquare}.</p>}
           {actionMode === 'sdoppiamento' && <p>🌫️ Modalità Sdoppiamento: scegli una casella vuota adiacente dove materializzare il clone.</p>}
+          {actionMode === 'riunione' && <p>🔗 Modalità Riunione: scegli la casella (quella del vero o quella del clone) dove ricompare il Miraggio unico.</p>}
           {revealRealMirage && <p>👁 I Miraggi veri del giocatore di turno sono contrassegnati da un punto giallo.</p>}
           {orphanMimicSource && (
             <p>🎭 L'Orfano è sotto scacco: imita {gameState.board.get(orphanMimicSource)?.sigla} da {orphanMimicSource}.</p>
@@ -639,6 +667,7 @@ function GameScreen() {
                     {entry.isSwap && ' (scambio)'}
                     {entry.isRevival && ` (rianimato ${entry.revivedSigla})`}
                     {entry.isSdoppiamento && ` (sdoppiamento: vero in ${entry.realSquare}, clone in ${entry.cloneSquare})`}
+                    {entry.isMerge && ' (riunione)'}
                     {entry.isCloneCapture && ' (clone eliminato — nessun punto)'}
                     {entry.dispelledClone && ' (clone dissolto)'}
                     {entry.areaDamageCoords && entry.areaDamageCoords.length > 0 && ` 💥 area: ${entry.areaDamageCoords.join(', ')}`}

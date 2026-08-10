@@ -695,6 +695,36 @@ describe('GameScreen — Miraggio sdoppiamento', () => {
     expect(screen.getByText(/sdoppiamento: vero in d4, clone in e4/i)).toBeInTheDocument();
   });
 
+  it('shows "Riunisci" only once the Miraggio has split, and merges the pair back into one piece', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'MG', 'A');
+    renderGame(board);
+
+    // Before splitting, there is nothing to merge.
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    expect(screen.queryByText(/Riunisci/i)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText(/🌫️ Sdoppia/i));
+    fireEvent.click(document.querySelector('[data-coord="e4"]')!);
+    fireEvent.click(screen.getByText(/Il vero resta in d4/));
+
+    // B plays a quiet king shuffle; back on A's turn, select one half (they look identical) and merge.
+    fireEvent.click(document.querySelector('[data-coord="e8"]')!);
+    fireEvent.click(document.querySelector('[data-coord="e7"]')!);
+    fireEvent.click(document.querySelector('[data-coord="e4"]')!); // the clone half
+    expect(screen.getByText(/🔗 Riunisci/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText(/🔗 Riunisci/i));
+    expect(document.querySelector('[data-coord="d4"]')).toHaveClass('board-square-highlighted'); // the other half
+    expect(document.querySelector('[data-coord="e4"]')).toHaveClass('board-square-highlighted');
+
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!); // reconstitute on the real's square
+    expect(document.querySelector('[data-coord="d4"]')?.querySelector('svg')?.getAttribute('aria-label')).toBe('MG');
+    expect(document.querySelector('[data-coord="e4"]')?.querySelector('svg')).toBeNull(); // clone gone
+    expect(screen.getByText(/Turno: Giocatore 2/i)).toBeInTheDocument();
+    expect(screen.getByText(/\(riunione\)/i)).toBeInTheDocument();
+  });
+
   it('the reveal toggle marks only the current player\'s real Miraggio', () => {
     let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
     board = place(board, 'e8', KING_SIGLA, 'B');

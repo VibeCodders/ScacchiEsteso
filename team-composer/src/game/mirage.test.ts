@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { canSdoppiare, getSdoppiamentoSquares, isMirageClone, isRealMirage, removeWithMirageFallout, findCloneOf } from './mirage';
+import {
+  canSdoppiare, canRiunire, getSdoppiamentoSquares, getRiunioneSquares,
+  isMirageClone, isRealMirage, removeWithMirageFallout, findCloneOf,
+} from './mirage';
 import { getPieceDef } from './moveEngine';
 import { createEmptyBoard, createPieceInstance, setPieceAt, type BoardState, type PieceInstance } from './board';
-import { createInitialGameState, applyTurn, applySdoppiamento, applyScocca } from './turnManager';
+import { createInitialGameState, applyTurn, applySdoppiamento, applyRiunione, applyScocca } from './turnManager';
 
 function place(board: BoardState, coord: string, sigla: string, owner: 'A' | 'B' = 'A'): BoardState {
   return setPieceAt(board, coord, createPieceInstance(sigla, owner));
@@ -295,6 +298,133 @@ describe('Miraggio capture resolution', () => {
     const mgGraveyard = blast.state.captured.A.filter((p) => p.sigla === 'MG');
     expect(mgGraveyard).toHaveLength(1); // only the real scores
     expect(blast.state.captured.B).toHaveLength(0);
+  });
+});
+
+describe('getRiunioneSquares / canRiunire', () => {
+  it('offers both halves\' squares as merge destinations, from either half', () => {
+    let board = placeMirage(createEmptyBoard(), 'd4', 'A', 'm1', false); // real
+    board = placeMirage(board, 'e5', 'A', 'm1', true); // clone
+    expect(getRiunioneSquares(board, 'd4', 'A', getPieceDef).sort()).toEqual(['d4', 'e5']);
+    expect(getRiunioneSquares(board, 'e5', 'A', getPieceDef).sort()).toEqual(['d4', 'e5']);
+    expect(canRiunire(getPieceDef('MG'))).toBe(true);
+    expect(canRiunire(getPieceDef('TO'))).toBe(false);
+  });
+
+  it('returns [] for an unsplit Miraggio and for a real whose clone is already gone', () => {
+    const unsplit = place(createEmptyBoard(), 'd4', 'MG', 'A');
+    expect(getRiunioneSquares(unsplit, 'd4', 'A', getPieceDef)).toEqual([]);
+
+    const loneReal = placeMirage(createEmptyBoard(), 'd4', 'A', 'm1', false); // clone was killed
+    expect(getRiunioneSquares(loneReal, 'd4', 'A', getPieceDef)).toEqual([]);
+  });
+
+  it('returns [] when the Miraggio is frozen by an adjacent enemy Stunner', () => {
+    let board = placeMirage(createEmptyBoard(), 'd4', 'A', 'm1', false);
+    board = placeMirage(board, 'e5', 'A', 'm1', true);
+    board = place(board, 'd5', 'ST', 'B');
+    expect(getRiunioneSquares(board, 'd4', 'A', getPieceDef)).toEqual([]);
+  });
+});
+
+describe('applyRiunione', () => {
+  it('merges onto the real\'s square: clone dissipates, one unsplit Miraggio remains, turn passes', () => {
+    const state = gameWith([['d4', 'MG', 'A']]);
+    const split = applySdoppiamento(state, 'd4', 'e5', 'd4'); // real d4, clone e5
+    if (!split.ok) throw new Error('split failed');
+    const bQuiet = applyTurn(split.state, 'h8', 'h7');
+    if (!bQuiet.ok) throw new Error('B quiet move failed');
+
+    const merged = applyRiunione(bQuiet.state, 'd4', 'd4');
+    expect(merged.ok).toBe(true);
+    if (!merged.ok) return;
+
+    expect(merged.state.board.get('d4')?.sigla).toBe('MG');
+    expect(merged.state.board.get('d4')?.mirage).toBeUndefined(); // unsplit again
+    expect(merged.state.board.has('e5')).toBe(false); // clone dissipated
+    expect(merged.state.turn).toBe('B');
+    expect(merged.state.history.at(-1)?.isMerge).toBe(true);
+  });
+
+  it('merges onto the clone\'s square: the real reconstitutes there', () => {
+    const state = gameWith([['d4', 'MG', 'A']]);
+    const split = applySdoppiamento(state, 'd4', 'e5', 'd4');
+    if (!split.ok) throw new Error('split failed');
+    const bQuiet = applyTurn(split.state, 'h8', 'h7');
+    if (!bQuiet.ok) throw new Error('B quiet move failed');
+
+    const merged = applyRiunione(bQuiet.state, 'd4', 'e5');
+    expect(merged.ok).toBe(true);
+    if (!merged.ok) return;
+
+    expect(merged.state.board.get('e5')?.sigla).toBe('MG'); // the single piece now sits where the clone was
+    expect(merged.state.board.get('e5')?.mirage).toBeUndefined();
+    expect(merged.state.board.has('d4')).toBe(false);
+  });
+
+  it('can be initiated from the clone half, and the merged piece may split again', () => {
+    const state = gameWith([['d4', 'MG', 'A']]);
+    const split = applySdoppiamento(state, 'd4', 'e5', 'd4');
+    if (!split.ok) throw new Error('split failed');
+    const bQuiet = applyTurn(split.state, 'h8', 'h7');
+    if (!bQuiet.ok) throw new Error('B quiet move failed');
+
+    const merged = applyRiunione(bQuiet.state, 'e5', 'd4'); // acting piece is the clone
+    expect(merged.ok).toBe(true);
+    if (!merged.ok) return;
+    expect(merged.state.board.get('d4')?.sigla).toBe('MG');
+    expect(merged.state.board.has('e5')).toBe(false);
+
+    // Hand the turn back to A: the reconstituted Miraggio may split afresh.
+    const bQuiet2 = applyTurn(merged.state, 'h7', 'h8');
+    if (!bQuiet2.ok) throw new Error('B quiet move 2 failed');
+    const reSplit = applySdoppiamento(bQuiet2.state, 'd4', 'e4', 'd4');
+    expect(reSplit.ok).toBe(true);
+  });
+
+  it('is rejected when the clone has already been killed', () => {
+    const state = gameWith([['d4', 'MG', 'A'], ['e7', 'TO', 'B']]);
+    const split = applySdoppiamento(state, 'd4', 'e5', 'd4');
+    if (!split.ok) throw new Error('split failed');
+    const killClone = applyTurn(split.state, 'e7', 'e5');
+    if (!killClone.ok) throw new Error('clone kill failed');
+
+    expect(killClone.state.turn).toBe('A');
+    expect(applyRiunione(killClone.state, 'd4', 'd4').ok).toBe(false);
+  });
+
+  it('is rejected when merging would expose the acting player\'s own King', () => {
+    // A's King at a1 is shielded from B's Torre at a8 only by the clone at a2 (the real at b2 is
+    // off the a-file). Merging onto the real's square (b2) removes the clone -> unblocks a1, so
+    // the merge is illegal; merging onto the clone's square (a2) keeps a piece on the line and is
+    // legal.
+    const state = gameWith([['b2', 'MG', 'A'], ['a8', 'TO', 'B']]);
+    const split = applySdoppiamento(state, 'b2', 'a2', 'b2'); // real b2, clone a2 (blocking the a-file)
+    if (!split.ok) throw new Error('split failed');
+    expect(split.state.status).toBe('ongoing'); // the clone blocks the Torre's line to a1
+    const bQuiet = applyTurn(split.state, 'h8', 'h7');
+    if (!bQuiet.ok) throw new Error('B quiet move failed');
+
+    expect(applyRiunione(bQuiet.state, 'b2', 'b2').ok).toBe(false); // unblocks the line -> own King in check
+    const safe = applyRiunione(bQuiet.state, 'b2', 'a2'); // reconstitute on the clone's square
+    expect(safe.ok).toBe(true);
+    if (safe.ok) {
+      expect(safe.state.board.get('a2')?.sigla).toBe('MG'); // still blocks the a-file
+      expect(safe.state.board.has('b2')).toBe(false);
+    }
+  });
+
+  it('counts as progress for the anti-stalemate counter', () => {
+    const state = gameWith([['d4', 'MG', 'A']]);
+    const split = applySdoppiamento({ ...state, turnsSinceProgress: 5 }, 'd4', 'e5', 'd4');
+    if (!split.ok) throw new Error('split failed');
+    const bQuiet = applyTurn(split.state, 'h8', 'h7');
+    if (!bQuiet.ok) throw new Error('B quiet move failed');
+
+    const merged = applyRiunione({ ...bQuiet.state, turnsSinceProgress: 10 }, 'd4', 'd4');
+    expect(merged.ok).toBe(true);
+    if (!merged.ok) return;
+    expect(merged.state.turnsSinceProgress).toBe(0);
   });
 });
 

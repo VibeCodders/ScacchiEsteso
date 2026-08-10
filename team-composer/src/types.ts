@@ -49,6 +49,10 @@ export interface Piece {
    *  capture-resolution logic (killing the real one dissolves the clone; killing the clone is a
    *  wasted capture — it awards no points). */
   sdoppiamento?: boolean;
+  /** True only for Miraggio (MG): while its clone is alive, it may instead reconstitute real and
+   *  clone into a single piece (see game/mirage.ts's getRiunioneSquares / turnManager's
+   *  applyRiunione) — the reverse of sdoppiamento. */
+  riunione?: boolean;
   promotable?: boolean;
   promotionTypes?: string[];
   promotionRank?: number;
