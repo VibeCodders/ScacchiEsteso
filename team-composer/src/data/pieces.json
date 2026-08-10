@@ -266,7 +266,7 @@
     "punti": 32,
     "categoria": "base",
     "classico": false,
-    "regole": "Si muove di 1 o 2 caselle in qualsiasi direzione. In alternativa al movimento, può scambiare istantaneamente la propria posizione con quella di un qualsiasi alleato adiacente, eccetto il Re.",
+    "regole": "Si muove di 1 o 2 caselle in qualsiasi direzione. In alternativa al movimento, può scambiare istantaneamente la propria posizione con quella di un qualsiasi alleato in linea di vista libera (stessa riga, colonna o diagonale, senza pezzi frapposti, a qualsiasi distanza), eccetto il Re.",
     "moves": [
       { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 2, "capture": true, "captureMode": "melee", "movementType": "step" }
     ],
@@ -274,7 +274,7 @@
     "resistance": 0,
     "immunityTypes": [],
     "alternativeActions": [
-      { "type": "scambio_posizione", "modalita": "alternativa", "params": { "target": "alleato_adiacente", "esclusi": ["re"] } }
+      { "type": "scambio_posizione", "modalita": "alternativa", "params": { "target": "alleato_in_linea_di_vista", "esclusi": ["re"] } }
     ],
     "scambiaPosizioneConAlleato": true
   },
@@ -511,5 +511,57 @@
     "immunityTypes": [],
     "alternativeActions": [],
     "catenaSaltiConCatturaFinale": true
+  },
+  {
+    "sigla": "RB",
+    "descrizione": "Rimbalzatore",
+    "punti": 0,
+    "categoria": "base",
+    "classico": false,
+    "regole": "Muove in diagonale come un Alfiere, ma può rimbalzare una sola volta cambiando direzione: contro il bordo della scacchiera riflette l'asse superato (in un angolo riflette entrambi); contro un pezzo (alleato o nemico, mai catturato dal rimbalzo) prosegue in una delle due direzioni di riflessione possibili, a scelta del giocatore. Dopo il rimbalzo prosegue come una normale scivolata fino a un ostacolo o al bordo.",
+    "moves": [
+      { "directions": ["ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 99, "capture": true, "captureMode": "melee", "movementType": "speciale", "note": "Rimbalzo unico gestito da generateBounceSlideMoves; vedi rimbalzoUnico." }
+    ],
+    "movimentoTipo": "speciale",
+    "resistance": 0,
+    "immunityTypes": [],
+    "alternativeActions": [],
+    "rimbalzoUnico": true
+  },
+  {
+    "sigla": "SW",
+    "descrizione": "Swapper",
+    "punti": 0,
+    "categoria": "base",
+    "classico": false,
+    "regole": "Muove come un Re. In alternativa al movimento, può scambiare le posizioni di due alleati (anche se stesso) purché entrambi si trovino in una delle 8 caselle adiacenti allo Swapper.",
+    "moves": [
+      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step" }
+    ],
+    "movimentoTipo": "step",
+    "resistance": 0,
+    "immunityTypes": [],
+    "alternativeActions": [
+      { "type": "scambio_due_alleati", "modalita": "alternativa", "params": { "target": "due_alleati_adiacenti_allo_swapper", "includeAlleati": true } }
+    ],
+    "scambioTraDueAlleati": true
+  },
+  {
+    "sigla": "ST",
+    "descrizione": "Stunner",
+    "punti": 0,
+    "categoria": "base",
+    "classico": false,
+    "regole": "Muove come un Re. Ogni pezzo nemico (tranne il Re avversario, sempre immune) che si trova su una delle 8 caselle adiacenti allo Stunner è completamente congelato: non ha alcuna mossa né azione speciale disponibile, tranne l'unica mossa che catturerebbe lo Stunner stesso.",
+    "moves": [
+      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step" }
+    ],
+    "movimentoTipo": "step",
+    "resistance": 0,
+    "immunityTypes": [],
+    "alternativeActions": [
+      { "type": "congelamento", "modalita": "passiva", "params": { "raggio": 1, "condizioni": ["non_re"], "effetto": "blocca_tutte_le_azioni_tranne_cattura_dello_stunner" } }
+    ],
+    "stunAura": true
   }
 ]
