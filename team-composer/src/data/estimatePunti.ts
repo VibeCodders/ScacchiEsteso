@@ -12,7 +12,7 @@ const SAMPLE_SQUARES: Coord[] = ['d4', 'b2', 'a4', 'b1'];
 
 /** Entries that ignore intervening pieces (leaps/jumps) are worth more than a slide/step entry
  *  reaching the same squares, since nothing can ever block them. */
-const BLOCKING_IGNORED_MULTIPLIER = 1.15;
+const BLOCKING_IGNORED_MULTIPLIER = 1.5;
 
 function entryIgnoresBlocking(entry: Move): boolean {
   return Boolean(entry.jump) || entry.leapPattern !== undefined;
@@ -45,8 +45,8 @@ function weightedMobilityOf(piece: Piece): number {
  * it's highly mobile, since its punti is fixed at 0 by design (it can't be removed from a team
  * and losing it ends the game, not a mobility-priced quantity).
  */
-const MOBILITY_COEFFICIENT = 1.85;
-const BASE_OFFSET = 0;
+const MOBILITY_COEFFICIENT = 1.4;
+const BASE_OFFSET = 2;
 
 /**
  * Flat bonus for compound multi-entry pieces (King+X style: Paladino, Damone, and now Generale/
@@ -54,7 +54,7 @@ const BASE_OFFSET = 0;
  * and Damone (real punti 25), the two multi-entry pieces already in the roster with no other
  * special mechanics.
  */
-const COMPOUND_BONUS = 8;
+const COMPOUND_BONUS = 15;
 
 /**
  * Additive adjustment per `alternativeActions[i].type`, calibrated as the average
@@ -74,8 +74,14 @@ const SPECIAL_MECHANIC_BONUS: Record<string, number> = {
   copia_poteri: 18,
 };
 
+/** Armatura (Golem) is a boolean flag with no corresponding `alternativeActions` entry — every
+ *  other special mechanic in the roster mirrors itself into `alternativeActions`, this one doesn't. */
+const ARMATURA_BONUS = 20;
+
 function specialMechanicBonus(piece: Piece): number {
-  return piece.alternativeActions.reduce((sum, action) => sum + (SPECIAL_MECHANIC_BONUS[action.type] ?? 0), 0);
+  const fromActions = piece.alternativeActions.reduce((sum, action) => sum + (SPECIAL_MECHANIC_BONUS[action.type] ?? 0), 0);
+  const fromArmatura = piece.armatura ? ARMATURA_BONUS : 0;
+  return fromActions + fromArmatura;
 }
 
 export interface PuntiEstimate {
