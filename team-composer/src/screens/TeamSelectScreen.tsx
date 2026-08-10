@@ -202,7 +202,7 @@ function TeamSelectScreen({
       <header className="header">
         <div>
           <h1>⚔️ {title}</h1>
-          <p className="subtitle">{subtitle ?? 'Scacchi Esteso — Budget 154 punti'}</p>
+          <p className="subtitle">{subtitle ?? `Scacchi Esteso — Budget ${BUDGET} punti`}</p>
         </div>
         <div className="budget-badge">
           <span className="label">Budget:</span>

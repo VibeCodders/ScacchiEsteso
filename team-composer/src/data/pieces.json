@@ -2,7 +2,7 @@
   {
     "sigla": "RE",
     "descrizione": "Re",
-    "punti": 0,
+    "punti": 12,
     "categoria": "base",
     "classico": true,
     "regole": "Muove di una casella in qualsiasi direzione. Cattura in mischia.",

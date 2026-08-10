@@ -141,8 +141,8 @@ describe('autoFillTeam — respects the optional distinct-special-types limit', 
   });
 
   it('prefers reinforcing an already-present special type over introducing a new one, even when a slot is still free', () => {
-    const startCost = 44; // CO alone
     const start = new Map<string, number>([[KING_SIGLA, 1], ['CO', 1]]);
+    const startCost = computeBudgetSpent(start, pieces); // King + CO
     const effectiveRules = { ...rules, budget: startCost + 45, maxPiecesTotal: rules.maxPiecesTotal };
 
     const result = autoFillTeam(start, effectiveRules, 3); // plenty of room for new types too
@@ -182,12 +182,13 @@ describe('improveTeam — respects and auto-corrects the optional distinct-speci
 
   it('removes the cheapest special type(s) first when correcting an over-limit team', () => {
     // CO=44, NE=30, BE=26 — BE is cheapest, should be the first removed to free a slot. The
-    // budget is pinned to exactly the post-correction cost (RE=0 + CO=44 + NE=30) so the
+    // budget is pinned to exactly the post-correction cost (King + CO=44 + NE=30) so the
     // general budget-fit optimization pass that runs afterward has nothing left to improve and
     // can't swap pieces around — isolating the correction step's own behavior from whatever
     // other pieces happen to exist in the roster.
     const start = new Map<string, number>([[KING_SIGLA, 1], ['CO', 1], ['NE', 1], ['BE', 1]]);
-    const effectiveRules = { ...rules, budget: 74 };
+    const postCorrectionCost = computeBudgetSpent(new Map([[KING_SIGLA, 1], ['CO', 1], ['NE', 1]]), pieces);
+    const effectiveRules = { ...rules, budget: postCorrectionCost };
     const result = improveTeam(start, effectiveRules, 2);
     expect(result.team.has('BE')).toBe(false);
     expect(result.team.has('CO')).toBe(true);

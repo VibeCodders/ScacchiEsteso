@@ -98,9 +98,11 @@ function solveLeastSquares(X: number[][], y: number[]): number[] {
   return augmented.map((row, i) => (Math.abs(row[i]) < 1e-10 ? 0 : row[k] / row[i]));
 }
 
-/** Pieces with no special mechanic (no `alternativeActions`, no `armatura`) and not the King (its
- *  punti is fixed at 0 by design — it can't be removed from a team and losing it ends the game,
- *  not a mobility-priced quantity) — the "pure movement" training set for the stage-1 fit. */
+/** Pieces with no special mechanic (no `alternativeActions`, no `armatura`) and not the King —
+ *  even though the King now carries a nominal punti value (used only to size the team budget; it
+ *  can't actually be traded for other pieces or left out of a team, so it isn't a mobility-priced
+ *  quantity in the same sense as everything else) — the "pure movement" training set for the
+ *  stage-1 fit. */
 function stage1TrainingSet(): Piece[] {
   return ROSTER.filter((p) => p.sigla !== 'RE' && p.alternativeActions.length === 0 && !p.armatura);
 }
@@ -219,9 +221,10 @@ export interface FitQuality {
 
 /**
  * Measures how well `estimatePunti` currently reproduces the real roster's hand-balanced `punti`
- * values (excluding the King, whose 0-cost is a design rule, not a mobility-priced quantity). This
- * is what makes the model's real-world accuracy visible and checkable, instead of a comment
- * asserting "loose heuristic" without a number to back it up.
+ * values (excluding the King, which isn't part of the stage-1 training set — see
+ * `stage1TrainingSet` — so comparing its estimate to its assigned value wouldn't say anything
+ * about the model's real accuracy). This is what makes the model's real-world accuracy visible
+ * and checkable, instead of a comment asserting "loose heuristic" without a number to back it up.
  */
 export function estimatorFitQuality(): FitQuality {
   const evaluated = ROSTER.filter((p) => p.sigla !== 'RE').map((p) => {

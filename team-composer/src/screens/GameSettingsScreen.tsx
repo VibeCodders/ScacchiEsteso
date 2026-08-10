@@ -45,7 +45,7 @@ function GameSettingsScreen() {
           <h2>📐 Dimensione scacchiera</h2>
           <p style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
             Minimo {MIN_BOARD_DIMENSION}×{MIN_BOARD_DIMENSION}. Il budget e il numero massimo di pezzi si adattano
-            proporzionalmente all'area della scacchiera (154pt/16 pezzi restano invariati su 8×8).
+            proporzionalmente all'area della scacchiera (166pt/16 pezzi restano invariati su 8×8).
           </p>
           <div className="actions" style={{ alignItems: 'center' }}>
             <label htmlFor="board-width">Larghezza</label>

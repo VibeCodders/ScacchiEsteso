@@ -74,7 +74,7 @@ describe('TeamSelectScreen — parametrized team selection', () => {
     fireEvent.click(screen.getByLabelText('Aggiungi Pedone')); // 4pt — added second
 
     const memberSiglas = [...document.querySelectorAll('.team-member .member-sigla')].map((el) => el.textContent);
-    expect(memberSiglas).toEqual(['RE', 'PE', 'RA']); // King (0pt) always first, then ascending
+    expect(memberSiglas).toEqual(['PE', 'RE', 'RA']); // ascending by punti: PE (4) < RE (12) < RA (48)
   });
 });
 

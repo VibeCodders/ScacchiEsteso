@@ -15,7 +15,7 @@ export const KING_SIGLA = rules.kingSigla;
 
 /**
  * Scales `budget` and `maxPiecesTotal` proportionally to board area relative to the classic 8×8
- * (154pt/16 pieces baseline) — a bigger board can support a proportionally bigger army. Every
+ * (BUDGET/16 pieces baseline) — a bigger board can support a proportionally bigger army. Every
  * other rule (max identical copies, per-category caps) is left untouched; the user only asked for
  * budget and total-piece-count to grow with the board.
  */
