@@ -408,6 +408,70 @@ describe('getRabbitKingStepMoves (Coniglio building block) — plain 1-step fall
   });
 });
 
+describe('Rimbalzatore (RB) — diagonal slide with a single reflective bounce', () => {
+  it('reflects off a single edge (rank exceeded), mirroring only the vertical component', () => {
+    // from d6, "ne" hits the top edge after e7,f8 (rank would be 9 next) — single-axis edge hit,
+    // so it must reflect only dr, continuing "se" from f8: g7, h6.
+    const board = place(createEmptyBoard(), 'd6', 'RB');
+    const moves = destinations(board, 'd6');
+    expect(moves).toContain('e7');
+    expect(moves).toContain('f8');
+    expect(moves).toContain('g7'); // 1st square of the reflected "se" segment from f8
+    expect(moves).toContain('h6'); // 2nd square of the reflected "se" segment
+  });
+
+  it('reflects both axes off a literal corner hit', () => {
+    // from d4, "ne" runs off the board exactly at the h8 corner (both axes exceeded at once) —
+    // reflects 180°, retracing back along the same diagonal as "sw" from h8.
+    const board = place(createEmptyBoard(), 'd4', 'RB');
+    const moves = destinations(board, 'd4');
+    expect(moves).toContain('h8'); // last square before the corner
+    expect(moves).toContain('g7'); // 1st square of the reflected "sw" segment from h8
+    expect(moves).toContain('f6');
+    expect(moves).toContain('e5'); // just short of d4 itself (occupied by the RB, blocks there)
+    expect(moves).not.toContain('d4');
+  });
+
+  it('offers BOTH possible reflections when bouncing off an obstacle, and never touches the obstacle itself', () => {
+    let board = place(createEmptyBoard(), 'd4', 'RB', 'A');
+    board = place(board, 'g7', 'PE', 'A'); // ally 3 squares out on "ne" — pivot is f6
+    const moves = destinations(board, 'd4');
+    expect(moves).toContain('e7'); // flip-df-only reflection ("nw" from f6)
+    expect(moves).toContain('g5'); // flip-dr-only reflection ("se" from f6)
+    expect(moves).not.toContain('g7'); // the obstacle itself is never a destination
+    const gen = generatePseudoLegalMoves(board, 'd4');
+    expect(gen.find((m) => m.capturedCoord === 'g7')).toBeUndefined();
+  });
+
+  it('offers the ordinary capture-and-stop at an enemy obstacle AND both non-capturing bounce-past continuations, simultaneously', () => {
+    let board = place(createEmptyBoard(), 'd4', 'RB', 'A');
+    board = place(board, 'g7', 'PE', 'B'); // enemy 3 squares out on "ne"
+    const moves = generatePseudoLegalMoves(board, 'd4');
+    const capture = moves.find((m) => m.to === 'g7');
+    expect(capture?.isCapture).toBe(true);
+    expect(capture?.capturedCoord).toBe('g7');
+    expect(moves.map((m) => m.to)).toContain('e7'); // flip-df-only bounce-past
+    expect(moves.map((m) => m.to)).toContain('g5'); // flip-dr-only bounce-past
+  });
+
+  it('caps at one bounce: a second obstacle along the reflected path just blocks, with no further reflection', () => {
+    let board = place(createEmptyBoard(), 'd4', 'RB', 'A');
+    board = place(board, 'g7', 'PE', 'A'); // 1st obstacle — triggers the bounce at f6
+    board = place(board, 'e7', 'PE', 'A'); // 2nd obstacle, immediately on the "nw" reflected path
+    const moves = destinations(board, 'd4');
+    expect(moves).not.toContain('e7'); // blocked by the 2nd ally, not a destination
+    expect(moves).not.toContain('d8'); // would only be reachable via an (illegal) second bounce off e7
+  });
+
+  it('every intermediate empty square on both segments is individually a valid destination, not just the endpoint', () => {
+    const board = place(createEmptyBoard(), 'd6', 'RB');
+    const moves = destinations(board, 'd6');
+    // From the single-edge-bounce case above: both 1st-segment squares (e7, f8) and both
+    // 2nd-segment squares (g7, h6) are present — i.e. stopping mid-path is always an option.
+    expect(moves).toEqual(expect.arrayContaining(['e7', 'f8', 'g7', 'h6']));
+  });
+});
+
 describe('Golem (GL) — armatura blocks capture by weak attackers', () => {
   it('cannot be captured by an attacker at or below the 14pt armor threshold', () => {
     let board = place(createEmptyBoard(), 'd4', 'CA', 'A'); // Cavallo, 12pt

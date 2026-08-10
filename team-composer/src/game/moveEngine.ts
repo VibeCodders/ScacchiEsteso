@@ -306,6 +306,121 @@ function isPawnDiagonalCaptureOnly(pieceDef: Piece, moveEntry: Move): boolean {
   );
 }
 
+/** Mirrors a diagonal Vector across whichever axis is being flipped by a bounce. */
+function reflectVector(v: Vector, flipDf: boolean, flipDr: boolean): Vector {
+  return { df: flipDf ? -v.df : v.df, dr: flipDr ? -v.dr : v.dr };
+}
+
+interface BounceSegmentResult {
+  /** Empty squares walked through this segment, nearest first. */
+  emptySquares: Coord[];
+  /** Enemy square this segment can capture-and-stop at (ordinary slide-capture semantics), if any. */
+  captureAt: Coord | null;
+  /** True if the segment ended by running off the board edge — the piece may bounce here. */
+  hitEdge: boolean;
+  /** Which axis exceeded the board when hitEdge is true. */
+  edgeAxis: 'file' | 'rank' | 'both' | null;
+  /** The square immediately before an obstacle (ally or enemy) this segment bumped into — the
+   *  pivot for an obstacle-bounce. Set whenever the segment stopped on a piece, whether or not
+   *  that piece is also capturable (captureAt and obstaclePivot can both be set at once — the
+   *  Rimbalzatore's rules offer capture-and-stop and bounce-past as coexisting options). */
+  obstaclePivot: Coord | null;
+}
+
+/**
+ * Hand-walks one diagonal segment from `from` in `vector`, up to `maxSteps`, square by square
+ * (mirrors generateGrasshopperMoves's approach rather than castRay's, since a bounce needs to know
+ * WHERE and WHY the walk stopped — edge vs. piece, and which axis — to compute a reflection).
+ */
+function walkDiagonalSegment(
+  board: BoardState,
+  from: Coord,
+  owner: Owner,
+  vector: Vector,
+  maxSteps: number,
+  dimensions: BoardDimensions,
+): BounceSegmentResult {
+  const { file: fromFile, rank: fromRank } = coordToFileRank(from);
+  const emptySquares: Coord[] = [];
+  let captureAt: Coord | null = null;
+  let obstaclePivot: Coord | null = null;
+  let hitEdge = false;
+  let edgeAxis: 'file' | 'rank' | 'both' | null = null;
+
+  for (let dist = 1; dist <= maxSteps; dist++) {
+    const file = fromFile + vector.df * dist;
+    const rank = fromRank + vector.dr * dist;
+    const fileOut = file < 0 || file >= dimensions.width;
+    const rankOut = rank < 1 || rank > dimensions.height;
+    if (fileOut || rankOut) {
+      hitEdge = true;
+      edgeAxis = fileOut && rankOut ? 'both' : fileOut ? 'file' : 'rank';
+      break;
+    }
+
+    const coord = fileRankToCoord(file, rank, dimensions)!;
+    const occupant = getPieceAt(board, coord);
+    if (occupant) {
+      obstaclePivot = dist === 1 ? from : emptySquares[emptySquares.length - 1];
+      if (occupant.owner !== owner) captureAt = coord;
+      break;
+    }
+
+    emptySquares.push(coord);
+  }
+
+  return { emptySquares, captureAt, hitEdge, edgeAxis, obstaclePivot };
+}
+
+/**
+ * The Rimbalzatore (RB): diagonal slide that may reflect direction at most once — deterministically
+ * off the board edge (mirrors the exceeded axis; a literal corner hit flips both), or, off an
+ * obstacle (ally or enemy, NEVER captured by the bounce itself), via one of 2 candidate reflections
+ * (flip-df-only or flip-dr-only) offered as separate destinations for the player to choose between.
+ * Every empty square on both segments is a valid destination; the piece may also simply not bounce.
+ * The ordinary capture-and-stop move at an enemy obstacle and the non-capturing bounce-past
+ * continuations coexist as separate offered destinations. No second bounce.
+ */
+function generateBounceSlideMoves(
+  board: BoardState,
+  from: Coord,
+  owner: Owner,
+  moveEntry: Move,
+  dimensions: BoardDimensions,
+): GeneratedMove[] {
+  const results: GeneratedMove[] = [];
+
+  for (const relDir of moveEntry.directions) {
+    const vector = ABSOLUTE_DIRECTION_VECTORS[toAbsoluteDirection(relDir, owner)];
+    const seg1 = walkDiagonalSegment(board, from, owner, vector, moveEntry.maxSteps, dimensions);
+
+    seg1.emptySquares.forEach((to) => results.push({ from, to, isCapture: false, captureMode: 'melee', movementType: 'speciale' }));
+    if (seg1.captureAt) {
+      results.push({ from, to: seg1.captureAt, isCapture: true, capturedCoord: seg1.captureAt, captureMode: 'melee', movementType: 'speciale' });
+    }
+
+    const pivot = seg1.hitEdge ? (seg1.emptySquares.at(-1) ?? from) : seg1.obstaclePivot;
+    if (!pivot) continue;
+
+    const remainingSteps = moveEntry.maxSteps - seg1.emptySquares.length;
+    if (remainingSteps <= 0) continue;
+
+    const reflections: Vector[] = seg1.hitEdge
+      ? [reflectVector(vector, seg1.edgeAxis === 'file' || seg1.edgeAxis === 'both', seg1.edgeAxis === 'rank' || seg1.edgeAxis === 'both')]
+      : [reflectVector(vector, true, false), reflectVector(vector, false, true)];
+
+    for (const reflected of reflections) {
+      const seg2 = walkDiagonalSegment(board, pivot, owner, reflected, remainingSteps, dimensions);
+      seg2.emptySquares.forEach((to) => results.push({ from, to, isCapture: false, captureMode: 'melee', movementType: 'speciale' }));
+      if (seg2.captureAt) {
+        results.push({ from, to: seg2.captureAt, isCapture: true, capturedCoord: seg2.captureAt, captureMode: 'melee', movementType: 'speciale' });
+      }
+    }
+  }
+
+  return results;
+}
+
 function generateMovesForEntry(
   board: BoardState,
   from: Coord,
@@ -318,6 +433,9 @@ function generateMovesForEntry(
 
   const effectiveMaxSteps = moveEntry.primaMossaDoppia && piece.hasMoved ? 1 : moveEntry.maxSteps;
 
+  if (moveEntry.movementType === 'speciale' && pieceDef.rimbalzoUnico) {
+    return generateBounceSlideMoves(board, from, piece.owner, moveEntry, dimensions);
+  }
   if (moveEntry.leapPattern === 'L') {
     return generateKnightPatternMoves(board, from, piece.owner, moveEntry, dimensions);
   }
