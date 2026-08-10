@@ -103,8 +103,8 @@ describe('autoFillTeam / improveTeam — custom (scaled) rules', () => {
   });
 
   it('improveTeam targets a custom budget instead of the default one', () => {
-    const smallerRules = { ...rules, budget: 20, maxPiecesTotal: rules.maxPiecesTotal };
-    const start = new Map<string, number>([[KING_SIGLA, 1], ['PE', 1]]); // 4pt, far from a 20pt target
+    const smallerRules = { ...rules, budget: 30, maxPiecesTotal: rules.maxPiecesTotal };
+    const start = new Map<string, number>([[KING_SIGLA, 1], ['PE', 1]]); // 22pt, far from the default budget
     const result = improveTeam(start, smallerRules);
     expect(computeBudgetSpent(result.team, pieces)).toBeLessThanOrEqual(smallerRules.budget);
   });
@@ -181,18 +181,18 @@ describe('improveTeam — respects and auto-corrects the optional distinct-speci
   });
 
   it('removes the cheapest special type(s) first when correcting an over-limit team', () => {
-    // CO=44, NE=30, BE=26 — BE is cheapest, should be the first removed to free a slot. The
-    // budget is pinned to exactly the post-correction cost (King + CO=44 + NE=30) so the
+    // CO=38, BE=32, NE=28 — NE is cheapest, should be the first removed to free a slot. The
+    // budget is pinned to exactly the post-correction cost (King + CO=38 + BE=32) so the
     // general budget-fit optimization pass that runs afterward has nothing left to improve and
     // can't swap pieces around — isolating the correction step's own behavior from whatever
     // other pieces happen to exist in the roster.
     const start = new Map<string, number>([[KING_SIGLA, 1], ['CO', 1], ['NE', 1], ['BE', 1]]);
-    const postCorrectionCost = computeBudgetSpent(new Map([[KING_SIGLA, 1], ['CO', 1], ['NE', 1]]), pieces);
+    const postCorrectionCost = computeBudgetSpent(new Map([[KING_SIGLA, 1], ['CO', 1], ['BE', 1]]), pieces);
     const effectiveRules = { ...rules, budget: postCorrectionCost };
     const result = improveTeam(start, effectiveRules, 2);
-    expect(result.team.has('BE')).toBe(false);
+    expect(result.team.has('NE')).toBe(false);
     expect(result.team.has('CO')).toBe(true);
-    expect(result.team.has('NE')).toBe(true);
+    expect(result.team.has('BE')).toBe(true);
   });
 
   it('never produces a team exceeding the budget even after the special-types correction pass', () => {

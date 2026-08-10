@@ -50,12 +50,13 @@ describe('estimatePunti — compound (multi-entry) pieces', () => {
     expect(suggestedPunti).toBeGreaterThan(estimatePunti(singleEntry).suggestedPunti);
   });
 
-  it('Paladino lands within a documented band of its real punti (36)', () => {
-    const { suggestedPunti } = estimatePunti(getPieceDef('PA'));
+  it('Paladino lands within a documented band of its real punti', () => {
+    const paladino = getPieceDef('PA');
+    const { suggestedPunti } = estimatePunti(paladino);
     // Widened from ±5 — the ridge penalty (see the calibration-sanity band above) trades
     // per-piece training accuracy for cross-validated stability, so even a piece inside the
     // training set no longer fits as tightly as an unregularized OLS would. Verified empirically.
-    expect(Math.abs(suggestedPunti - 36)).toBeLessThanOrEqual(13);
+    expect(Math.abs(suggestedPunti - paladino.punti)).toBeLessThanOrEqual(13);
   });
 });
 

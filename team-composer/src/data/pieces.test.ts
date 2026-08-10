@@ -28,13 +28,13 @@ describe('sortByPunti', () => {
   });
 
   it('breaks a point-cost tie by sigla, alphabetically', () => {
-    // Torre (TO) and Spettro (SP) are both 15pt — the sigla must decide, not incidental array position.
+    // Torre (TO) and Orfano (OR) are both 26pt — the sigla must decide, not incidental array position.
     const to = pieces.find((p) => p.sigla === 'TO')!;
-    const sp = pieces.find((p) => p.sigla === 'SP')!;
-    expect(to.punti).toBe(sp.punti);
+    const or_ = pieces.find((p) => p.sigla === 'OR')!;
+    expect(to.punti).toBe(or_.punti);
 
-    expect(sortByPunti([to, sp])).toEqual([sp, to]); // 'SP' < 'TO'
-    expect(sortByPunti([sp, to])).toEqual([sp, to]); // stable regardless of input order
+    expect(sortByPunti([to, or_])).toEqual([or_, to]); // 'OR' < 'TO'
+    expect(sortByPunti([or_, to])).toEqual([or_, to]); // stable regardless of input order
   });
 
   it('never leaves two equal-punti pieces in non-alphabetical order anywhere in a full sort', () => {
@@ -49,8 +49,8 @@ describe('sortByPunti', () => {
 
 describe('sortSiglasByPunti', () => {
   it('sorts siglas ascending by the point cost of the piece they name', () => {
-    // SP=15, PE=4, CA=12, AL=10 — deliberately shuffled, not already in cost order
-    expect(sortSiglasByPunti(['SP', 'PE', 'CA', 'AL'])).toEqual(['PE', 'AL', 'CA', 'SP']);
+    // SP=17, PE=7, CA=15, AL=19 — deliberately shuffled, not already in cost order
+    expect(sortSiglasByPunti(['SP', 'PE', 'CA', 'AL'])).toEqual(['PE', 'CA', 'SP', 'AL']);
   });
 
   it('does not mutate the input array', () => {
@@ -64,8 +64,8 @@ describe('sortSiglasByPunti', () => {
     expect(sortSiglasByPunti([])).toEqual([]);
   });
 
-  it('breaks a point-cost tie by sigla, alphabetically (Torre and Spettro are both 15pt)', () => {
-    expect(sortSiglasByPunti(['TO', 'SP'])).toEqual(['SP', 'TO']);
+  it('breaks a point-cost tie by sigla, alphabetically (Torre and Orfano are both 26pt)', () => {
+    expect(sortSiglasByPunti(['TO', 'OR'])).toEqual(['OR', 'TO']);
   });
 });
 
@@ -100,5 +100,22 @@ describe('scaleRulesForBoardSize', () => {
     const original = { ...rules };
     scaleRulesForBoardSize(rules, { width: 12, height: 12 });
     expect(rules).toEqual(original);
+  });
+});
+
+describe('rules.budget — matches a full classic chess army', () => {
+  it('equals the punti sum of one Re, 8 Pedone, 2 Torre, 2 Cavallo, 2 Alfiere and 1 Regina (classic config)', () => {
+    // The default budget is defined to be exactly what it costs to field a complete classic
+    // chess army (the pieces flagged `classico: true`, in their standard chess quantities) — not
+    // an arbitrary round number. This test pins that relationship down so it can't silently drift
+    // out of sync the next time punti values change (e.g. after re-running the punti estimator).
+    const classicArmyComposition: Record<string, number> = { RE: 1, PE: 8, TO: 2, CA: 2, AL: 2, RA: 1 };
+    const classicArmyCost = Object.entries(classicArmyComposition).reduce((sum, [sigla, count]) => {
+      const piece = pieces.find((p) => p.sigla === sigla);
+      expect(piece).toBeDefined();
+      expect(piece!.classico).toBe(true);
+      return sum + piece!.punti * count;
+    }, 0);
+    expect(rules.budget).toBe(classicArmyCost);
   });
 });

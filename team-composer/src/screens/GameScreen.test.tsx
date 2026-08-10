@@ -258,7 +258,7 @@ describe('GameScreen — pawn promotion', () => {
     fireEvent.click(document.querySelector('[data-coord="d8"]')!);
 
     const optionSiglas = [...document.querySelectorAll('.btn-save')].map((el) => el.textContent?.split(' — ')[0]);
-    expect(optionSiglas).toEqual(['PE', 'AL', 'CA', 'SP']); // 4pt, 10pt, 12pt, 15pt
+    expect(optionSiglas).toEqual(['PE', 'CA', 'SP', 'AL']); // 7pt, 15pt, 17pt, 19pt
   });
 
   it('replaces the pawn with the chosen piece once an option is picked', () => {

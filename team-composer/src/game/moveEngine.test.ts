@@ -517,14 +517,14 @@ describe('Stunner (ST) — freeze aura on adjacent enemies', () => {
 
 describe('Golem (GL) — armatura blocks capture by weak attackers', () => {
   it('cannot be captured by an attacker at or below the 14pt armor threshold', () => {
-    let board = place(createEmptyBoard(), 'd4', 'CA', 'A'); // Cavallo, 12pt
-    board = place(board, 'e6', 'GL', 'B'); // reachable by the knight's L-pattern
+    let board = place(createEmptyBoard(), 'd4', 'DU', 'A'); // Duca, 7pt — diagonal melee capture, adjacent to GL
+    board = place(board, 'e5', 'GL', 'B');
     const moves = generatePseudoLegalMoves(board, 'd4');
-    expect(moves.find((m) => m.to === 'e6')).toBeUndefined();
+    expect(moves.find((m) => m.to === 'e5')).toBeUndefined();
   });
 
   it('can be captured by an attacker above the 14pt armor threshold', () => {
-    let board = place(createEmptyBoard(), 'd4', 'TO', 'A'); // Torre, 15pt
+    let board = place(createEmptyBoard(), 'd4', 'TO', 'A'); // Torre, 26pt
     board = place(board, 'd8', 'GL', 'B');
     const moves = generatePseudoLegalMoves(board, 'd4');
     const capture = moves.find((m) => m.to === 'd8');
@@ -532,16 +532,15 @@ describe('Golem (GL) — armatura blocks capture by weak attackers', () => {
   });
 
   it('still blocks a weak slide attacker\'s path (can approach but not capture or pass through)', () => {
-    let board = place(createEmptyBoard(), 'a1', 'AL', 'A'); // Alfiere, 10pt — below the threshold
-    board = place(board, 'd4', 'GL', 'B'); // 3 squares along the same diagonal
+    let board = place(createEmptyBoard(), 'a1', 'RI', 'A'); // Ricognitore, 12pt — below the threshold, diagonal slide up to 2 steps
+    board = place(board, 'c3', 'GL', 'B'); // 2 squares along the same diagonal, within RI's own range
     const moves = generatePseudoLegalMoves(board, 'a1');
-    expect(moves.map((m) => m.to).sort()).toEqual(['b2', 'c3']); // can approach...
-    expect(moves.find((m) => m.to === 'd4')).toBeUndefined(); // ...but not capture...
-    expect(moves.map((m) => m.to)).not.toContain('e5'); // ...or slide past
+    expect(moves.map((m) => m.to).sort()).toEqual(['b2']); // can approach...
+    expect(moves.find((m) => m.to === 'c3')).toBeUndefined(); // ...but not capture...
   });
 
   it('a strong attacker sliding toward the Golem captures it and stops there (does not slide past)', () => {
-    let board = place(createEmptyBoard(), 'd1', 'TO', 'A'); // Torre, 15pt — above the threshold
+    let board = place(createEmptyBoard(), 'd1', 'TO', 'A'); // Torre, 26pt — above the threshold
     board = place(board, 'd4', 'GL', 'B');
     const moves = generatePseudoLegalMoves(board, 'd1');
     expect(moves.find((m) => m.to === 'd4')?.isCapture).toBe(true);
