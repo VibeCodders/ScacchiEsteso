@@ -274,7 +274,9 @@ export function estimatePunti(piece: Piece): PuntiEstimate {
   );
 
   return {
-    suggestedPunti: Math.max(0, Math.round(stage1Estimate(piece) + mechanicBonus)),
+    // A piece costing 0 punti would be free to field — every real piece costs at least 1 (in
+    // practice the cheapest, Paggio, costs 2), so the floor is 1, not 0.
+    suggestedPunti: Math.max(1, Math.round(stage1Estimate(piece) + mechanicBonus)),
     breakdown: {
       stepSlideMobility: f.stepSlideMobility,
       leapMobility: f.leapMobility,
