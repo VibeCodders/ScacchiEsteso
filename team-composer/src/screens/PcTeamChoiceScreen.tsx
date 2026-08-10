@@ -3,15 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useGameSetup } from '../context/gameSetup';
 import { rules, scaleRulesForBoardSize } from '../data/pieces';
 import { getPresetTeams, buildPresetTeam, randomFillTeam, isPresetValid, type PresetTeamId } from '../data/presetTeams';
-import { BOT_DIFFICULTY_MAX, BOT_DIFFICULTY_MIN, difficultyToDepth } from '../game/bot';
+import { BOT_DIFFICULTY_MAX, BOT_DIFFICULTY_MIN, difficultyToDepth, formatMovesAhead } from '../game/bot';
 import '../App.css';
-
-/** Difficulty ÷ 10 = mosse che il PC vede avanti (10 → "1 mossa", 5 → "0.5 mosse", 1 → "0 mosse"). */
-function formatMovesAhead(difficulty: number): string {
-  const moves = difficulty / 10;
-  if (moves === 1) return '1 mossa';
-  return `${moves} mosse`;
-}
 
 function PcTeamChoiceScreen() {
   const navigate = useNavigate();

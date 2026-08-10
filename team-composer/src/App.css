@@ -101,6 +101,12 @@
   border: 1px solid #78350f;
 }
 
+.status-badge-difficulty {
+  background: #1a233b;
+  color: #93c5fd;
+  border: 1px solid #1e3a8a;
+}
+
 @keyframes check-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }

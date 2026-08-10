@@ -842,6 +842,16 @@ describe('GameScreen — PvC bot auto-play', () => {
     expect(screen.getAllByRole('listitem')).toHaveLength(1);
   });
 
+  it('shows the PC difficulty badge (level and moves seen ahead) in PvC mode', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'a1', 'TO', 'A');
+    board = place(board, 'h8', 'TO', 'B');
+    renderPvcGame(board, 'A'); // BootstrapPvc sets difficulty 5
+
+    expect(screen.getByText(/PC: difficoltà 5\/50 — vede 0.5 mosse avanti/i)).toBeInTheDocument();
+  });
+
   it('does not let the human move the PC\'s pieces during the PC\'s turn', () => {
     let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
     board = place(board, 'e8', KING_SIGLA, 'B');

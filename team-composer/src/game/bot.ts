@@ -57,6 +57,14 @@ export function difficultyTimeBudgetMs(difficulty: number): number {
   return Math.round(500 + ((t - BOT_DIFFICULTY_MIN) / (BOT_DIFFICULTY_MAX - BOT_DIFFICULTY_MIN)) * 3500);
 }
 
+/** Human-readable lookahead for a difficulty: difficulty ÷ 10 mosse (10 → "1 mossa", 5 → "0.5
+ *  mosse", 1 → "0 mosse"), shared by the difficulty slider and the in-game PC badge. */
+export function formatMovesAhead(difficulty: number): string {
+  const moves = difficulty / 10;
+  if (moves === 1) return '1 mossa';
+  return `${moves} mosse`;
+}
+
 export type BotAction =
   | { kind: 'move'; from: Coord; to: Coord; promotionChoice?: string; orphanMimicSource?: Coord }
   | { kind: 'scocca'; from: Coord; target: Coord }

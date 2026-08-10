@@ -11,7 +11,7 @@ import { canRevive, getRevivalSquares, getRevivableSiglas } from '../game/necrom
 import { canMimic, getOrphanThreats } from '../game/orphan';
 import { canSdoppiare, canRiunire, getSdoppiamentoSquares, getRiunioneSquares, isRealMirage } from '../game/mirage';
 import { createInitialGameState, applyTurn, applyScocca, applySwap, applySwapperSwap, applyRevive, applySdoppiamento, applyRiunione, getLegalMovesForTurn, skipExtraMove, stopRabbitChain, type GameState } from '../game/turnManager';
-import { chooseBotAction, applyBotAction } from '../game/bot';
+import { chooseBotAction, applyBotAction, formatMovesAhead, BOT_DIFFICULTY_MAX } from '../game/bot';
 import { pieces, sortSiglasByPunti } from '../data/pieces';
 import type { Coord, Owner } from '../game/board';
 import '../App.css';
@@ -418,7 +418,12 @@ function GameScreen() {
           <h1>♟️ Partita</h1>
           <p className="subtitle">Modalità: {mode === 'pvc' ? 'PvC' : 'PvP locale'}</p>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          {mode === 'pvc' && (
+            <span className="status-badge status-badge-difficulty" title="Livello di difficoltà del PC (1–50)">
+              🤖 PC: difficoltà {botDifficulty}/{BOT_DIFFICULTY_MAX} — vede {formatMovesAhead(botDifficulty)} avanti
+            </span>
+          )}
           <span className={`turn-badge ${isBotTurn ? 'turn-badge-bot' : 'turn-badge-human'}`}>
             Turno: {ownerLabel(gameState.turn)}
           </span>
