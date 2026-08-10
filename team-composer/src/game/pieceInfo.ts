@@ -72,9 +72,12 @@ export interface PieceRangeSquares {
 /**
  * Computes, purely from the piece's data (no board, no occupancy — this is for the "piece
  * encyclopedia", not gameplay), every square reachable as a plain move and every square where an
- * enemy could be captured from `from`. For jump-over patterns that need something to hop over
- * (the Cavalletta's grasshopper leap, the Pedone di Dama's checkers-style jump) the illustrative
- * hurdle is assumed to sit immediately adjacent, since there's no real board to consult.
+ * enemy could be captured from `from`. For jump-over patterns whose real range depends on where a
+ * hurdle happens to sit (the Cavalletta's grasshopper leap, the Coniglio's jump-chain) the
+ * illustration shows every square the piece could conceivably reach depending on hurdle placement,
+ * rather than assuming a single fixed hurdle distance — the Pedone di Dama's checkers-style jump is
+ * the one case where the hurdle position genuinely is fixed (immediately adjacent, by that piece's
+ * own rules), so it alone keeps the fixed-distance illustration.
  */
 export function computePieceRangeSquares(pieceDef: Piece, owner: Owner, from: Coord): PieceRangeSquares {
   const moveSquares = new Set<Coord>();
@@ -142,10 +145,43 @@ export function computePieceRangeSquares(pieceDef: Piece, owner: Owner, from: Co
     }
 
     if (moveEntry.leapPattern === 'grasshopper') {
+      // Per the real Grasshopper rules (see moveEngine.ts's generateGrasshopperMoves, and
+      // https://en.wikipedia.org/wiki/Grasshopper_(chess)): it needs a hurdle — any piece, of
+      // either side — somewhere along a queen-line, and lands on the square immediately beyond it.
+      // Without a real board there's no way to know where that hurdle will be, so every square from
+      // distance 2 out to the board edge is a *possible* landing (distance 1 never is: a hurdle
+      // can't sit on the piece's own square). This used to assume the hurdle always sits exactly 1
+      // square away, which made the Cavalletta indistinguishable in aggregate mobility from a
+      // fixed-offset leaper like the Cavallo — the whole point of a grasshopper is the long,
+      // hurdle-contingent reach this now shows.
       for (const relDir of moveEntry.directions) {
         const v = ABSOLUTE_DIRECTION_VECTORS[toAbsoluteDirection(relDir, owner)];
-        const landing = offsetCoord(from, v.df * 2, v.dr * 2); // illustrative: hurdle assumed 1 square away
-        if (landing) visit(landing, landing, moveEntry.capture, true);
+        for (let dist = 2; ; dist++) {
+          const to = offsetCoord(from, v.df * dist, v.dr * dist);
+          if (!to) break;
+          visit(to, to, moveEntry.capture, true);
+        }
+      }
+      continue;
+    }
+
+    if (pieceDef.catenaSaltiConCatturaFinale && moveEntry.jump) {
+      // Coniglio's jump-chain: each hop clears an adjacent enemy (the hurdle) and lands on the next
+      // empty square, and may repeat from the new square — so along a single straight/diagonal line
+      // it can reach any *even* distance away, capturing whichever enemy it jumped last if it stops
+      // there (see the piece's own rules text in pieces.json). Illustrative only, and deliberately
+      // doesn't model direction changes mid-chain (unbounded and occupancy-dependent, not a useful
+      // structural signal) — this replaces the generic fixed single-hop fallback below, which
+      // modeled this piece as capable of only one hop, indistinguishable in aggregate mobility from
+      // a knight-leap piece like Generale despite the two having nothing in common mechanically.
+      for (const relDir of moveEntry.directions) {
+        const v = ABSOLUTE_DIRECTION_VECTORS[toAbsoluteDirection(relDir, owner)];
+        for (let hops = 1; ; hops++) {
+          const hurdle = offsetCoord(from, v.df * (2 * hops - 1), v.dr * (2 * hops - 1));
+          const landing = offsetCoord(from, v.df * (2 * hops), v.dr * (2 * hops));
+          if (!hurdle || !landing) break;
+          visit(landing, hurdle, moveEntry.capture, true);
+        }
       }
       continue;
     }

@@ -47,11 +47,17 @@ describe('computePieceRangeSquares — knight-pattern leap (Cavallo)', () => {
 });
 
 describe('computePieceRangeSquares — grasshopper leap (Cavalletta)', () => {
-  it('illustrates a landing 2 squares away in each direction, assuming an adjacent hurdle', () => {
+  it('illustrates every square from distance 2 to the board edge in each direction, since a hurdle could sit anywhere along the way', () => {
     const { moveSquares, captureSquares } = computePieceRangeSquares(getPieceDef('CV'), 'A', 'd4');
-    const expected = ['d2', 'd6', 'b4', 'f4', 'b2', 'b6', 'f2', 'f6'];
+    const expected = ['a1', 'a4', 'a7', 'b2', 'b4', 'b6', 'd1', 'd2', 'd6', 'd7', 'd8', 'f2', 'f4', 'f6', 'g1', 'g4', 'g7', 'h4', 'h8'];
     expect([...moveSquares].sort()).toEqual(expected.sort());
     expect([...captureSquares].sort()).toEqual(expected.sort());
+  });
+
+  it('no longer resembles a fixed-offset leaper: distance-3 and distance-4 squares are reachable, not just distance-2', () => {
+    const { moveSquares } = computePieceRangeSquares(getPieceDef('CV'), 'A', 'd4');
+    expect(moveSquares).toContain('d7'); // distance 3 north
+    expect(moveSquares).toContain('d8'); // distance 4 north
   });
 });
 
@@ -74,9 +80,9 @@ describe('computePieceRangeSquares — diagonal 1-step (Duca)', () => {
   });
 });
 
-describe('computePieceRangeSquares — diagonal 1-2 jump ignoring intervening piece (Elefante)', () => {
+describe('computePieceRangeSquares — diagonal 1-2 jump ignoring intervening piece (Spettro)', () => {
   it('reports both distance-1 and distance-2 diagonal squares from a central square', () => {
-    const { moveSquares, captureSquares } = computePieceRangeSquares(getPieceDef('EL'), 'A', 'd4');
+    const { moveSquares, captureSquares } = computePieceRangeSquares(getPieceDef('SP'), 'A', 'd4');
     const expected = ['c3', 'c5', 'e3', 'e5', 'b2', 'b6', 'f2', 'f6'];
     expect([...moveSquares].sort()).toEqual(expected.sort());
     expect([...captureSquares].sort()).toEqual(expected.sort());
@@ -104,12 +110,22 @@ describe('computePieceRangeSquares — union of 1-step and bishop-slide (Rinocer
   });
 });
 
-describe('computePieceRangeSquares — simplified single-hop illustration (Coniglio)', () => {
-  it('shows the 8 king-step squares plus 8 illustrative single-hop landing squares, with the 8 adjacent squares as captures', () => {
-    const { moveSquares, captureSquares } = computePieceRangeSquares(getPieceDef('CN'), 'A', 'd4');
-    expect(moveSquares).toHaveLength(16);
-    const expectedCaptures = ['c3', 'c5', 'e3', 'e5', 'd3', 'd5', 'c4', 'e4'];
-    expect([...captureSquares].sort()).toEqual(expectedCaptures.sort());
+describe('computePieceRangeSquares — jump-chain illustration (Coniglio)', () => {
+  it('shows the 8 king-step squares plus every even-distance chain-hop landing square in each direction', () => {
+    const { moveSquares } = computePieceRangeSquares(getPieceDef('CN'), 'A', 'd4');
+    const expected = ['b2', 'b4', 'b6', 'c3', 'c4', 'c5', 'd2', 'd3', 'd5', 'd6', 'd8', 'e3', 'e4', 'e5', 'f2', 'f4', 'f6', 'h4', 'h8'];
+    expect([...moveSquares].sort()).toEqual(expected.sort());
+  });
+
+  it('captures the last hurdle jumped, not the landing square, for every reachable chain length', () => {
+    const { captureSquares } = computePieceRangeSquares(getPieceDef('CN'), 'A', 'd4');
+    const expected = ['c3', 'c4', 'c5', 'd3', 'd5', 'd7', 'e3', 'e4', 'e5', 'g4', 'g7'];
+    expect([...captureSquares].sort()).toEqual(expected.sort());
+  });
+
+  it('is no longer mobility-indistinguishable from a knight-leap piece like Generale: reaches distance-4 squares a fixed leaper cannot', () => {
+    const { moveSquares } = computePieceRangeSquares(getPieceDef('CN'), 'A', 'd4');
+    expect(moveSquares).toContain('d8'); // 4 squares north, via a 2-hop chain
   });
 });
 

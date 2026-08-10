@@ -75,14 +75,14 @@ describe('estimatePunti — monotonicity', () => {
 });
 
 describe('estimatePunti — new pieces produce non-zero, distinct suggestions', () => {
-  it('the 6 new pieces have plausible relative ordering (Duca cheapest, Tigre priciest)', () => {
+  it('newer pieces have plausible relative ordering (Duca cheapest, Tigre priciest)', () => {
     const du = estimatePunti(getPieceDef('DU')).suggestedPunti;
-    const el = estimatePunti(getPieceDef('EL')).suggestedPunti;
+    const sp = estimatePunti(getPieceDef('SP')).suggestedPunti;
     const ti = estimatePunti(getPieceDef('TI')).suggestedPunti;
 
     expect(du).toBeGreaterThanOrEqual(1);
-    expect(du).toBeLessThan(el);
-    expect(el).toBeLessThan(ti);
+    expect(du).toBeLessThan(sp);
+    expect(sp).toBeLessThan(ti);
   });
 });
 

@@ -291,34 +291,6 @@ describe('Duca (DU) — diagonal 1-step, standard blocking/capture', () => {
   });
 });
 
-describe('Elefante (EL) — diagonal 1-2, ignores intervening piece', () => {
-  it('has 8 destinations from d4 on an empty board', () => {
-    const board = place(createEmptyBoard(), 'd4', 'EL');
-    expect(destinations(board, 'd4')).toHaveLength(8);
-  });
-
-  it('reaches the distance-2 square even when an ally occupies the distance-1 square', () => {
-    let board = place(createEmptyBoard(), 'd4', 'EL', 'A');
-    board = place(board, 'e5', 'PE', 'A'); // ally at distance 1, ignored
-    expect(destinations(board, 'd4')).toContain('f6');
-  });
-
-  it('reaches and independently captures the distance-1 enemy while still reaching distance-2', () => {
-    let board = place(createEmptyBoard(), 'd4', 'EL', 'A');
-    board = place(board, 'e5', 'PE', 'B'); // enemy at distance 1
-    const moves = generatePseudoLegalMoves(board, 'd4');
-    expect(moves.find((m) => m.to === 'e5')?.isCapture).toBe(true);
-    expect(moves.map((m) => m.to)).toContain('f6');
-  });
-
-  it('cannot land on the distance-2 square when it is occupied, regardless of distance-1', () => {
-    let board = place(createEmptyBoard(), 'd4', 'EL', 'A');
-    board = place(board, 'f6', 'PE', 'A'); // ally on the landing square
-    expect(destinations(board, 'd4')).not.toContain('f6');
-    expect(destinations(board, 'd4')).toContain('e5'); // distance-1 in that direction still reachable
-  });
-});
-
 describe('Generale (GE) — union of 1-step and knight-leap (Paladino pattern)', () => {
   it('combines both move sets into 16 destinations from d4 on an empty board', () => {
     const board = place(createEmptyBoard(), 'd4', 'GE');

@@ -432,22 +432,6 @@
     "alternativeActions": []
   },
   {
-    "sigla": "EL",
-    "descrizione": "Elefante",
-    "punti": 17,
-    "categoria": "base",
-    "classico": false,
-    "regole": "Si muove in diagonale di 1 o 2 caselle, ignorando eventuali pezzi interposti (alleati o nemici). Cattura sulla casella di arrivo.",
-    "moves": [
-      { "directions": ["ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 2, "capture": true, "captureMode": "leap", "movementType": "leap", "jump": true }
-    ],
-    "movimentoTipo": "leap",
-    "resistance": 0,
-    "immunityTypes": [],
-    "alternativeActions": [],
-    "saltaInterposizioni": true
-  },
-  {
     "sigla": "GE",
     "descrizione": "Generale",
     "punti": 43,
