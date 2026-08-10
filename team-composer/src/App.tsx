@@ -9,6 +9,7 @@ import GameOverScreen from './screens/GameOverScreen';
 import PieceEncyclopediaScreen from './screens/PieceEncyclopediaScreen';
 import GameSettingsScreen from './screens/GameSettingsScreen';
 import PuntiEstimatorScreen from './screens/PuntiEstimatorScreen';
+import SimilarPiecesScreen from './screens/SimilarPiecesScreen';
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
       <Route path="/game-over" element={<GameOverScreen />} />
       <Route path="/pieces" element={<PieceEncyclopediaScreen />} />
       <Route path="/punti-estimator" element={<PuntiEstimatorScreen />} />
+      <Route path="/pezzi-simili" element={<SimilarPiecesScreen />} />
     </Routes>
   );
 }
