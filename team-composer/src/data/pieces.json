@@ -415,5 +415,101 @@
     "immunityTypes": [],
     "alternativeActions": [],
     "obtainableOnlyViaPromotion": true
+  },
+  {
+    "sigla": "DU",
+    "descrizione": "Duca",
+    "punti": 0,
+    "categoria": "base",
+    "classico": false,
+    "regole": "Si muove di una casella in diagonale. Cattura in mischia.",
+    "moves": [
+      { "directions": ["ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step" }
+    ],
+    "movimentoTipo": "step",
+    "resistance": 0,
+    "immunityTypes": [],
+    "alternativeActions": []
+  },
+  {
+    "sigla": "EL",
+    "descrizione": "Elefante",
+    "punti": 0,
+    "categoria": "base",
+    "classico": false,
+    "regole": "Si muove in diagonale di 1 o 2 caselle, ignorando eventuali pezzi interposti (alleati o nemici). Cattura sulla casella di arrivo.",
+    "moves": [
+      { "directions": ["ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 2, "capture": true, "captureMode": "leap", "movementType": "leap", "jump": true }
+    ],
+    "movimentoTipo": "leap",
+    "resistance": 0,
+    "immunityTypes": [],
+    "alternativeActions": [],
+    "saltaInterposizioni": true
+  },
+  {
+    "sigla": "GE",
+    "descrizione": "Generale",
+    "punti": 0,
+    "categoria": "base",
+    "classico": false,
+    "regole": "Si muove come il Cavallo oppure di 1 casella in qualsiasi direzione.",
+    "moves": [
+      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step" },
+      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 0, "capture": true, "captureMode": "leap", "movementType": "leap", "jump": true, "leapPattern": "L", "note": "Salto a L" }
+    ],
+    "movimentoTipo": "speciale",
+    "resistance": 0,
+    "immunityTypes": [],
+    "alternativeActions": []
+  },
+  {
+    "sigla": "TI",
+    "descrizione": "Tigre",
+    "punti": 0,
+    "categoria": "base",
+    "classico": false,
+    "regole": "Si muove come la Torre oppure di 1 casella in qualsiasi direzione.",
+    "moves": [
+      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step" },
+      { "directions": ["n", "s", "e", "w"], "minSteps": 1, "maxSteps": 99, "capture": true, "captureMode": "melee", "movementType": "slide" }
+    ],
+    "movimentoTipo": "speciale",
+    "resistance": 0,
+    "immunityTypes": [],
+    "alternativeActions": []
+  },
+  {
+    "sigla": "RN",
+    "descrizione": "Rinoceronte",
+    "punti": 0,
+    "categoria": "base",
+    "classico": false,
+    "regole": "Si muove come l'Alfiere oppure di 1 casella in qualsiasi direzione.",
+    "moves": [
+      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step" },
+      { "directions": ["ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 99, "capture": true, "captureMode": "melee", "movementType": "slide" }
+    ],
+    "movimentoTipo": "speciale",
+    "resistance": 0,
+    "immunityTypes": [],
+    "alternativeActions": []
+  },
+  {
+    "sigla": "CN",
+    "descrizione": "Coniglio",
+    "punti": 0,
+    "categoria": "base",
+    "classico": false,
+    "regole": "Se non ha salti disponibili, si muove come il Re (1 casella, cattura in mischia). Se ha un nemico adiacente in una delle 8 direzioni con la casella successiva libera, puo saltarlo senza catturarlo subito; dopo l'atterraggio, se c'e un altro nemico adiacente (anche lo stesso appena saltato) con casella successiva libera, puo continuare a saltare. Quando si ferma, solo l'ultimo nemico saltato viene catturato: tutti gli altri nemici saltati durante la catena restano in gioco.",
+    "moves": [
+      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step", "note": "Mossa di riserva: usata solo se non ci sono salti disponibili" },
+      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 0, "capture": true, "captureMode": "leap", "movementType": "leap", "jump": true, "note": "Salto in catena: cattura differita, vedi catenaSaltiConCatturaFinale" }
+    ],
+    "movimentoTipo": "speciale",
+    "resistance": 0,
+    "immunityTypes": [],
+    "alternativeActions": [],
+    "catenaSaltiConCatturaFinale": true
   }
 ]

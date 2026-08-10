@@ -61,6 +61,10 @@ export interface Piece {
   noteCondizionali?: string;
   /** True for pieces obtainable only via in-game promotion (e.g. Damone) — excluded from team-building rosters. */
   obtainableOnlyViaPromotion?: boolean;
+  /** True only for Coniglio (CN): checkers-style jump-chain where only the LAST jumped-over
+   *  enemy is actually captured when the player stops; the King-step fallback move is only
+   *  offered when no jump is currently available. Drives turnManager's pendingRabbitChain flow. */
+  catenaSaltiConCatturaFinale?: boolean;
 }
 
 export interface TeamMember {
