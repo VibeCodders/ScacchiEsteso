@@ -263,7 +263,7 @@
   {
     "sigla": "MI",
     "descrizione": "Mistico",
-    "punti": 32,
+    "punti": 42,
     "categoria": "base",
     "classico": false,
     "regole": "Si muove di 1 o 2 caselle in qualsiasi direzione. In alternativa al movimento, può scambiare istantaneamente la propria posizione con quella di un qualsiasi alleato in linea di vista libera (stessa riga, colonna o diagonale, senza pezzi frapposti, a qualsiasi distanza), eccetto il Re.",
@@ -515,7 +515,7 @@
   {
     "sigla": "RB",
     "descrizione": "Rimbalzatore",
-    "punti": 0,
+    "punti": 30,
     "categoria": "base",
     "classico": false,
     "regole": "Muove in diagonale come un Alfiere, ma può rimbalzare una sola volta cambiando direzione: contro il bordo della scacchiera riflette l'asse superato (in un angolo riflette entrambi); contro un pezzo (alleato o nemico, mai catturato dal rimbalzo) prosegue in una delle due direzioni di riflessione possibili, a scelta del giocatore. Dopo il rimbalzo prosegue come una normale scivolata fino a un ostacolo o al bordo.",
@@ -531,7 +531,7 @@
   {
     "sigla": "SW",
     "descrizione": "Swapper",
-    "punti": 0,
+    "punti": 30,
     "categoria": "base",
     "classico": false,
     "regole": "Muove come un Re. In alternativa al movimento, può scambiare le posizioni di due alleati (anche se stesso) purché entrambi si trovino in una delle 8 caselle adiacenti allo Swapper.",
@@ -549,7 +549,7 @@
   {
     "sigla": "ST",
     "descrizione": "Stunner",
-    "punti": 0,
+    "punti": 38,
     "categoria": "base",
     "classico": false,
     "regole": "Muove come un Re. Ogni pezzo nemico (tranne il Re avversario, sempre immune) che si trova su una delle 8 caselle adiacenti allo Stunner è completamente congelato: non ha alcuna mossa né azione speciale disponibile, tranne l'unica mossa che catturerebbe lo Stunner stesso.",
