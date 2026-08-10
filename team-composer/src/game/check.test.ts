@@ -43,6 +43,14 @@ describe('isKingInCheck', () => {
     board = place(board, 'd6', 'CA', 'B'); // d6 -> e4 is a valid knight move
     expect(isKingInCheck(board, 'A')).toBe(true);
   });
+
+  it('counts a Rimbalzatore threatening the King via a bounced (reflected) path', () => {
+    // from d6, "ne" hits the top edge after e7,f8, then reflects "se": g7, h6 — the enemy King
+    // sitting on h6 is reachable only via the bounce, not a direct bishop line.
+    let board = place(createEmptyBoard(), 'h6', 'RE', 'B');
+    board = place(board, 'd6', 'RB', 'A');
+    expect(isKingInCheck(board, 'B')).toBe(true);
+  });
 });
 
 describe('getLegalMoves — filters moves that would leave the mover\'s own King in check', () => {

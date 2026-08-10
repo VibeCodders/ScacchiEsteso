@@ -1,4 +1,4 @@
-import { pieces as PIECE_DEFS } from '../data/pieces';
+import { pieces as PIECE_DEFS, KING_SIGLA } from '../data/pieces';
 import type { CaptureMode, Direction, Move, Piece } from '../types';
 import {
   coordToFileRank,
@@ -14,6 +14,7 @@ import {
   type PieceInstance,
 } from './board';
 import { castRay } from './lineOfSight';
+import { isAdjacentToEnemyStunner } from './stun';
 
 const PIECE_BY_SIGLA = new Map(PIECE_DEFS.map((p) => [p.sigla, p]));
 
