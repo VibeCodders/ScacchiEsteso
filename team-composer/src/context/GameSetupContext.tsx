@@ -1,10 +1,9 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { GameSetupContext, type GameMode, type GameSetupContextValue, type MatchResult, type TeamMap } from './gameSetup';
 import { DEFAULT_BOARD_DIMENSIONS, type BoardDimensions, type BoardState, type Owner } from '../game/board';
-import type { BotDifficulty } from '../game/bot';
+import { DEFAULT_BOT_DIFFICULTY, type BotDifficulty } from '../game/bot';
 
 const DEFAULT_HUMAN_OWNER: Owner = 'A';
-const DEFAULT_BOT_DIFFICULTY: BotDifficulty = 'medium';
 const DEFAULT_MAX_DISTINCT_SPECIAL_TYPES: number | null = null;
 
 export function GameSetupProvider({ children }: { children: ReactNode }) {

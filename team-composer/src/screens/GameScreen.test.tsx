@@ -793,7 +793,7 @@ function BootstrapPvc({ board, humanOwner }: { board: BoardState; humanOwner: 'A
   useEffect(() => {
     setMode('pvc');
     setHumanOwner(humanOwner);
-    setBotDifficulty('easy'); // depth 1 — fast and deterministic-enough for a test
+    setBotDifficulty(5); // difficulty 5 = 1 ply — fast and deterministic-enough for a test
     setDeployedBoard(board);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

@@ -55,6 +55,19 @@ describe('TeamSelectScreen — parametrized team selection', () => {
     expect(teamB.has('PE')).toBe(false);
   });
 
+  it('shows the special actions as badges on the roster cards (Miraggio: Sdoppiamento + Riunione)', () => {
+    render(<TeamSelectScreen title="Test" onComplete={() => {}} />);
+
+    const mgCard = screen.getByLabelText(/Aggiungi Miraggio/i).closest('.piece-card');
+    expect(mgCard).not.toBeNull();
+    expect(mgCard!.textContent).toMatch(/Sdoppiamento/);
+    expect(mgCard!.textContent).toMatch(/Riunione/);
+
+    // Other pieces keep their action badges too (Arciere: Scoccare).
+    const arCard = screen.getByLabelText(/Aggiungi Arciere/i).closest('.piece-card');
+    expect(arCard!.textContent).toMatch(/Scoccare/);
+  });
+
   it('never offers Damone (DM) in the roster — it is obtainable only via promotion', () => {
     render(<TeamSelectScreen title="Test" onComplete={() => {}} />);
     expect(screen.queryByText('DM')).not.toBeInTheDocument();

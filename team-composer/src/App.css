@@ -1192,6 +1192,23 @@
   margin-top: 8px;
 }
 
+.difficulty-control {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.difficulty-control input[type='range'] {
+  width: 100%;
+  accent-color: #3b82f6;
+}
+
+.difficulty-hint {
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
 .actions button {
   flex: 1;
   padding: 10px 16px;

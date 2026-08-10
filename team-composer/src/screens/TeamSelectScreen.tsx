@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { pieces, pickablePieces, rules, sortByPunti, scaleRulesForBoardSize, KING_SIGLA } from '../data/pieces';
 import { autoFillTeam, improveTeam } from '../data/optimizer';
 import { getMaxIdenticalBySigla, countByCategory, computeValidation } from '../data/validators';
+import { ACTION_LABELS } from '../data/actionLabels';
 import { emptyTeam, type TeamMap } from '../context/gameSetup';
 import { DEFAULT_BOARD_DIMENSIONS, type BoardDimensions } from '../game/board';
 import type { Piece, TeamMember } from '../types';
@@ -159,18 +160,14 @@ function TeamSelectScreen({
     return 'cost-high';
   };
 
+  // Movement/capture quirks and the Golem's armatura — the special ACTIONS themselves (scocca,
+  // egida, sdoppiamento, riunione, …) come from `alternativeActions` below, with the same labels
+  // the encyclopedia uses, so no piece's abilities are duplicated or forgotten.
   const flagLabels: Record<string, string> = {
     saltaInterposizioni: 'Salta interposizioni',
     catturaSoloInMischia: 'Solo mischia',
     catturaADistanza: 'A distanza',
-    secondoMovimentoPostCattura: '2° mov. post-cattura',
-    dannoAdArea: 'Danno area',
-    rianimaPedoni: 'Rianima pedoni',
-    silenzioAttacchiADistanza: 'Silenzio',
     armatura: 'Armatura',
-    scambiaPosizioneConAlleato: 'Scambia pos.',
-    scocca: 'Scocca',
-    egida: 'Egida',
   };
 
   const activeFlags = (piece: Piece) => {
@@ -180,6 +177,11 @@ function TeamSelectScreen({
     }
     return flags;
   };
+
+  /** Special-action badges: one per `alternativeActions` entry (e.g. Sdoppiamento + Riunione for
+   *  the Miraggio), labeled exactly like the encyclopedia's "Azioni speciali" section. */
+  const actionBadges = (piece: Piece) =>
+    piece.alternativeActions.map((action) => ACTION_LABELS[action.type] ?? action.type);
 
   const renderMoves = (piece: Piece) => {
     if (!piece.moves || piece.moves.length === 0) return null;
@@ -244,11 +246,11 @@ function TeamSelectScreen({
                   <span className="regole">{piece.regole}</span>
                   {renderMoves(piece)}
                   {(() => {
-                    const flags = activeFlags(piece);
-                    return flags.length > 0 ? (
+                    const badges = [...activeFlags(piece), ...actionBadges(piece)];
+                    return badges.length > 0 ? (
                       <div className="flags">
-                        {flags.map((f) => (
-                          <span key={f} className="flag-badge">{f}</span>
+                        {badges.map((b) => (
+                          <span key={b} className="flag-badge">{b}</span>
                         ))}
                       </div>
                     ) : null;

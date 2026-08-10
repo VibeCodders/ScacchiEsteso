@@ -26,6 +26,11 @@ export function canRiunire(pieceDef: Piece): boolean {
   return Boolean(pieceDef.riunione);
 }
 
+/** True for any half of a split Miraggio (real or clone). */
+export function isMiragePiece(piece: PieceInstance): boolean {
+  return Boolean(piece.mirage);
+}
+
 /** True for the illusion copy of a split Miraggio (`mirage.isClone`), never for the real one. */
 export function isMirageClone(piece: PieceInstance): boolean {
   return Boolean(piece.mirage?.isClone);

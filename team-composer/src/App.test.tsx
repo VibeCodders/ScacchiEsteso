@@ -99,9 +99,13 @@ describe('PC team choice screen options', () => {
     continueFromGameSettings();
     fireEvent.click(screen.getByText(/Conferma Team Giocatore 1/i));
 
-    expect(screen.getByText(/Facile/i)).toBeInTheDocument();
-    expect(screen.getByText(/Medio/i)).toBeInTheDocument();
-    expect(screen.getByText(/Difficile/i)).toBeInTheDocument();
+    // Difficulty is a numeric 1–50 slider (default 10 = the PC sees 1 mossa ahead).
+    const slider = screen.getByLabelText(/Difficoltà del bot/i) as HTMLInputElement;
+    expect(slider.type).toBe('range');
+    expect(Number(slider.min)).toBe(1);
+    expect(Number(slider.max)).toBe(50);
+    expect(Number(slider.value)).toBe(10);
+    expect(screen.getByText(/vede 1 mossa avanti/i)).toBeInTheDocument();
     expect(screen.getByText(/Manuale — lo compongo io/i)).toBeInTheDocument();
     expect(screen.getByText(/Bilanciato/i)).toBeInTheDocument();
     expect(screen.getByText(/Aggressivo/i)).toBeInTheDocument();

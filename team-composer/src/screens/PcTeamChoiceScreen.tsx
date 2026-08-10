@@ -3,10 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { useGameSetup } from '../context/gameSetup';
 import { rules, scaleRulesForBoardSize } from '../data/pieces';
 import { getPresetTeams, buildPresetTeam, randomFillTeam, isPresetValid, type PresetTeamId } from '../data/presetTeams';
-import { DIFFICULTY_DEPTH, type BotDifficulty } from '../game/bot';
+import { BOT_DIFFICULTY_MAX, BOT_DIFFICULTY_MIN, difficultyToDepth } from '../game/bot';
 import '../App.css';
 
-const DIFFICULTY_LABELS: Record<BotDifficulty, string> = { easy: 'Facile', medium: 'Medio', hard: 'Difficile' };
+/** Difficulty ÷ 10 = mosse che il PC vede avanti (10 → "1 mossa", 5 → "0.5 mosse", 1 → "0 mosse"). */
+function formatMovesAhead(difficulty: number): string {
+  const moves = difficulty / 10;
+  if (moves === 1) return '1 mossa';
+  return `${moves} mosse`;
+}
 
 function PcTeamChoiceScreen() {
   const navigate = useNavigate();
@@ -59,16 +64,24 @@ function PcTeamChoiceScreen() {
       <div className="main" style={{ gridTemplateColumns: '1fr', justifyItems: 'center', paddingTop: '2rem' }}>
         <div className="panel" style={{ maxWidth: 640 }}>
           <h2>🧠 Difficoltà</h2>
-          <div className="actions">
-            {(Object.keys(DIFFICULTY_LABELS) as BotDifficulty[]).map((difficulty) => (
-              <button
-                key={difficulty}
-                className={botDifficulty === difficulty ? 'btn-save' : 'btn-auto'}
-                onClick={() => setBotDifficulty(difficulty)}
-              >
-                {DIFFICULTY_LABELS[difficulty]} (profondità {DIFFICULTY_DEPTH[difficulty]})
-              </button>
-            ))}
+          <div className="difficulty-control">
+            <label htmlFor="bot-difficulty">
+              Livello di difficoltà: {botDifficulty} / {BOT_DIFFICULTY_MAX}
+            </label>
+            <input
+              id="bot-difficulty"
+              type="range"
+              min={BOT_DIFFICULTY_MIN}
+              max={BOT_DIFFICULTY_MAX}
+              step={1}
+              value={botDifficulty}
+              onChange={(e) => setBotDifficulty(Number(e.target.value))}
+              aria-label="Difficoltà del bot"
+            />
+            <p className="difficulty-hint">
+              Il PC vede {formatMovesAhead(botDifficulty)} avanti
+              (profondità di ricerca {difficultyToDepth(botDifficulty)} mezze mosse).
+            </p>
           </div>
 
           <h2>🎯 Composizione</h2>

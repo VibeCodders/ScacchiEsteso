@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chooseBotAction, generateBotActions, applyBotAction, DIFFICULTY_TIME_BUDGET_MS } from './bot';
+import { chooseBotAction, generateBotActions, applyBotAction, difficultyToDepth, difficultyTimeBudgetMs } from './bot';
 import { createInitialGameState } from './turnManager';
 import { createEmptyBoard, createPieceInstance, setPieceAt, type BoardState } from './board';
 import { buildClassicStartingBoard } from './samplePositions';
@@ -91,6 +91,67 @@ describe('generateBotActions', () => {
     expect(actions).toHaveLength(1);
     expect(actions[0]).toMatchObject({ kind: 'move', from: 'd4', to: 'd5' });
   });
+
+  it('offers sdoppiamento before a Miraggio splits and riunione afterwards, never both at once', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'MG', 'A');
+    const state = createInitialGameState(board, 'A');
+
+    // Unsplit Miraggio: splitting is possible, merging is not (nothing to merge).
+    const beforeSplit = generateBotActions(state, 'A');
+    expect(beforeSplit.some((a) => a.kind === 'sdoppiamento' && a.from === 'd4')).toBe(true);
+    expect(beforeSplit.some((a) => a.kind === 'riunione')).toBe(false);
+
+    const split = applyBotAction(state, beforeSplit.find((a) => a.kind === 'sdoppiamento')!);
+    expect(split.ok).toBe(true);
+    if (!split.ok) return;
+
+    // Split Miraggio (clone alive): merging is possible; re-splitting is not (max 2 on the board).
+    const afterSplit = generateBotActions(split.state, 'A');
+    expect(afterSplit.some((a) => a.kind === 'riunione')).toBe(true);
+    expect(afterSplit.some((a) => a.kind === 'sdoppiamento')).toBe(false);
+  });
+
+  it('applies bot sdoppiamento and a later riunione, ending with a single unsplit Miraggio', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'MG', 'A');
+    let state = createInitialGameState(board, 'A');
+
+    // A's bot splits: the clone materializes on an adjacent empty square.
+    const splitActions = generateBotActions(state, 'A').filter((a) => a.kind === 'sdoppiamento' && a.from === 'd4');
+    expect(splitActions.length).toBeGreaterThan(0);
+    const split = applyBotAction(state, splitActions[0]);
+    expect(split.ok).toBe(true);
+    if (!split.ok) return;
+    state = split.state;
+
+    const mgAfterSplit = [...state.board.values()].filter((p) => p.sigla === 'MG');
+    expect(mgAfterSplit).toHaveLength(2); // real + clone
+    expect(mgAfterSplit.some((p) => p.mirage?.isClone)).toBe(true);
+    expect(mgAfterSplit.some((p) => p.mirage && !p.mirage.isClone)).toBe(true);
+
+    // B's bot replies with a quiet king move, handing the turn back to A.
+    const bAction = chooseBotAction(state, 'B', 5);
+    expect(bAction).not.toBeNull();
+    const bMove = applyBotAction(state, bAction!);
+    expect(bMove.ok).toBe(true);
+    if (!bMove.ok) return;
+    state = bMove.state;
+    expect(state.turn).toBe('A');
+
+    // A's bot merges the pair back into a single piece.
+    const mergeActions = generateBotActions(state, 'A').filter((a) => a.kind === 'riunione');
+    expect(mergeActions.length).toBeGreaterThan(0);
+    const merge = applyBotAction(state, mergeActions[0]);
+    expect(merge.ok).toBe(true);
+    if (!merge.ok) return;
+
+    const mgAfterMerge = [...merge.state.board.values()].filter((p) => p.sigla === 'MG');
+    expect(mgAfterMerge).toHaveLength(1);
+    expect(mgAfterMerge[0].mirage).toBeUndefined(); // unsplit again
+  });
 });
 
 describe('chooseBotAction', () => {
@@ -108,7 +169,7 @@ describe('chooseBotAction', () => {
 
     for (const board of boards) {
       const state = createInitialGameState(board, 'A');
-      const action = chooseBotAction(state, 'A', 'easy');
+      const action = chooseBotAction(state, 'A', 5);
       expect(action).not.toBeNull();
       if (!action) continue;
       const result = applyBotAction(state, action);
@@ -123,8 +184,25 @@ describe('chooseBotAction', () => {
     board = place(board, 'd7', 'RA', 'B'); // an undefended Regina — a huge, obvious capture
     const state = createInitialGameState(board, 'A');
 
-    const action = chooseBotAction(state, 'A', 'easy');
+    const action = chooseBotAction(state, 'A', 5);
     expect(action).toEqual({ kind: 'move', from: 'd4', to: 'd7' });
+  });
+
+  it('prefers a Miraggio split whose clone guards its own King (positional bonus)', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'e2', 'MG', 'A');
+    const state = createInitialGameState(board, 'A');
+
+    const action = chooseBotAction(state, 'A', 5);
+    expect(action).not.toBeNull();
+    if (!action) return;
+    expect(action.kind).toBe('sdoppiamento');
+    if (action.kind !== 'sdoppiamento') return;
+    // The clone should land on a square adjacent to A's King (e1) — d1/d2/f1/f2 — where it shields
+    // the King (an enemy capture there is wasted: no punti), rather than on e3/d3/f3, which sit one
+    // square further away and earn no guard bonus.
+    expect(['d1', 'd2', 'f1', 'f2']).toContain(action.cloneSquare);
   });
 
   it('never leaves its own King in check', () => {
@@ -134,7 +212,7 @@ describe('chooseBotAction', () => {
     board = place(board, 'a8', 'RE', 'B');
     const state = createInitialGameState(board, 'A');
 
-    const action = chooseBotAction(state, 'A', 'medium');
+    const action = chooseBotAction(state, 'A', 10);
     expect(action).not.toBeNull();
     if (!action) return;
     const result = applyBotAction(state, action);
@@ -149,15 +227,15 @@ describe('chooseBotAction', () => {
     board = place(board, 'b8', 'TO', 'B');
     board = place(board, 'h8', 'RE', 'B');
     const state = createInitialGameState(board, 'A'); // checkmate
-    expect(chooseBotAction(state, 'A', 'easy')).toBeNull();
+    expect(chooseBotAction(state, 'A', 5)).toBeNull();
   });
 
-  it('completes within a reasonable time at "medium" difficulty on a busy board', () => {
+  it('completes within a reasonable time at difficulty 10 on a busy board', () => {
     const board = buildClassicStartingBoard();
     const state = createInitialGameState(board, 'A');
 
     const start = Date.now();
-    const action = chooseBotAction(state, 'A', 'medium');
+    const action = chooseBotAction(state, 'A', 10);
     const elapsed = Date.now() - start;
 
     expect(action).not.toBeNull();
@@ -172,7 +250,7 @@ describe('bot vs. bot self-play — PvC end-to-end (Step 12)', () => {
     let plies = 0;
 
     while (state.status !== 'checkmate' && state.status !== 'stalemate' && state.status !== 'anti_stalemate' && plies < MAX_PLIES) {
-      const action = chooseBotAction(state, state.turn, 'easy'); // depth 1 — keeps a 60-ply game fast
+      const action = chooseBotAction(state, state.turn, 5); // difficulty 5 = 1 ply — keeps a 60-ply game fast
       expect(action).not.toBeNull();
       if (!action) break;
 
@@ -192,7 +270,7 @@ describe('bot vs. bot self-play — PvC end-to-end (Step 12)', () => {
     if (state.status === 'checkmate') {
       expect(state.winner).toBeDefined();
     }
-  }, 30000); // easy (depth 1) keeps each ply fast, but 60 of them still need more than the default 5s timeout
+  }, 30000); // difficulty 5 (1 ply) keeps each ply fast, but 60 of them still need more than the default 5s timeout
 });
 
 describe('chooseBotAction — custom board dimensions', () => {
@@ -203,7 +281,7 @@ describe('chooseBotAction — custom board dimensions', () => {
     board = place(board, 'j1', 'TO', 'B');
     const state = createInitialGameState(board, 'A', { width: 10, height: 8 });
 
-    const action = chooseBotAction(state, 'A', 'easy');
+    const action = chooseBotAction(state, 'A', 5);
     expect(action).not.toBeNull();
     if (!action) return;
     const result = applyBotAction(state, action);
@@ -213,14 +291,45 @@ describe('chooseBotAction — custom board dimensions', () => {
   });
 });
 
-describe('chooseBotAction — hard difficulty performance', () => {
+describe('chooseBotAction — max difficulty performance', () => {
   it('respects its wall-clock time budget (with slack for one in-flight branch) on the classic starting position', () => {
     const board = buildClassicStartingBoard();
     const state = createInitialGameState(board, 'A');
     const start = Date.now();
-    const action = chooseBotAction(state, 'A', 'hard');
+    const action = chooseBotAction(state, 'A', 50);
     const elapsed = Date.now() - start;
     expect(action).not.toBeNull();
-    expect(elapsed).toBeLessThan(DIFFICULTY_TIME_BUDGET_MS.hard * 2.5);
+    expect(elapsed).toBeLessThan(difficultyTimeBudgetMs(50) * 2.5);
+  });
+});
+
+describe('difficultyToDepth — numeric difficulty maps to lookahead in plies', () => {
+  it('10 → 1 mossa (2 plies), 20 → 2 mosse (4 plies), 50 → 5 mosse (10 plies)', () => {
+    expect(difficultyToDepth(10)).toBe(2);
+    expect(difficultyToDepth(20)).toBe(4);
+    expect(difficultyToDepth(50)).toBe(10);
+  });
+
+  it('5 → 0.5 mosse (1 ply) and 1 → 0 mosse (0 plies)', () => {
+    expect(difficultyToDepth(5)).toBe(1);
+    expect(difficultyToDepth(1)).toBe(0);
+  });
+
+  it('never goes negative even below the documented minimum', () => {
+    expect(difficultyToDepth(0)).toBe(0);
+    expect(difficultyToDepth(-3)).toBe(0);
+  });
+
+  it('difficulty 1 (0 plies) still picks a legal action by static evaluation alone', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'TO', 'A');
+    const state = createInitialGameState(board, 'A');
+
+    const action = chooseBotAction(state, 'A', 1);
+    expect(action).not.toBeNull();
+    if (!action) return;
+    const result = applyBotAction(state, action);
+    expect(result.ok).toBe(true);
   });
 });

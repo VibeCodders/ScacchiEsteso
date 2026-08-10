@@ -24,6 +24,13 @@ describe('computeMaterialScore', () => {
     expect(computeMaterialScore(board, 'A')).toBe(15);
   });
 
+  it('counts a Miraggio clone as worthless material (only the real half has punti)', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A'); // 15pt
+    board = setPieceAt(board, 'd4', { ...createPieceInstance('MG', 'A'), mirage: { id: 'm1', isClone: false } }); // real half, 27pt
+    board = setPieceAt(board, 'e5', { ...createPieceInstance('MG', 'A'), mirage: { id: 'm1', isClone: true } }); // clone — an illusion, 0pt
+    expect(computeMaterialScore(board, 'A')).toBe(42); // 15 + 27 — the clone adds nothing
+  });
+
   it('counts a piece placed beyond the default 8×8 bounds when the real board is wider/taller', () => {
     let board = place(createEmptyBoard(), 'e1', 'RE', 'A'); // 15pt, within any board size
     board = place(board, 'j6', 'RA', 'A'); // 37pt — only a valid square on a board at least 10 wide, 6 tall

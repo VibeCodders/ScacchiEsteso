@@ -36,6 +36,29 @@ function renderScreen(maxDistinctSpecialTypes?: number | null, dimensions?: { wi
   );
 }
 
+describe('PcTeamChoiceScreen — numeric bot difficulty (1–50)', () => {
+  it('shows a 1–50 slider defaulting to 10 (il PC vede 1 mossa avanti)', () => {
+    renderScreen(null);
+    const slider = screen.getByLabelText(/Difficoltà del bot/i) as HTMLInputElement;
+    expect(slider.type).toBe('range');
+    expect(Number(slider.min)).toBe(1);
+    expect(Number(slider.max)).toBe(50);
+    expect(Number(slider.value)).toBe(10);
+    expect(screen.getByText(/vede 1 mossa avanti/i)).toBeInTheDocument();
+  });
+
+  it('updates the difficulty and the lookahead label when the slider moves', () => {
+    renderScreen(null);
+    const slider = screen.getByLabelText(/Difficoltà del bot/i) as HTMLInputElement;
+    fireEvent.change(slider, { target: { value: '20' } });
+    expect(screen.getByText(/Livello di difficoltà: 20/i)).toBeInTheDocument();
+    expect(screen.getByText(/vede 2 mosse avanti/i)).toBeInTheDocument();
+
+    fireEvent.change(slider, { target: { value: '5' } });
+    expect(screen.getByText(/vede 0.5 mosse avanti/i)).toBeInTheDocument();
+  });
+});
+
 describe('PcTeamChoiceScreen — preset gating against the current match rules', () => {
   it('leaves every preset enabled when there is no distinct-special-types limit', () => {
     renderScreen(null);

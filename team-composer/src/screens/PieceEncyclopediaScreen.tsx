@@ -4,28 +4,11 @@ import Board from '../components/Board';
 import { pieces, sortByPunti } from '../data/pieces';
 import { computePieceRangeSquares } from '../game/pieceInfo';
 import { createEmptyBoard, createPieceInstance, setPieceAt, type Coord } from '../game/board';
+import { ACTION_LABELS } from '../data/actionLabels';
 import type { ActionModalita, Piece } from '../types';
 import '../App.css';
 
 const DEMO_ENEMY_SIGLA = 'PE';
-
-/** Human-readable name for every alternative-action type in pieces.json, so the encyclopedia can
- *  surface each piece's special abilities (sdoppiamento/riunione included) instead of showing raw
- *  type keys. Unknown types fall back to the raw key. */
-const ACTION_LABELS: Record<string, string> = {
-  furia_bellica: 'Furia bellica',
-  rianimazione_pedone: 'Rianimazione',
-  silenzio_aura: 'Silenzio',
-  scambio_posizione: 'Scambio di posizione',
-  scocca: 'Scoccare',
-  egida: 'Egida',
-  danno_ad_area: 'Danno ad area',
-  copia_poteri: 'Copia poteri',
-  congelamento: 'Congelamento',
-  scambio_due_alleati: 'Scambio di due alleati',
-  sdoppiamento: 'Sdoppiamento',
-  riunione: 'Riunione',
-};
 
 const MODALITA_LABELS: Record<ActionModalita, string> = {
   alternativa: 'azione alternativa al movimento',

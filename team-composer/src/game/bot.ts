@@ -1,5 +1,6 @@
-import { allCoords, getPieceAt, type Coord, type Owner } from './board';
+import { allCoords, coordToFileRank, getPieceAt, type Coord, type Owner } from './board';
 import { getPieceDef } from './moveEngine';
+import { findKingCoord } from './check';
 import { getPromotionOptions, isPromotionMove } from './promotion';
 import { canUseScocca, getScoccaTargets } from './scocca';
 import { canSwap, getSwapTargets } from './swap';
@@ -23,19 +24,38 @@ import {
   type GameState,
 } from './turnManager';
 
-export type BotDifficulty = 'easy' | 'medium' | 'hard';
+/** Bot difficulty is a plain number on the 1–50 scale: difficulty ÷ 10 = moves the bot looks
+ *  ahead (10 → 1 mossa, 20 → 2 mosse, 50 → 5 mosse; 5 → 0.5 mosse, 1 → 0 mosse).
+ *  A "mossa" is a full turn, so the search depth in plies is difficulty ÷ 5. */
+export type BotDifficulty = number;
 
-/** Search depth per difficulty. A "depth unit" is one resolved action, not strictly one full turn — see bot.ts's notes on the Berserker bonus phase. */
-export const DIFFICULTY_DEPTH: Record<BotDifficulty, number> = { easy: 1, medium: 2, hard: 3 };
+export const BOT_DIFFICULTY_MIN = 1;
+export const BOT_DIFFICULTY_MAX = 50;
+/** 10 → the bot sees 1 mossa ahead — a reasonable default between pure greed and deep search. */
+export const DEFAULT_BOT_DIFFICULTY: BotDifficulty = 10;
 
 /**
- * Wall-clock safety cap per difficulty (ms). Full-ability action generation makes the branching
- * factor position-dependent (a busy board with many Arcieri/Necromanti in range costs far more
- * than a sparse endgame), so a fixed depth alone can't bound response time — this keeps the bot
- * from ever freezing the UI for long, at the cost of a shallower-than-requested search in the
- * rare positions that would otherwise blow the budget.
+ * Search depth in plies for a numeric difficulty. Each "ply" is one resolved action (not strictly
+ * one full turn — see bot.ts's notes on the Berserker bonus phase). Difficulty ÷ 5 plies, quantized
+ * to whole plies so the anchors land exactly: 1 → 0 plies (0 mosse), 5 → 1 ply (0.5 mosse),
+ * 10 → 2 plies (1 mossa), 20 → 4 plies (2 mosse), 50 → 10 plies (5 mosse).
  */
-export const DIFFICULTY_TIME_BUDGET_MS: Record<BotDifficulty, number> = { easy: 1000, medium: 2500, hard: 4000 };
+export function difficultyToDepth(difficulty: number): number {
+  return Math.max(0, Math.round(difficulty / 5));
+}
+
+/**
+ * Wall-clock safety cap (ms) for a numeric difficulty — more lookahead buys more time. Full-ability
+ * action generation makes the branching factor position-dependent (a busy board with many
+ * Arcieri/Necromanti in range costs far more than a sparse endgame), so a fixed depth alone can't
+ * bound response time — this keeps the bot from ever freezing the UI for long, at the cost of a
+ * shallower-than-requested search in the rare positions that would otherwise blow the budget.
+ * 500ms at difficulty 1, ~1.1s at 10, ~2.5s at 25, 4s at 50.
+ */
+export function difficultyTimeBudgetMs(difficulty: number): number {
+  const t = Math.min(BOT_DIFFICULTY_MAX, Math.max(BOT_DIFFICULTY_MIN, difficulty));
+  return Math.round(500 + ((t - BOT_DIFFICULTY_MIN) / (BOT_DIFFICULTY_MAX - BOT_DIFFICULTY_MIN)) * 3500);
+}
 
 export type BotAction =
   | { kind: 'move'; from: Coord; to: Coord; promotionChoice?: string; orphanMimicSource?: Coord }
@@ -169,15 +189,32 @@ export function generateBotActions(state: GameState, owner: Owner): BotAction[] 
 
 const CENTER_SQUARES: ReadonlySet<Coord> = new Set(['d4', 'd5', 'e4', 'e5']);
 const CENTER_CONTROL_BONUS = 3;
+/** A Miraggio (real half, clone, or unsplit) sitting next to its own King is a shield: an enemy
+ *  capture on the clone is a wasted capture (the illusion awards no punti), and either half patrols
+ *  the King's immediate perimeter — worth more than a random quiet move, less than a real piece. */
+const MIRAGE_GUARD_BONUS = 12;
 const CHECKMATE_SCORE = 100000;
+
+/** True when the two squares are 8-neighbors (different squares, |Δfile| ≤ 1 and |Δrank| ≤ 1). */
+function isAdjacentCoord(a: Coord, b: Coord): boolean {
+  if (a === b) return false;
+  const pa = coordToFileRank(a);
+  const pb = coordToFileRank(b);
+  return Math.abs(pa.file - pb.file) <= 1 && Math.abs(pa.rank - pb.rank) <= 1;
+}
 
 function positionalScore(state: GameState, owner: Owner): number {
   let score = computeMaterialScore(state.board, owner, state.dimensions);
+  const kingCoord = findKingCoord(state.board, owner, state.dimensions);
 
   for (const coord of allCoords(state.dimensions)) {
     const piece = getPieceAt(state.board, coord);
-    if (piece && piece.owner === owner && CENTER_SQUARES.has(coord)) {
+    if (!piece || piece.owner !== owner) continue;
+    if (CENTER_SQUARES.has(coord)) {
       score += CENTER_CONTROL_BONUS;
+    }
+    if (kingCoord && canSdoppiare(getPieceDef(piece.sigla)) && isAdjacentCoord(coord, kingCoord)) {
+      score += MIRAGE_GUARD_BONUS;
     }
   }
 
@@ -222,7 +259,7 @@ function minimax(
   deadline: number,
 ): number {
   if (
-    depth === 0 ||
+    depth <= 0 ||
     Date.now() >= deadline ||
     state.status === 'checkmate' ||
     state.status === 'stalemate' ||
@@ -266,8 +303,8 @@ export function chooseBotAction(state: GameState, owner: Owner, difficulty: BotD
   const actions = orderActions(state, owner, generateBotActions(state, owner));
   if (actions.length === 0) return null;
 
-  const depth = DIFFICULTY_DEPTH[difficulty];
-  const deadline = Date.now() + DIFFICULTY_TIME_BUDGET_MS[difficulty];
+  const depth = difficultyToDepth(difficulty);
+  const deadline = Date.now() + difficultyTimeBudgetMs(difficulty);
   let bestAction = actions[0];
   let bestValue = -Infinity;
   let alpha = -Infinity;
