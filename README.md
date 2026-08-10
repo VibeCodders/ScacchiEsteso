@@ -69,3 +69,10 @@
 1. **Limite:** se per **20 turni consecutivi** non avvengono catture e nessun Pedone viene mosso, la partita si chiude.
 2. **Vincitore:** vince il giocatore con il maggior punteggio dei pezzi ancora presenti sulla scacchiera.
 3. **Pareggio:** se i punteggi sono uguali, la partita è patta.
+
+## 9. Miraggio (sdoppiamento)
+
+1. **Movimento:** il Miraggio si muove come il Re (una casella in qualsiasi direzione, cattura in mischia).
+2. **Sdoppiamento:** in alternativa al movimento, il Miraggio può materializzare un clone illusorio su una casella vuota adiacente, senza spostarsi. Il giocatore sceglie quale dei due pezzi è quello **vero** (quello originale o il clone). I due pezzi sono indistinguibili sulla scacchiera.
+3. **Limite:** massimo **1 Miraggio per composizione** (in gioco diventano 2 contando il clone). Un clone non può mai sdoppiarsi a sua volta e il Miraggio vero non può sdoppiarsi finché il suo clone è in gioco.
+4. **Cattura del vero:** solo la cattura del Miraggio **vero** lo elimina definitivamente; il clone si dissolve insieme a esso. Né il clone catturato né il clone dissolto assegnano punti: l'avversario deve uccidere quello vero, altrimenti la cattura è sprecata.

@@ -547,5 +547,24 @@
       { "type": "congelamento", "modalita": "passiva", "params": { "raggio": 1, "condizioni": ["non_re"], "effetto": "blocca_tutte_le_azioni_tranne_cattura_dello_stunner" } }
     ],
     "stunAura": true
+  },
+  {
+    "sigla": "MG",
+    "descrizione": "Miraggio",
+    "punti": 23,
+    "categoria": "base",
+    "classico": false,
+    "regole": "Si muove come il Re (una casella in qualsiasi direzione). Sdoppiamento: al posto del movimento può creare un clone illusorio su una casella vuota adiacente, scegliendo quale dei due è quello vero. L'avversario deve catturare quello vero: se cattura il clone, l'illusione si dissolve e il Miraggio vero sopravvive; se cattura quello vero, sparisce anche il clone (che non assegna punti). Massimo 1 Miraggio per composizione (in gioco diventano 2 contando il clone).",
+    "moves": [
+      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step" }
+    ],
+    "movimentoTipo": "step",
+    "maxIdentical": 1,
+    "resistance": 0,
+    "immunityTypes": [],
+    "alternativeActions": [
+      { "type": "sdoppiamento", "modalita": "alternativa", "params": { "target": "casella_adiacente_vuota", "raggio": 1 } }
+    ],
+    "sdoppiamento": true
   }
 ]

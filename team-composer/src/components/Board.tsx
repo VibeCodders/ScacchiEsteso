@@ -37,6 +37,12 @@ export interface BoardProps {
   flashSquares?: string[];
   /** Bumped by the caller on every move/action so the flash replays even if it lands on the same squares again. */
   flashVersion?: number;
+  /**
+   * Squares holding the REAL half of a split Miraggio, rendered with a small marker (see
+   * GameScreen's reveal toggle — off by default, since the whole point of the illusion is that
+   * the two pieces are indistinguishable on the board).
+   */
+  mirageRealSquares?: string[];
 }
 
 function Board({
@@ -51,10 +57,12 @@ function Board({
   onSquareDrop,
   flashSquares = [],
   flashVersion = 0,
+  mirageRealSquares = [],
 }: BoardProps) {
   const flashing = new Set(flashSquares);
   const highlighted = new Set(highlightedSquares);
   const captureHighlighted = new Set(captureSquares);
+  const mirageReals = new Set(mirageRealSquares);
 
   return (
     <div className={`board-wrapper ${orientation === 'B' ? 'board-rotated' : ''}`} data-testid="board" data-orientation={orientation}>
@@ -103,6 +111,7 @@ function Board({
                     />
                   </span>
                 )}
+                {mirageReals.has(coord) && <span className="board-mirage-real-marker" aria-label="Miraggio vero" />}
                 {flashing.has(coord) && <span key={flashVersion} className="board-square-flash" />}
                 {col === 0 && <span className="board-rank-label">{dimensions.height - row}</span>}
                 {row === dimensions.height - 1 && <span className="board-file-label">{indexToFile(col)}</span>}

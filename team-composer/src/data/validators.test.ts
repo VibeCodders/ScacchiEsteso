@@ -187,6 +187,32 @@ describe('wouldExceedSpecialTypesLimit', () => {
   });
 });
 
+describe('Miraggio — per-piece maxIdentical cap of 1', () => {
+  const mirage = pieces.find((p) => p.sigla === 'MG')!;
+
+  it('is capped at 1 by its own maxIdentical, overriding the default limit of 5', () => {
+    expect(mirage.maxIdentical).toBe(1);
+    expect(getMaxIdenticalBySigla('MG', pieces, rules)).toBe(1);
+  });
+
+  it('a team with two Miraggi is flagged invalid by computeValidation', () => {
+    const team = teamOf([[KING_SIGLA, 1], ['MG', 2]]);
+    const result = computeValidation(team, pieces, rules);
+    expect(result.maxFive.valid).toBe(false);
+    expect(result.overall).toBe(false);
+  });
+
+  it('a single Miraggio is fully legal', () => {
+    const team = teamOf([[KING_SIGLA, 1], ['MG', 1]]);
+    expect(computeValidation(team, pieces, rules).overall).toBe(true);
+  });
+
+  it('canAddPieceType refuses a second Miraggio once one is present', () => {
+    const team = teamOf([[KING_SIGLA, 1], ['MG', 1]]);
+    expect(canAddPieceType(team, mirage, pieces, rules)).toBe(false);
+  });
+});
+
 describe('canAddPieceType — single source of truth for structural eligibility', () => {
   it('rejects the King sigla (never addable through this path)', () => {
     const king = pieces.find((p) => p.sigla === KING_SIGLA)!;

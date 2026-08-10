@@ -1,3 +1,5 @@
+import type { MirageMarker } from '../types';
+
 export type Coord = string; // algebraic coordinate, e.g. "e4" (file a-h, rank 1-8 by default)
 export type Owner = 'A' | 'B';
 
@@ -45,6 +47,10 @@ export interface PieceInstance {
   owner: Owner;
   hasMoved: boolean;
   resistenzaCorrente: number;
+  /** Set only on Miraggio pieces that have split: links the real piece to its clone (shared `id`,
+   *  `isClone: false` on the real, true on the illusion). Absent on a Miraggio that hasn't split
+   *  yet and on every other piece. */
+  mirage?: MirageMarker;
 }
 
 export type BoardState = Map<Coord, PieceInstance>;

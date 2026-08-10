@@ -645,6 +645,81 @@ describe('GameScreen — Orfano mimicry', () => {
   });
 });
 
+describe('GameScreen — Miraggio sdoppiamento', () => {
+  it('shows the "Sdoppia" toggle only when a Miraggio with an adjacent empty square is selected', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'MG', 'A');
+    board = place(board, 'a1', 'TO', 'A');
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="a1"]')!);
+    expect(screen.queryByText(/Sdoppia/i)).not.toBeInTheDocument();
+
+    fireEvent.click(document.querySelector('[data-coord="a1"]')!); // deselect
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    expect(screen.getByText(/🌫️ Sdoppia/i)).toBeInTheDocument();
+  });
+
+  it('entering sdoppiamento mode highlights adjacent EMPTY squares only', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'MG', 'A');
+    board = place(board, 'd5', 'TO', 'B'); // occupied — not a valid clone square
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    fireEvent.click(screen.getByText(/🌫️ Sdoppia/i));
+
+    expect(document.querySelector('[data-coord="d5"]')).not.toHaveClass('board-square-highlighted'); // occupied
+    expect(document.querySelector('[data-coord="e4"]')).toHaveClass('board-square-highlighted');
+    expect(document.querySelector('[data-coord="e5"]')).toHaveClass('board-square-highlighted');
+  });
+
+  it('shows the real-or-clone dialog and commits the split, passing the turn', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'MG', 'A');
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    fireEvent.click(screen.getByText(/🌫️ Sdoppia/i));
+    fireEvent.click(document.querySelector('[data-coord="e4"]')!);
+
+    expect(screen.getByText(/Dove sta il Miraggio vero/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByText(/Il vero resta in d4/));
+
+    expect(document.querySelector('[data-coord="e4"]')?.querySelector('svg')?.getAttribute('aria-label')).toBe('MG'); // the clone
+    expect(document.querySelector('[data-coord="d4"]')?.querySelector('svg')?.getAttribute('aria-label')).toBe('MG'); // the real
+    expect(screen.getByText(/Turno: Giocatore 2/i)).toBeInTheDocument();
+    expect(screen.getByText(/sdoppiamento: vero in d4, clone in e4/i)).toBeInTheDocument();
+  });
+
+  it('the reveal toggle marks only the current player\'s real Miraggio', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'MG', 'A');
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    fireEvent.click(screen.getByText(/🌫️ Sdoppia/i));
+    fireEvent.click(document.querySelector('[data-coord="e4"]')!);
+    fireEvent.click(screen.getByText(/Il vero è in e4/)); // real at e4, clone left at d4
+
+    // Reveal is off by default, and even once toggled on it only shows the current player's reals
+    // (it's B's turn now — A's pieces stay hidden).
+    expect(document.querySelector('[data-coord="e4"] .board-mirage-real-marker')).toBeNull();
+    fireEvent.click(screen.getByText(/Vedi i Miraggi veri/i));
+    expect(document.querySelector('[data-coord="e4"] .board-mirage-real-marker')).toBeNull();
+
+    // B plays a quiet king shuffle; back on A's turn the reveal marks A's real at e4, never the clone at d4.
+    fireEvent.click(document.querySelector('[data-coord="e8"]')!);
+    fireEvent.click(document.querySelector('[data-coord="e7"]')!);
+    expect(document.querySelector('[data-coord="e4"] .board-mirage-real-marker')).not.toBeNull();
+    expect(document.querySelector('[data-coord="d4"] .board-mirage-real-marker')).toBeNull();
+  });
+});
+
 describe('GameScreen — anti-stalemate (20 turns without progress)', () => {
   it('shows the anti-stalemate banner and result after 20 consecutive non-progress moves', () => {
     let board = place(createEmptyBoard(), 'a1', KING_SIGLA, 'A');

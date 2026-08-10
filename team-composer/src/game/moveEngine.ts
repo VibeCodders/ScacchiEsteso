@@ -5,7 +5,6 @@ import {
   fileRankToCoord,
   getPieceAt,
   movePiece,
-  removePieceAt,
   DEFAULT_BOARD_DIMENSIONS,
   type BoardDimensions,
   type BoardState,
@@ -15,6 +14,7 @@ import {
 } from './board';
 import { castRay } from './lineOfSight';
 import { isAdjacentToEnemyStunner } from './stun';
+import { removeWithMirageFallout } from './mirage';
 
 const PIECE_BY_SIGLA = new Map(PIECE_DEFS.map((p) => [p.sigla, p]));
 
@@ -456,11 +456,14 @@ function generateMovesForEntry(
 
 /**
  * Applies a generated move to the board, returning a new board. Removes the captured piece
- * first (which may sit on a different square than `to`, e.g. the DA checkers-style jump) and
- * then relocates the moving piece.
+ * first (which may sit on a different square than `to`, e.g. the DA checkers-style jump) — and,
+ * when the captured piece is the real Miraggio, its clone dissolves too (the illusion cannot
+ * outlive its source) — and then relocates the moving piece. The clone is gone from the board
+ * purely for the resulting position's correctness (king safety, lines of sight, material); the
+ * caller is responsible for the graveyard bookkeeping (a clone has no punti value).
  */
 export function applyMove(board: BoardState, move: GeneratedMove): BoardState {
-  const withCaptureResolved = move.capturedCoord ? removePieceAt(board, move.capturedCoord) : board;
+  const withCaptureResolved = move.capturedCoord ? removeWithMirageFallout(board, move.capturedCoord).board : board;
   return movePiece(withCaptureResolved, move.from, move.to);
 }
 

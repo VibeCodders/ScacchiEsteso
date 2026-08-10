@@ -74,6 +74,22 @@
   height: 100%;
 }
 
+/* Small marker on the REAL half of a split Miraggio — only rendered when GameScreen's reveal
+   toggle is on (the pieces are indistinguishable on the board by default, which is the whole
+   point of the illusion). */
+.board-mirage-real-marker {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #facc15;
+  box-shadow: 0 0 4px rgba(250, 204, 21, 0.9);
+  pointer-events: none;
+  z-index: 2;
+}
+
 .board-piece {
   width: 78%;
   height: 78%;

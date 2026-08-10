@@ -6,6 +6,7 @@ import { canSwap, getSwapTargets } from './swap';
 import { canSwapperSwap, getSwapperCandidatePairs } from './swapper';
 import { canRevive, getRevivalSquares, getRevivableSiglas } from './necromancy';
 import { canMimic, getOrphanThreats } from './orphan';
+import { canSdoppiare, getSdoppiamentoSquares } from './mirage';
 import { computeMaterialScore } from './antiStalemate';
 import {
   applyTurn,
@@ -13,6 +14,7 @@ import {
   applySwap,
   applySwapperSwap,
   applyRevive,
+  applySdoppiamento,
   skipExtraMove,
   stopRabbitChain,
   getLegalMovesForTurn,
@@ -40,6 +42,7 @@ export type BotAction =
   | { kind: 'swap'; from: Coord; target: Coord }
   | { kind: 'swapperSwap'; from: Coord; squareA: Coord; squareB: Coord }
   | { kind: 'revive'; from: Coord; target: Coord; sigla: string }
+  | { kind: 'sdoppiamento'; from: Coord; cloneSquare: Coord; realSquare: Coord }
   | { kind: 'skipExtraMove' }
   | { kind: 'stopRabbitChain' };
 
@@ -55,6 +58,8 @@ export function applyBotAction(state: GameState, action: BotAction): ApplyTurnRe
       return applySwapperSwap(state, action.from, action.squareA, action.squareB);
     case 'revive':
       return applyRevive(state, action.from, action.target, action.sigla);
+    case 'sdoppiamento':
+      return applySdoppiamento(state, action.from, action.cloneSquare, action.realSquare);
     case 'skipExtraMove':
       return skipExtraMove(state);
     case 'stopRabbitChain':
@@ -136,6 +141,14 @@ export function generateBotActions(state: GameState, owner: Owner): BotAction[] 
           for (const sigla of siglas) {
             actions.push({ kind: 'revive', from, target, sigla });
           }
+        }
+      }
+    }
+
+    if (canSdoppiare(pieceDef)) {
+      for (const cloneSquare of getSdoppiamentoSquares(state.board, from, owner, getPieceDef, state.dimensions)) {
+        for (const realSquare of [from, cloneSquare]) {
+          actions.push({ kind: 'sdoppiamento', from, cloneSquare, realSquare });
         }
       }
     }

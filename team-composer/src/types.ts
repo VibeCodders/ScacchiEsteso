@@ -40,6 +40,15 @@ export interface Piece {
   regole: string;
   moves: Move[];
   movimentoTipo?: MovementType;
+  /** Per-piece cap on how many copies of this exact sigla a single team may field, overriding the
+   *  rules' default/category limits (e.g. Miraggio's `maxIdentical: 1` — its clone brings the
+   *  on-board count to 2, so a player can never own two of them). */
+  maxIdentical?: number;
+  /** True only for Miraggio (MG): in addition to its King-style move, it may split into a real
+   *  piece plus an illusion clone (see game/mirage.ts). Drives the sdoppiamento action UI and the
+   *  capture-resolution logic (killing the real one dissolves the clone; killing the clone is a
+   *  wasted capture — it awards no points). */
+  sdoppiamento?: boolean;
   promotable?: boolean;
   promotionTypes?: string[];
   promotionRank?: number;
@@ -78,6 +87,13 @@ export interface Piece {
    *  itself. Checked by moveEngine.ts's generatePseudoLegalMoves and by every alternative-action
    *  module (scocca.ts, swap.ts, necromancy.ts, swapper.ts). */
   stunAura?: boolean;
+}
+
+export interface MirageMarker {
+  /** Shared id linking the real piece to its clone — the clone dissolves when the real is removed. */
+  id: string;
+  /** false on the real Miraggio, true on its illusion clone. */
+  isClone: boolean;
 }
 
 export interface TeamMember {

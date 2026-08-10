@@ -9,7 +9,8 @@ import { canSwap, getSwapTargets } from '../game/swap';
 import { canSwapperSwap, getSwapperCandidateSquares } from '../game/swapper';
 import { canRevive, getRevivalSquares, getRevivableSiglas } from '../game/necromancy';
 import { canMimic, getOrphanThreats } from '../game/orphan';
-import { createInitialGameState, applyTurn, applyScocca, applySwap, applySwapperSwap, applyRevive, getLegalMovesForTurn, skipExtraMove, stopRabbitChain, type GameState } from '../game/turnManager';
+import { canSdoppiare, getSdoppiamentoSquares, isRealMirage } from '../game/mirage';
+import { createInitialGameState, applyTurn, applyScocca, applySwap, applySwapperSwap, applyRevive, applySdoppiamento, getLegalMovesForTurn, skipExtraMove, stopRabbitChain, type GameState } from '../game/turnManager';
 import { chooseBotAction, applyBotAction } from '../game/bot';
 import { pieces, sortSiglasByPunti } from '../data/pieces';
 import type { Coord, Owner } from '../game/board';
@@ -36,6 +37,11 @@ interface PendingMimicChoice {
   threats: Coord[];
 }
 
+interface PendingSdoppiamento {
+  from: Coord;
+  cloneSquare: Coord;
+}
+
 function GameScreen() {
   const navigate = useNavigate();
   const { mode, humanOwner, botDifficulty, deployedBoard, boardDimensions, setMatchResult } = useGameSetup();
@@ -49,8 +55,10 @@ function GameScreen() {
   const [pendingRevival, setPendingRevival] = useState<PendingRevival | null>(null);
   const [pendingMimicChoice, setPendingMimicChoice] = useState<PendingMimicChoice | null>(null);
   const [orphanMimicSource, setOrphanMimicSource] = useState<Coord | null>(null);
-  const [actionMode, setActionMode] = useState<'scocca' | 'swap' | 'revive' | 'swapperSwap' | null>(null);
+  const [actionMode, setActionMode] = useState<'scocca' | 'swap' | 'revive' | 'swapperSwap' | 'sdoppiamento' | null>(null);
   const [swapperFirstSquare, setSwapperFirstSquare] = useState<Coord | null>(null);
+  const [pendingSdoppiamento, setPendingSdoppiamento] = useState<PendingSdoppiamento | null>(null);
+  const [revealRealMirage, setRevealRealMirage] = useState(false);
 
   const effectiveSelected = gameState?.pendingExtraMove ?? gameState?.pendingRabbitChain?.at ?? selected;
 
@@ -71,6 +79,7 @@ function GameScreen() {
       setSwapperFirstSquare(null);
       setOrphanMimicSource(null);
       setPendingMimicChoice(null);
+      setPendingSdoppiamento(null);
       setError(null);
     }
   }, [isBotTurn, gameState, botOwner, botDifficulty]);
@@ -92,8 +101,23 @@ function GameScreen() {
       const candidates = getSwapperCandidateSquares(gameState.board, effectiveSelected, mover.owner);
       return swapperFirstSquare ? candidates.filter((c) => c !== swapperFirstSquare) : candidates;
     }
+    if (actionMode === 'sdoppiamento') {
+      return mover && canSdoppiare(getPieceDef(mover.sigla))
+        ? getSdoppiamentoSquares(gameState.board, effectiveSelected, mover.owner, getPieceDef, gameState.dimensions)
+        : [];
+    }
     return getLegalMovesForTurn(gameState, effectiveSelected, orphanMimicSource ?? undefined).map((m) => m.to);
   }, [gameState, effectiveSelected, actionMode, orphanMimicSource, swapperFirstSquare]);
+
+  /** Squares holding the REAL half of a split Miraggio — rendered with a marker only while the
+   *  reveal toggle is on, and only for the player whose turn it is (hot-seat compromise: whoever
+   *  is at the screen verifies their own pieces; the opponent's stays hidden). */
+  const mirageRealSquares = useMemo(() => {
+    if (!gameState || !revealRealMirage) return [];
+    return [...gameState.board]
+      .filter(([, p]) => isRealMirage(p) && p.owner === gameState.turn)
+      .map(([coord]) => coord);
+  }, [gameState, revealRealMirage]);
 
   if (!deployedBoard || !gameState) {
     return (
@@ -130,6 +154,7 @@ function GameScreen() {
       setPendingPromotion(null);
       setOrphanMimicSource(null);
       setPendingMimicChoice(null);
+      setPendingSdoppiamento(null);
     } else {
       setError(result.reason);
     }
@@ -143,6 +168,7 @@ function GameScreen() {
     setError(null);
     setOrphanMimicSource(null);
     setPendingMimicChoice(null);
+    setPendingSdoppiamento(null);
 
     const piece = gameState.board.get(coord);
     if (piece && canMimic(getPieceDef(piece.sigla))) {
@@ -241,8 +267,23 @@ function GameScreen() {
     }
   };
 
+  const commitSdoppiamento = (from: Coord, cloneSquare: Coord, realSquare: Coord) => {
+    const result = applySdoppiamento(gameState, from, cloneSquare, realSquare);
+    if (result.ok) {
+      setGameState(result.state);
+      setOrientation(result.state.turn);
+      setSelected(null);
+      setActionMode(null);
+      setSwapperFirstSquare(null);
+      setPendingSdoppiamento(null);
+      setError(null);
+    } else {
+      setError(result.reason);
+    }
+  };
+
   const handleSquareClick = (coord: Coord) => {
-    if (gameOver || isBotTurn || pendingPromotion || pendingRevival || pendingMimicChoice) return;
+    if (gameOver || isBotTurn || pendingPromotion || pendingRevival || pendingMimicChoice || pendingSdoppiamento) return;
 
     if (gameState.pendingExtraMove) {
       if (legalDestinations.includes(coord)) {
@@ -273,6 +314,7 @@ function GameScreen() {
       if (legalDestinations.includes(coord)) {
         if (actionMode === 'scocca') commitScocca(selected, coord);
         else if (actionMode === 'swap') commitSwap(selected, coord);
+        else if (actionMode === 'sdoppiamento') setPendingSdoppiamento({ from: selected, cloneSquare: coord });
         else attemptRevive(selected, coord);
       }
       return;
@@ -292,6 +334,7 @@ function GameScreen() {
         setSwapperFirstSquare(null);
         setOrphanMimicSource(null);
         setPendingMimicChoice(null);
+        setPendingSdoppiamento(null);
       } else {
         selectPiece(coord);
       }
@@ -303,10 +346,11 @@ function GameScreen() {
     setSwapperFirstSquare(null);
     setOrphanMimicSource(null);
     setPendingMimicChoice(null);
+    setPendingSdoppiamento(null);
   };
 
   const handleDragStart = (coord: Coord) => {
-    if (gameOver || isBotTurn || pendingPromotion || pendingRevival || pendingMimicChoice) return;
+    if (gameOver || isBotTurn || pendingPromotion || pendingRevival || pendingMimicChoice || pendingSdoppiamento) return;
     if (gameState.pendingExtraMove) return; // the bonus square is already the effective selection
     if (gameState.pendingRabbitChain) return; // the chain's current square is already the effective selection
     const pieceHere = gameState.board.get(coord);
@@ -375,10 +419,14 @@ function GameScreen() {
             onSquareDrop={gameOver || isBotTurn || pendingPromotion || pendingRevival || pendingMimicChoice || actionMode ? undefined : handleSquareClick}
             flashSquares={lastMoveFlashSquares}
             flashVersion={gameState.history.length}
+            mirageRealSquares={mirageRealSquares}
           />
           <div className="actions">
             <button className="btn-improve" onClick={() => setOrientation((o) => (o === 'A' ? 'B' : 'A'))}>
               🔄 Gira scacchiera (vista: {ownerLabel(orientation)})
+            </button>
+            <button className="btn-improve" onClick={() => setRevealRealMirage((r) => !r)}>
+              {revealRealMirage ? '🙈 Nascondi Miraggi veri' : '👁 Vedi i Miraggi veri (tuo turno)'}
             </button>
             {selected && !gameState.pendingExtraMove && !gameState.pendingRabbitChain && canUseScocca(getPieceDef(gameState.board.get(selected)!.sigla))
               && getScoccaTargets(gameState.board, selected, gameState.board.get(selected)!.owner).length > 0 && (
@@ -405,12 +453,20 @@ function GameScreen() {
                 {actionMode === 'revive' ? '↩️ Annulla Rianimazione' : '🧟 Rianima alleato'}
               </button>
             )}
+            {selected && !gameState.pendingExtraMove && !gameState.pendingRabbitChain && canSdoppiare(getPieceDef(gameState.board.get(selected)!.sigla))
+              && getSdoppiamentoSquares(gameState.board, selected, gameState.board.get(selected)!.owner, getPieceDef, gameState.dimensions).length > 0 && (
+              <button className="btn-auto" onClick={() => setActionMode((m) => (m === 'sdoppiamento' ? null : 'sdoppiamento'))}>
+                {actionMode === 'sdoppiamento' ? '↩️ Annulla Sdoppiamento' : '🌫️ Sdoppia'}
+              </button>
+            )}
           </div>
           {actionMode === 'scocca' && <p>🏹 Modalità Scoccare: seleziona un bersaglio nemico a 3-4 caselle.</p>}
           {actionMode === 'swap' && <p>🔀 Modalità Scambio: seleziona un alleato in linea di vista libera (riga, colonna o diagonale).</p>}
           {actionMode === 'revive' && <p>🧟 Modalità Rianimazione: seleziona una casella vuota adiacente.</p>}
           {actionMode === 'swapperSwap' && !swapperFirstSquare && <p>🔁 Scambio: seleziona la prima casella (un alleato adiacente, o lo Swapper stesso).</p>}
           {actionMode === 'swapperSwap' && swapperFirstSquare && <p>🔁 Scambio: seleziona la seconda casella da scambiare con {swapperFirstSquare}.</p>}
+          {actionMode === 'sdoppiamento' && <p>🌫️ Modalità Sdoppiamento: scegli una casella vuota adiacente dove materializzare il clone.</p>}
+          {revealRealMirage && <p>👁 I Miraggi veri del giocatore di turno sono contrassegnati da un punto giallo.</p>}
           {orphanMimicSource && (
             <p>🎭 L'Orfano è sotto scacco: imita {gameState.board.get(orphanMimicSource)?.sigla} da {orphanMimicSource}.</p>
           )}
@@ -514,6 +570,36 @@ function GameScreen() {
             </div>
           )}
 
+          {pendingSdoppiamento && (
+            <div
+              style={{
+                position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center', gap: '1rem',
+                background: 'rgba(15, 15, 20, 0.85)', borderRadius: '0.5rem',
+              }}
+            >
+              <h2>🌫️ Dove sta il Miraggio vero?</h2>
+              <p style={{ maxWidth: 420, textAlign: 'center' }}>
+                I due pezzi sono indistinguibili. L'avversario deve catturare quello vero: se cattura il clone,
+                l'illusione si dissolve e il Miraggio vero sopravvive.
+              </p>
+              <div className="actions" style={{ flexDirection: 'column' }}>
+                <button
+                  className="btn-save"
+                  onClick={() => commitSdoppiamento(pendingSdoppiamento.from, pendingSdoppiamento.cloneSquare, pendingSdoppiamento.from)}
+                >
+                  Il vero resta in {pendingSdoppiamento.from} (clone in {pendingSdoppiamento.cloneSquare})
+                </button>
+                <button
+                  className="btn-save"
+                  onClick={() => commitSdoppiamento(pendingSdoppiamento.from, pendingSdoppiamento.cloneSquare, pendingSdoppiamento.cloneSquare)}
+                >
+                  Il vero è in {pendingSdoppiamento.cloneSquare} (clone in {pendingSdoppiamento.from})
+                </button>
+              </div>
+            </div>
+          )}
+
           {gameOver && (
             <div
               style={{
@@ -552,6 +638,9 @@ function GameScreen() {
                     {entry.isRangedAttack && ' (scocca)'}
                     {entry.isSwap && ' (scambio)'}
                     {entry.isRevival && ` (rianimato ${entry.revivedSigla})`}
+                    {entry.isSdoppiamento && ` (sdoppiamento: vero in ${entry.realSquare}, clone in ${entry.cloneSquare})`}
+                    {entry.isCloneCapture && ' (clone eliminato — nessun punto)'}
+                    {entry.dispelledClone && ' (clone dissolto)'}
                     {entry.areaDamageCoords && entry.areaDamageCoords.length > 0 && ` 💥 area: ${entry.areaDamageCoords.join(', ')}`}
                   </li>
                 ))}

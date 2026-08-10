@@ -25,6 +25,14 @@ import { getAreaDamageVictims, triggersAreaDamage } from './areaDamage';
 import { canMimic, getMimicMoves, getOrphanThreats } from './orphan';
 import { isSilenced } from './auras';
 import { ANTI_STALEMATE_TURN_LIMIT, resolveAntiStalemateWinner } from './antiStalemate';
+import {
+  canSdoppiare,
+  getSdoppiamentoSquares,
+  isMirageClone,
+  isRealMirage,
+  findCloneOf,
+  removeWithMirageFallout,
+} from './mirage';
 
 export type GameStatus = 'ongoing' | 'check' | 'checkmate' | 'stalemate' | 'anti_stalemate';
 
@@ -56,6 +64,17 @@ export interface HistoryEntry {
    *  piece's own `from` square. */
   isSwapperSwap?: boolean;
   swapSquares?: [Coord, Coord];
+  /** True for a Miraggio's "sdoppiamento": it materializes an illusion clone on `cloneSquare`
+   *  (the piece itself never moves) and the player designates which of the two squares holds the
+   *  real Miraggio (`realSquare` — either the original `from` or `cloneSquare`). */
+  isSdoppiamento?: boolean;
+  cloneSquare?: Coord;
+  realSquare?: Coord;
+  /** True when the captured piece was a Miraggio's illusion clone — it leaves the board but has
+   *  no material value (the opponent gained nothing: the real Miraggio survives). */
+  isCloneCapture?: boolean;
+  /** True when capturing the REAL Miraggio dissolved its clone as fallout (also no material value). */
+  dispelledClone?: boolean;
 }
 
 export interface GameState {
@@ -126,6 +145,7 @@ function isProgressEntry(entry: HistoryEntry): boolean {
   if (entry.isSwap) return true;
   if (entry.isRevival) return true;
   if (entry.isSwapperSwap) return true;
+  if (entry.isSdoppiamento) return true; // a board-changing special action, like swap/revival
   return getPieceDef(entry.sigla).categoria === 'pedone';
 }
 
@@ -281,6 +301,9 @@ interface MoveOutcome {
 
 function resolveMove(state: GameState, piece: PieceInstance, move: GeneratedMove, promotionChoice: string | undefined, isExtraMove: boolean): MoveOutcome {
   const capturedPiece = move.capturedCoord ? getPieceAt(state.board, move.capturedCoord) : undefined;
+  // The clone of a real Miraggio dissolves the moment the real is removed (applyMove handles the
+  // board; the graveyard bookkeeping below handles what's worth punti).
+  const dispelledClone = capturedPiece && isRealMirage(capturedPiece) ? Boolean(findCloneOf(state.board, capturedPiece.mirage!.id)) : false;
   let nextBoard = applyMove(state.board, move);
 
   if (promotionChoice) {
@@ -288,7 +311,9 @@ function resolveMove(state: GameState, piece: PieceInstance, move: GeneratedMove
   }
 
   const nextCaptured: Record<Owner, PieceInstance[]> = { A: state.captured.A, B: state.captured.B };
-  if (capturedPiece) {
+  if (capturedPiece && !isMirageClone(capturedPiece)) {
+    // A clone is an illusion: it leaves the board but awards no punti (killing it was a wasted
+    // capture — the real Miraggio survives). Only the real piece has material value.
     nextCaptured[capturedPiece.owner] = [...nextCaptured[capturedPiece.owner], capturedPiece];
   }
 
@@ -297,11 +322,25 @@ function resolveMove(state: GameState, piece: PieceInstance, move: GeneratedMove
   if (triggersAreaDamage(pieceDef, move) && !isSilenced(nextBoard, move.to, piece.owner, state.dimensions)) {
     const victims = getAreaDamageVictims(nextBoard, move.to, state.dimensions);
     if (victims.length > 0) {
-      areaDamageCoords = victims;
+      // Collect victims plus any clones dissolved as fallout into one removal set (a real mirage
+      // destroyed by the blast takes its clone with it; a clone caught in the blast is removed
+      // without fallout). Only non-clone victims enter the graveyard — the rest are illusions.
+      const removalSet = new Map<Coord, PieceInstance>();
       for (const coord of victims) {
-        const victim = getPieceAt(nextBoard, coord)!;
+        const victim = getPieceAt(nextBoard, coord);
+        if (!victim) continue;
+        removalSet.set(coord, victim);
+        if (isRealMirage(victim)) {
+          const clone = findCloneOf(nextBoard, victim.mirage!.id);
+          if (clone && !removalSet.has(clone.coord)) removalSet.set(clone.coord, clone.piece);
+        }
+      }
+      areaDamageCoords = [...removalSet.keys()];
+      for (const [coord, victim] of removalSet) {
         nextBoard = removePieceAt(nextBoard, coord);
-        nextCaptured[victim.owner] = [...nextCaptured[victim.owner], victim];
+        if (!isMirageClone(victim)) {
+          nextCaptured[victim.owner] = [...nextCaptured[victim.owner], victim];
+        }
       }
     }
   }
@@ -318,6 +357,8 @@ function resolveMove(state: GameState, piece: PieceInstance, move: GeneratedMove
     promotedTo: promotionChoice,
     isExtraMove: isExtraMove || undefined,
     areaDamageCoords,
+    isCloneCapture: capturedPiece && isMirageClone(capturedPiece) ? true : undefined,
+    dispelledClone: dispelledClone ? true : undefined,
   };
 
   return { nextBoard, nextCaptured, historyEntry };
@@ -418,8 +459,14 @@ export function stopRabbitChain(state: GameState): ApplyTurnResult {
     return { ok: false, reason: 'Stato della catena di salti non valido.' };
   }
 
-  const nextBoard = removePieceAt(state.board, lastHurdle);
-  const nextCaptured: Record<Owner, PieceInstance[]> = { ...state.captured, [capturedPiece.owner]: [...state.captured[capturedPiece.owner], capturedPiece] };
+  // Miraggio fallout: capturing the real one dissolves its clone (no punti); capturing a clone is
+  // itself a wasted capture (no punti). Only the real piece lands in the graveyard.
+  const dispelledClone = isRealMirage(capturedPiece) ? Boolean(findCloneOf(state.board, capturedPiece.mirage!.id)) : false;
+  const { board: nextBoard } = removeWithMirageFallout(state.board, lastHurdle);
+  const nextCaptured: Record<Owner, PieceInstance[]> = { ...state.captured };
+  if (!isMirageClone(capturedPiece)) {
+    nextCaptured[capturedPiece.owner] = [...nextCaptured[capturedPiece.owner], capturedPiece];
+  }
 
   const historyEntry: HistoryEntry = {
     turnNumber: state.turnNumber,
@@ -430,6 +477,8 @@ export function stopRabbitChain(state: GameState): ApplyTurnResult {
     isCapture: true,
     capturedCoord: lastHurdle,
     capturedSigla: capturedPiece.sigla,
+    isCloneCapture: isMirageClone(capturedPiece) ? true : undefined,
+    dispelledClone: dispelledClone ? true : undefined,
   };
 
   const nextTurn: Owner = piece.owner === 'A' ? 'B' : 'A';
@@ -608,7 +657,10 @@ export function applyScocca(state: GameState, from: Coord, target: Coord): Apply
   }
 
   const targetPiece = getPieceAt(state.board, target)!;
-  const nextBoard = removePieceAt(state.board, target);
+  // Miraggio fallout: shooting the real one dissolves its clone (no punti); shooting a clone is a
+  // wasted shot (no punti). Only the real piece lands in the graveyard.
+  const dispelledClone = isRealMirage(targetPiece) ? Boolean(findCloneOf(state.board, targetPiece.mirage!.id)) : false;
+  const { board: nextBoard } = removeWithMirageFallout(state.board, target);
 
   if (isKingInCheck(nextBoard, piece.owner, state.dimensions)) {
     return { ok: false, reason: 'Questa azione lascerebbe il tuo Re sotto scacco.' };
@@ -628,10 +680,14 @@ export function applyScocca(state: GameState, from: Coord, target: Coord): Apply
     capturedCoord: target,
     capturedSigla: targetPiece.sigla,
     isRangedAttack: true,
+    isCloneCapture: isMirageClone(targetPiece) ? true : undefined,
+    dispelledClone: dispelledClone ? true : undefined,
   };
 
   const nextCaptured: Record<Owner, PieceInstance[]> = { A: state.captured.A, B: state.captured.B };
-  nextCaptured[targetPiece.owner] = [...nextCaptured[targetPiece.owner], targetPiece];
+  if (!isMirageClone(targetPiece)) {
+    nextCaptured[targetPiece.owner] = [...nextCaptured[targetPiece.owner], targetPiece];
+  }
 
   return {
     ok: true,
@@ -880,6 +936,92 @@ export function applyRevive(state: GameState, from: Coord, target: Coord, sigla:
       turnNumber: state.turnNumber + 1,
       history: [...state.history, historyEntry],
       captured: nextCaptured,
+      status,
+      winner: resolveWinner(status, nextBoard, piece.owner, state.dimensions),
+      enPassantTarget: null,
+      pendingExtraMove: null,
+      pendingRabbitChain: null,
+      turnsSinceProgress,
+    },
+  };
+}
+
+/**
+ * Plays a Miraggio's "sdoppiamento" as the turn's action: the Miraggio materializes an illusion
+ * clone on an adjacent empty square (`cloneSquare`) — it never moves itself — and the player
+ * designates which of the two squares holds the REAL Miraggio (`realSquare`, either the original
+ * `from` or `cloneSquare`). The two pieces are visually indistinguishable; only removing the real
+ * one destroys the Miraggio (the clone dissolves as fallout). A clone can never split again, and a
+ * real Miraggio cannot split while its clone is still alive (max 2 on the board — real + clone).
+ * Like any action, it's rejected if the Miraggio is frozen by an enemy Stunner (stun blocks every
+ * action, mirroring applyScocca/applySwap). Adding a piece can never expose the acting player's
+ * own King, so no king-safety filter applies here.
+ */
+export function applySdoppiamento(state: GameState, from: Coord, cloneSquare: Coord, realSquare: Coord): ApplyTurnResult {
+  if (GAME_OVER_STATUSES.has(state.status)) {
+    return { ok: false, reason: 'La partita è terminata.' };
+  }
+  if (state.pendingExtraMove) {
+    return { ok: false, reason: 'Devi prima completare (o saltare) il movimento extra del Berserker.' };
+  }
+  if (state.pendingRabbitChain) {
+    return { ok: false, reason: 'Devi prima continuare (o fermare) la catena di salti del Coniglio.' };
+  }
+
+  const piece = getPieceAt(state.board, from);
+  if (!piece) {
+    return { ok: false, reason: `Nessun pezzo in ${from}.` };
+  }
+  if (piece.owner !== state.turn) {
+    return { ok: false, reason: 'Non è il turno di questo giocatore.' };
+  }
+
+  const pieceDef = getPieceDef(piece.sigla);
+  if (!canSdoppiare(pieceDef)) {
+    return { ok: false, reason: 'Questo pezzo non può sdoppiarsi.' };
+  }
+
+  const squares = getSdoppiamentoSquares(state.board, from, piece.owner, getPieceDef, state.dimensions);
+  if (!squares.includes(cloneSquare)) {
+    return { ok: false, reason: `Casella non valida per lo sdoppiamento: ${cloneSquare}.` };
+  }
+  if (realSquare !== from && realSquare !== cloneSquare) {
+    return { ok: false, reason: 'Il Miraggio vero deve stare su una delle due caselle (quella originale o quella del clone).' };
+  }
+
+  const clonePiece = createPieceInstance(piece.sigla, piece.owner);
+  // When `realSquare` is the original square, the NEW piece on `cloneSquare` is the clone; when
+  // `realSquare` is the clone square, the original piece left behind on `from` is the clone.
+  const realStays = realSquare === from;
+
+  let nextBoard = setPieceAt(state.board, cloneSquare, { ...clonePiece, hasMoved: true, mirage: { id: piece.id, isClone: realStays } });
+  nextBoard = setPieceAt(nextBoard, from, { ...piece, mirage: { id: piece.id, isClone: !realStays } });
+
+  const nextTurn: Owner = piece.owner === 'A' ? 'B' : 'A';
+  const turnsSinceProgress = 0; // a board-changing special action — always progress (mirrors applySwap/applyRevive)
+  const status = computeStatus(nextBoard, nextTurn, turnsSinceProgress, state.dimensions);
+
+  const historyEntry: HistoryEntry = {
+    turnNumber: state.turnNumber,
+    owner: piece.owner,
+    from,
+    to: cloneSquare,
+    sigla: piece.sigla,
+    isCapture: false,
+    isSdoppiamento: true,
+    cloneSquare,
+    realSquare,
+  };
+
+  return {
+    ok: true,
+    state: {
+      board: nextBoard,
+      dimensions: state.dimensions,
+      turn: nextTurn,
+      turnNumber: state.turnNumber + 1,
+      history: [...state.history, historyEntry],
+      captured: state.captured,
       status,
       winner: resolveWinner(status, nextBoard, piece.owner, state.dimensions),
       enPassantTarget: null,

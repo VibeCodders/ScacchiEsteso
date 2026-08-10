@@ -1,7 +1,12 @@
 import type { Piece, Rules, ValidationResult } from '../types';
 
+/**
+ * How many copies of `piece` a single team may field. A piece-level `maxIdentical` (e.g. the
+ * Miraggio's 1 — its clone brings the on-board count to 2, so two of them would be too many)
+ * overrides the rules' default and per-category caps.
+ */
 export function getMaxIdentical(piece: Piece, rules: Rules): number {
-  return rules.maxIdenticalByCategory[piece.categoria] ?? rules.maxIdenticalDefault;
+  return piece.maxIdentical ?? rules.maxIdenticalByCategory[piece.categoria] ?? rules.maxIdenticalDefault;
 }
 
 export function getMaxIdenticalBySigla(sigla: string, pieces: Piece[], rules: Rules): number {
