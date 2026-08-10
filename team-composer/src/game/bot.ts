@@ -242,6 +242,76 @@ function orderActions(state: GameState, owner: Owner, actions: BotAction[]): Bot
   return [...actions].sort((a, b) => estimateActionGain(state, owner, b) - estimateActionGain(state, owner, a));
 }
 
+/**
+ * Per-search state shared across the minimax recursion: the wall-clock deadline, the killer-move
+ * table (up to 2 moves that caused a cutoff, per depth) and the history heuristic (cutoff moves
+ * accumulate a score). Both tables only REORDER moves — alpha-beta results are unaffected — but
+ * good ordering lets alpha-beta prune far more branches, which is what lets the deepest iterative
+ * deepening iterations finish inside the time budget.
+ */
+export interface SearchContext {
+  deadline: number;
+  killers: Map<number, string[]>;
+  history: Map<string, number>;
+}
+
+/** Stable string identity for a bot action — the key for killer moves and the history heuristic.
+ *  Action objects are recreated at every node of the search, so reference identity won't do. */
+export function actionKey(action: BotAction): string {
+  switch (action.kind) {
+    case 'move':
+      return `move:${action.from}:${action.to}:${action.promotionChoice ?? ''}:${action.orphanMimicSource ?? ''}`;
+    case 'scocca': return `scocca:${action.from}:${action.target}`;
+    case 'swap': return `swap:${action.from}:${action.target}`;
+    case 'swapperSwap': return `swapperSwap:${action.squareA}:${action.squareB}`;
+    case 'revive': return `revive:${action.from}:${action.target}:${action.sigla}`;
+    case 'sdoppiamento': return `sdoppiamento:${action.from}:${action.cloneSquare}:${action.realSquare}`;
+    case 'riunione': return `riunione:${action.from}:${action.mergeSquare}`;
+    case 'skipExtraMove': return 'skipExtraMove';
+    case 'stopRabbitChain': return 'stopRabbitChain';
+  }
+}
+
+/** Records a move that caused a beta cutoff: it joins (or bumps) the two killer moves for this
+ *  depth and earns a history score of depth² (deeper cutoffs weigh more). Ordering-only. */
+export function recordCutoff(ctx: SearchContext, depth: number, action: BotAction): void {
+  const key = actionKey(action);
+  const killers = ctx.killers.get(depth);
+  if (!killers) {
+    ctx.killers.set(depth, [key]);
+  } else if (!killers.includes(key)) {
+    // Keep the two most recent killers, newest first: unshift puts the new one ahead; a third
+    // distinct killer evicts the least recent (pop) before inserting.
+    if (killers.length >= 2) killers.pop();
+    killers.unshift(key);
+  }
+  ctx.history.set(key, (ctx.history.get(key) ?? 0) + depth * depth);
+}
+
+/** Orders a node's actions for alpha-beta: captures first (by value), then the killer moves for
+ *  this depth, then by accumulated history score. Only affects pruning efficiency, never results. */
+function orderMoves(state: GameState, toMove: Owner, actions: BotAction[], depth: number, ctx: SearchContext): BotAction[] {
+  const killers = ctx.killers.get(depth);
+  const keys = new Map<BotAction, string>();
+  const keyOf = (a: BotAction) => {
+    let k = keys.get(a);
+    if (!k) {
+      k = actionKey(a);
+      keys.set(a, k);
+    }
+    return k;
+  };
+  return [...actions].sort((a, b) => {
+    const gainDiff = estimateActionGain(state, toMove, b) - estimateActionGain(state, toMove, a);
+    if (gainDiff !== 0) return gainDiff;
+    const kb = keyOf(b);
+    const ka = keyOf(a);
+    const killerDiff = (killers?.includes(kb) ? 1 : 0) - (killers?.includes(ka) ? 1 : 0);
+    if (killerDiff !== 0) return killerDiff;
+    return (ctx.history.get(kb) ?? 0) - (ctx.history.get(ka) ?? 0);
+  });
+}
+
 function evaluate(state: GameState, botOwner: Owner): number {
   const opponent: Owner = botOwner === 'A' ? 'B' : 'A';
 
@@ -264,11 +334,11 @@ function minimax(
   alpha: number,
   beta: number,
   botOwner: Owner,
-  deadline: number,
+  ctx: SearchContext,
 ): number {
   if (
     depth <= 0 ||
-    Date.now() >= deadline ||
+    Date.now() >= ctx.deadline ||
     state.status === 'checkmate' ||
     state.status === 'stalemate' ||
     state.status === 'anti_stalemate'
@@ -277,7 +347,7 @@ function minimax(
   }
 
   const toMove = state.turn;
-  const actions = orderActions(state, toMove, generateBotActions(state, toMove));
+  const actions = orderMoves(state, toMove, generateBotActions(state, toMove), depth, ctx);
   if (actions.length === 0) return evaluate(state, botOwner);
 
   const maximizing = toMove === botOwner;
@@ -286,7 +356,7 @@ function minimax(
   for (const action of actions) {
     const result = applyBotAction(state, action);
     if (!result.ok) continue;
-    const value = minimax(result.state, depth - 1, alpha, beta, botOwner, deadline);
+    const value = minimax(result.state, depth - 1, alpha, beta, botOwner, ctx);
 
     if (maximizing) {
       best = Math.max(best, value);
@@ -295,8 +365,11 @@ function minimax(
       best = Math.min(best, value);
       beta = Math.min(beta, best);
     }
-    if (beta <= alpha) break;
-    if (Date.now() >= deadline) break;
+    if (beta <= alpha) {
+      recordCutoff(ctx, depth, action);
+      break;
+    }
+    if (Date.now() >= ctx.deadline) break;
   }
 
   return best;
@@ -317,7 +390,11 @@ export function chooseBotAction(state: GameState, owner: Owner, difficulty: BotD
   if (actions.length === 0) return null;
 
   const maxDepth = difficultyToDepth(difficulty);
-  const deadline = Date.now() + difficultyTimeBudgetMs(difficulty);
+  const ctx: SearchContext = {
+    deadline: Date.now() + difficultyTimeBudgetMs(difficulty),
+    killers: new Map(),
+    history: new Map(),
+  };
 
   // Difficulty 1 = 0 plies: no lookahead at all — pick the action whose resulting position scores
   // best under the static evaluation (the equivalent of a depth-0 minimax over the root actions).
@@ -325,7 +402,7 @@ export function chooseBotAction(state: GameState, owner: Owner, difficulty: BotD
     let bestAction = actions[0];
     let bestValue = -Infinity;
     for (const action of actions) {
-      if (Date.now() >= deadline) break;
+      if (Date.now() >= ctx.deadline) break;
       const result = applyBotAction(state, action);
       if (!result.ok) continue;
       const value = evaluate(result.state, owner);
@@ -352,13 +429,13 @@ export function chooseBotAction(state: GameState, owner: Owner, difficulty: BotD
     let interrupted = false;
 
     for (const action of iterationOrdering) {
-      if (Date.now() >= deadline) {
+      if (Date.now() >= ctx.deadline) {
         interrupted = true;
         break;
       }
       const result = applyBotAction(state, action);
       if (!result.ok) continue;
-      const value = minimax(result.state, depth - 1, alpha, beta, owner, deadline);
+      const value = minimax(result.state, depth - 1, alpha, beta, owner, ctx);
       previousScores.set(action, value);
       if (value > iterationBestValue) {
         iterationBestValue = value;

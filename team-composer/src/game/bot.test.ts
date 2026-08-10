@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chooseBotAction, generateBotActions, applyBotAction, difficultyToDepth, difficultyTimeBudgetMs } from './bot';
+import { chooseBotAction, generateBotActions, applyBotAction, difficultyToDepth, difficultyTimeBudgetMs, actionKey, recordCutoff, type SearchContext } from './bot';
 import { createInitialGameState } from './turnManager';
 import { createEmptyBoard, createPieceInstance, setPieceAt, type BoardState } from './board';
 import { buildClassicStartingBoard } from './samplePositions';
@@ -317,6 +317,36 @@ describe('chooseBotAction — max difficulty performance', () => {
     const elapsed = Date.now() - start;
     expect(action).not.toBeNull();
     expect(elapsed).toBeLessThan(difficultyTimeBudgetMs(50) * 2.5);
+  });
+});
+
+describe('killer moves and history heuristic', () => {
+  function ctx(): SearchContext {
+    return { deadline: Number.MAX_SAFE_INTEGER, killers: new Map(), history: new Map() };
+  }
+
+  it('actionKey is stable and distinct across different actions', () => {
+    expect(actionKey({ kind: 'move', from: 'd4', to: 'd5' })).toBe('move:d4:d5::');
+    expect(actionKey({ kind: 'move', from: 'd4', to: 'd5' })).toBe(actionKey({ kind: 'move', from: 'd4', to: 'd5' }));
+    expect(actionKey({ kind: 'move', from: 'd4', to: 'd5' })).not.toBe(actionKey({ kind: 'move', from: 'd4', to: 'd6' }));
+    expect(actionKey({ kind: 'move', from: 'd4', to: 'd8', promotionChoice: 'RA' })).not.toBe(actionKey({ kind: 'move', from: 'd4', to: 'd8' }));
+    expect(actionKey({ kind: 'scocca', from: 'd4', target: 'd7' })).toBe('scocca:d4:d7');
+    expect(actionKey({ kind: 'sdoppiamento', from: 'e2', cloneSquare: 'f2', realSquare: 'e2' })).toBe('sdoppiamento:e2:f2:e2');
+    expect(actionKey({ kind: 'skipExtraMove' })).toBe('skipExtraMove');
+  });
+
+  it('recordCutoff fills the killer slots (most recent first, max 2) and scores the history table', () => {
+    const c = ctx();
+    recordCutoff(c, 2, { kind: 'move', from: 'd4', to: 'd5' });
+    recordCutoff(c, 2, { kind: 'move', from: 'e4', to: 'e5' });
+    recordCutoff(c, 2, { kind: 'move', from: 'f4', to: 'f5' }); // bumps the oldest
+    expect(c.killers.get(2)).toEqual(['move:f4:f5::', 'move:e4:e5::']);
+    expect(c.history.get('move:d4:d5::')).toBe(4); // depth² = 4
+    expect(c.history.get('move:f4:f5::')).toBe(4);
+    // Different depths keep independent killer slots.
+    recordCutoff(c, 3, { kind: 'move', from: 'd4', to: 'd5' });
+    expect(c.killers.get(3)).toEqual(['move:d4:d5::']);
+    expect(c.history.get('move:d4:d5::')).toBe(13); // 4 + 3²
   });
 });
 
