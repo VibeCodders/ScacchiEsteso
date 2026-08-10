@@ -49,6 +49,9 @@ function Home() {
             <button className="btn-improve" onClick={() => navigate('/pieces')}>
               Enciclopedia dei pezzi
             </button>
+            <button className="btn-improve" onClick={() => navigate('/punti-estimator')}>
+              📊 Stima punti pezzi
+            </button>
           </div>
         </div>
       </div>

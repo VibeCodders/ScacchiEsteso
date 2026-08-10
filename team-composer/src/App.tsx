@@ -8,6 +8,7 @@ import GameScreen from './screens/GameScreen';
 import GameOverScreen from './screens/GameOverScreen';
 import PieceEncyclopediaScreen from './screens/PieceEncyclopediaScreen';
 import GameSettingsScreen from './screens/GameSettingsScreen';
+import PuntiEstimatorScreen from './screens/PuntiEstimatorScreen';
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
       <Route path="/game" element={<GameScreen />} />
       <Route path="/game-over" element={<GameOverScreen />} />
       <Route path="/pieces" element={<PieceEncyclopediaScreen />} />
+      <Route path="/punti-estimator" element={<PuntiEstimatorScreen />} />
     </Routes>
   );
 }

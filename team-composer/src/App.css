@@ -294,6 +294,71 @@
   border-radius: 3px;
 }
 
+.fit-quality-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 16px;
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.fit-quality-summary strong {
+  color: #f1f5f9;
+}
+
+.punti-table-wrapper {
+  overflow-x: auto;
+}
+
+.punti-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.punti-table th {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid #334155;
+  color: #94a3b8;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.punti-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #1e293b;
+  vertical-align: top;
+}
+
+.punti-table tr:hover td {
+  background: #0f172a;
+}
+
+.punti-table .sigla-cell {
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.punti-table .breakdown-cell {
+  font-size: 0.72rem;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.punti-diff {
+  font-size: 0.8rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.punti-diff-close { background: #1e3a2e; color: #4ade80; }
+.punti-diff-over { background: #3b1a1a; color: #f87171; }
+.punti-diff-under { background: #3b2e1a; color: #fbbf24; }
+
 .piece-detail-overlay {
   position: fixed;
   inset: 0;
