@@ -1,15 +1,18 @@
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { pieces, sortByPunti } from '../data/pieces';
 import {
   estimatePunti,
   estimatorFitQuality,
   stage1ModelSummary,
+  stage2ModelSummary,
   mechanicBonusSummary,
   confidenceForSampleCount,
   type PuntiEstimate,
 } from '../data/estimatePunti';
 import type { Piece } from '../types';
+import BreakdownBarChart from './BreakdownBarChart';
+import PieceDesignerPanel from './PieceDesignerPanel';
 import '../App.css';
 
 /** How close is "close enough" before a suggestion counts as a meaningful over/under estimate. */
@@ -33,13 +36,56 @@ const CONFIDENCE_LABEL: Record<'low' | 'medium' | 'high', string> = {
   high: 'alta',
 };
 
+/** Plain-language explanation for each stage-1 feature name, shown as a hover/focus tooltip next to
+ *  the feature in `ModelTransparencyPanel` — the coefficient table alone doesn't say what a feature
+ *  actually measures. Keyed by the same strings `stage1ModelSummary()` returns. */
+const STAGE1_FEATURE_EXPLANATIONS: Record<string, string> = {
+  'Intercetta': 'Il valore base del modello quando tutte le altre feature sono a zero — il punto di partenza a cui si sommano i contributi.',
+  'Mobilità di movimento (scorrimento)': 'Quante caselle vuote il pezzo può raggiungere muovendosi in linea (non a salto) — più alto, più il pezzo è mobile senza contare le catture.',
+  'Mobilità di cattura (scorrimento)': 'Quante caselle con un nemico il pezzo può catturare muovendosi in linea, non a salto.',
+  'Mobilità di movimento (salto)': 'Quante caselle vuote il pezzo può raggiungere saltando (ignorando le interposizioni).',
+  'Mobilità di cattura (salto)': 'Quante caselle con un nemico il pezzo può catturare saltando (ignorando le interposizioni).',
+  'Categoria pedone': 'Vale 1 se il pezzo è nella categoria "pedone", altrimenti 0 — i pedoni hanno una dinamica di valore diversa dagli altri pezzi.',
+  'Voci di mossa extra (pezzi composti)': 'Quante voci di mossa aggiuntive ha il pezzo oltre alla prima (es. Cavallo+Re) — un pezzo composto vale più della somma delle sue parti isolate.',
+  'Resistenza': 'Quanti colpi in più il pezzo può assorbire prima di essere eliminato.',
+  'Numero di immunità': 'A quanti tipi di attacco/effetto il pezzo è immune.',
+  'Cattura a distanza': 'Vale 1 se il pezzo può catturare senza muoversi verso il bersaglio (es. tiro), altrimenti 0.',
+  'Cattura solo in mischia': 'Vale 1 se il pezzo può catturare solo su una casella adiacente a cui si muove, altrimenti 0.',
+  'Flag azione minori': 'Conteggio di piccoli vantaggi extra (secondo movimento dopo cattura, silenzio a distanza, ignora interposizioni, egida) non già coperti da una meccanica speciale vera e propria.',
+};
+
+/** Plain-language explanation for each stage-2 (mechanic bonus) feature name — see
+ *  `mechanicFeaturesOf` in estimatePunti.ts for how each is extracted from `params`. */
+const MECHANIC_FEATURE_EXPLANATIONS: Record<string, string> = {
+  'Intercetta': 'Il bonus base che il modello attribuisce a "avere una meccanica speciale qualsiasi", prima di guardare ai suoi parametri.',
+  'Raggio': "Quanto si estende l'effetto della meccanica intorno al pezzo (es. quante caselle intorno colpisce un'aura).",
+  'Ampiezza direzionale/distanze': 'Quante direzioni o distanze copre la meccanica (es. le 8 direzioni di uno scocca, o le 4 di un\'aura ortogonale).',
+  'Intensità numerica': "Un eventuale parametro numerico di soglia/intensità della meccanica (es. il costo massimo che un'armatura può bloccare), riscalato.",
+  'Coinvolge alleati': 'Vale 1 se la meccanica colpisce/protegge/coinvolge anche pezzi alleati, non solo nemici.',
+  'Passiva': 'Vale 1 se la meccanica è sempre attiva (non richiede di scegliere un\'azione), altrimenti 0.',
+  'Su cattura': 'Vale 1 se la meccanica si attiva solo a seguito di una cattura, altrimenti 0.',
+};
+
+/** Small CSS-only tooltip (native `title` would work too, but this stays visible on keyboard focus
+ *  and is more legible) — zero dependencies, consistent with the rest of the file. */
+function InfoTooltip({ text }: { text: string }) {
+  return (
+    <span className="info-tooltip" tabIndex={0}>
+      <span className="info-icon" aria-hidden="true">ⓘ</span>
+      <span className="info-tooltip-bubble" role="tooltip">{text}</span>
+    </span>
+  );
+}
+
 /**
  * Collapsible panel exposing the fitted stage-1 coefficients (incl. the ridge penalty chosen by
- * leave-one-out cross-validation) and the stage-2 mechanic bonus table (raw vs. shrunk toward the
- * global average) — makes the model's reasoning inspectable instead of only its final numbers.
+ * leave-one-out cross-validation) and the fitted stage-2 parametric mechanic-bonus model (its own
+ * coefficients plus the empirical-Bayes shrinkage constant K, both chosen by cross-validation) —
+ * makes the model's reasoning inspectable instead of only its final numbers.
  */
 function ModelTransparencyPanel() {
   const summary = useMemo(() => stage1ModelSummary(), []);
+  const mechanicModel = useMemo(() => stage2ModelSummary(), []);
   const mechanicTable = useMemo(() => mechanicBonusSummary(), []);
 
   return (
@@ -50,9 +96,9 @@ function ModelTransparencyPanel() {
         <div>
           <h3>Stage 1 — mobilità e durabilità</h3>
           <p className="model-transparency-note">
-            Regressione ridge (penalità λ = {summary.lambda}, scelta minimizzando l'errore leave-one-out) contro i
-            pezzi di puro movimento del roster. Errore leave-one-out attuale:{' '}
-            <strong>{summary.looMeanAbsoluteError.toFixed(1)} pt</strong>.
+            Regressione ridge robusta agli outlier (penalità λ = {summary.lambda}, scelta minimizzando l'errore
+            leave-one-out) contro i pezzi di puro movimento del roster, con mobilità calcolata su tutte le caselle
+            della scacchiera. Errore leave-one-out attuale: <strong>{summary.looMeanAbsoluteError.toFixed(1)} pt</strong>.
           </p>
           <table className="model-coefficients-table">
             <thead>
@@ -64,7 +110,7 @@ function ModelTransparencyPanel() {
             <tbody>
               {summary.features.map((f) => (
                 <tr key={f.name}>
-                  <td>{f.name}</td>
+                  <td>{f.name} <InfoTooltip text={STAGE1_FEATURE_EXPLANATIONS[f.name] ?? ''} /></td>
                   <td>{f.coefficient.toFixed(2)}</td>
                 </tr>
               ))}
@@ -73,16 +119,40 @@ function ModelTransparencyPanel() {
         </div>
 
         <div>
-          <h3>Stage 2 — bonus per meccanica speciale</h3>
+          <h3>Stage 2 — modello parametrico dei bonus meccanica</h3>
           <p className="model-transparency-note">
-            Ogni bonus grezzo (media di punti reali − stima stage 1 sui pezzi con quella meccanica) è tirato verso
-            la media globale delle meccaniche speciali, tanto più quanti meno esempi lo sostengono.
+            Il bonus di ogni meccanica speciale non è più una costante fissa per tipo: è <em>predetto</em> dai suoi
+            parametri effettivi (raggio, direzioni, intensità, ecc.) tramite un piccolo modello lineare condiviso da
+            tutte le meccaniche (λ = {mechanicModel.lambda}, errore leave-one-out{' '}
+            <strong>{mechanicModel.looMeanAbsoluteError.toFixed(1)} pt</strong>), poi tirato verso il valore osservato
+            per quel tipo specifico (shrinkage con K = {mechanicModel.shrinkageK.toFixed(1)}) quando disponibile —
+            questo è ciò che permette di stimare anche una meccanica mai vista nel roster (vedi il piece designer qui
+            sotto).
           </p>
+          <table className="model-coefficients-table">
+            <thead>
+              <tr>
+                <th>Feature</th>
+                <th>Coefficiente</th>
+              </tr>
+            </thead>
+            <tbody>
+              {mechanicModel.features.map((f) => (
+                <tr key={f.name}>
+                  <td>{f.name} <InfoTooltip text={MECHANIC_FEATURE_EXPLANATIONS[f.name] ?? ''} /></td>
+                  <td>{f.coefficient.toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <h4>Bonus applicato per meccanica osservata nel roster</h4>
           <table className="model-coefficients-table">
             <thead>
               <tr>
                 <th>Meccanica</th>
                 <th>Bonus grezzo</th>
+                <th>Predetto dal modello</th>
                 <th>Bonus applicato</th>
                 <th>Esempi</th>
                 <th>Confidenza</th>
@@ -93,6 +163,7 @@ function ModelTransparencyPanel() {
                 <tr key={type}>
                   <td>{type}</td>
                   <td>{entry.rawValue > 0 ? '+' : ''}{entry.rawValue.toFixed(1)}</td>
+                  <td>{entry.predictedValue > 0 ? '+' : ''}{entry.predictedValue.toFixed(1)}</td>
                   <td>{entry.value > 0 ? '+' : ''}{entry.value.toFixed(1)}</td>
                   <td>{entry.sampleCount}</td>
                   <td>{CONFIDENCE_LABEL[confidenceForSampleCount(entry.sampleCount)]}</td>
@@ -202,6 +273,18 @@ function PuntiScatterChart({ rows }: { rows: Row[] }) {
         {/* y = x reference line (perfect estimate) */}
         <line x1={x(0)} y1={y(0)} x2={x(maxValue)} y2={y(maxValue)} className="scatter-reference-line" />
 
+        {/* confidence interval bands, drawn before the markers so they sit underneath them */}
+        {rows.map(({ piece, estimate }) => (
+          <line
+            key={`${piece.sigla}-band`}
+            x1={x(piece.punti)}
+            y1={y(estimate.confidenceInterval.low)}
+            x2={x(piece.punti)}
+            y2={y(estimate.confidenceInterval.high)}
+            className="scatter-error-band"
+          />
+        ))}
+
         {/* data points */}
         {rows.map(({ piece, estimate }) => {
           const status = diffStatus(piece.punti, estimate.suggestedPunti);
@@ -216,7 +299,7 @@ function PuntiScatterChart({ rows }: { rows: Row[] }) {
               onMouseLeave={() => setHovered((h) => (h === piece.sigla ? null : h))}
               className="scatter-point-group"
             >
-              <title>{`${piece.sigla} — reali: ${piece.punti}, stimati: ${estimate.suggestedPunti}${lowConfidence ? ' (bassa confidenza)' : ''}`}</title>
+              <title>{`${piece.sigla} — reali: ${piece.punti}, stimati: ${estimate.suggestedPunti} (intervallo ${estimate.confidenceInterval.low}–${estimate.confidenceInterval.high})${lowConfidence ? ' (bassa confidenza)' : ''}`}</title>
               {lowConfidence ? (
                 <rect
                   x={cx - 5}
@@ -252,6 +335,7 @@ function PuntiScatterChart({ rows }: { rows: Row[] }) {
         <span className="scatter-legend-item"><span className="scatter-legend-swatch" style={{ background: statusColor.under }} /> sottostimato</span>
         <span className="scatter-legend-item"><span className="scatter-legend-shape scatter-legend-shape-diamond" /> bassa confidenza (1 esempio)</span>
         <span className="scatter-legend-item"><span className="scatter-legend-shape scatter-legend-shape-circle" /> confidenza normale</span>
+        <span className="scatter-legend-item"><span className="scatter-legend-band" /> intervallo plausibile (± errore di validazione incrociata)</span>
       </div>
     </div>
   );
@@ -265,6 +349,7 @@ function PuntiEstimatorScreen() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [filterText, setFilterText] = useState('');
   const [lowConfidenceOnly, setLowConfidenceOnly] = useState(false);
+  const [expandedSigla, setExpandedSigla] = useState<string | null>(null);
 
   const allRows = useMemo<Row[]>(
     () => sortByPunti(pieces).map((piece) => ({ piece, estimate: estimatePunti(piece) })),
@@ -320,6 +405,8 @@ function PuntiEstimatorScreen() {
 
           <ModelTransparencyPanel />
 
+          <PieceDesignerPanel />
+
           <PuntiScatterChart rows={allRows} />
 
           <div className="punti-controls">
@@ -353,34 +440,48 @@ function PuntiEstimatorScreen() {
                 </tr>
               </thead>
               <tbody>
-                {visibleRows.map(({ piece, estimate }) => (
-                  <tr key={piece.sigla}>
-                    <td className="sigla-cell">{piece.sigla}</td>
-                    <td>{piece.descrizione}</td>
-                    <td>{piece.punti}</td>
-                    <td>{estimate.suggestedPunti}</td>
-                    <td>
-                      <span className={`punti-diff ${diffBadgeClass(piece.punti, estimate.suggestedPunti)}`}>
-                        {formatDiff(piece.punti, estimate.suggestedPunti)}
-                      </span>
-                    </td>
-                    <td className="breakdown-cell">
-                      mobilità mossa: {(estimate.breakdown.stepSlideMoveMobility + estimate.breakdown.leapMoveMobility).toFixed(1)}
-                      {' · '}mobilità cattura: {(estimate.breakdown.stepSlideCaptureMobility + estimate.breakdown.leapCaptureMobility).toFixed(1)}
-                      {' · '}contributo: {estimate.breakdown.mobilityContribution.toFixed(1)}
-                      {estimate.breakdown.compoundContribution > 0 && <> · composto: +{estimate.breakdown.compoundContribution.toFixed(1)}</>}
-                      {estimate.breakdown.specialMechanicBonus !== 0 && <> · meccanica: {estimate.breakdown.specialMechanicBonus > 0 ? '+' : ''}{estimate.breakdown.specialMechanicBonus.toFixed(1)}</>}
-                      {estimate.breakdown.mechanicConfidence === 'low' && (
-                        <span
-                          className="low-confidence-badge"
-                          title={`Bonus basato su un solo esempio nel roster: ${estimate.breakdown.lowConfidenceMechanics.join(', ')}`}
-                        >
-                          ⚠ 1 esempio
-                        </span>
+                {visibleRows.map(({ piece, estimate }) => {
+                  const isExpanded = expandedSigla === piece.sigla;
+                  return (
+                    <Fragment key={piece.sigla}>
+                      <tr>
+                        <td className="sigla-cell">{piece.sigla}</td>
+                        <td>{piece.descrizione}</td>
+                        <td>{piece.punti}</td>
+                        <td>{estimate.suggestedPunti}</td>
+                        <td>
+                          <span className={`punti-diff ${diffBadgeClass(piece.punti, estimate.suggestedPunti)}`}>
+                            {formatDiff(piece.punti, estimate.suggestedPunti)}
+                          </span>
+                        </td>
+                        <td className="breakdown-cell">
+                          <button
+                            type="button"
+                            className="breakdown-toggle-btn"
+                            onClick={() => setExpandedSigla((current) => (current === piece.sigla ? null : piece.sigla))}
+                          >
+                            {isExpanded ? '▲ nascondi' : '▼ dettagli'}
+                          </button>
+                          {estimate.breakdown.mechanicConfidence === 'low' && (
+                            <span
+                              className="low-confidence-badge"
+                              title={`Bonus basato su un solo esempio nel roster: ${estimate.breakdown.lowConfidenceMechanics.join(', ')}`}
+                            >
+                              ⚠ 1 esempio
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                      {isExpanded && (
+                        <tr className="breakdown-detail-row">
+                          <td colSpan={6}>
+                            <BreakdownBarChart estimate={estimate} />
+                          </td>
+                        </tr>
                       )}
-                    </td>
-                  </tr>
-                ))}
+                    </Fragment>
+                  );
+                })}
                 {visibleRows.length === 0 && (
                   <tr>
                     <td colSpan={6} className="punti-table-empty">Nessun pezzo corrisponde al filtro.</td>
