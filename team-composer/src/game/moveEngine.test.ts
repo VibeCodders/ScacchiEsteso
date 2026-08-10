@@ -472,6 +472,49 @@ describe('Rimbalzatore (RB) — diagonal slide with a single reflective bounce',
   });
 });
 
+describe('Stunner (ST) — freeze aura on adjacent enemies', () => {
+  it('a plain enemy piece adjacent to a Stunner has zero destinations', () => {
+    let board = place(createEmptyBoard(), 'd4', 'PE', 'A');
+    board = place(board, 'd5', 'ST', 'B');
+    expect(destinations(board, 'd4')).toEqual([]);
+  });
+
+  it('a frozen piece with a legal move that captures the Stunner has EXACTLY that one destination', () => {
+    let board = place(createEmptyBoard(), 'd4', 'TO', 'A');
+    board = place(board, 'd5', 'ST', 'B'); // adjacent Stunner, also directly capturable by the Rook
+    const moves = generatePseudoLegalMoves(board, 'd4');
+    expect(moves).toHaveLength(1);
+    expect(moves[0]).toMatchObject({ to: 'd5', isCapture: true, capturedCoord: 'd5' });
+  });
+
+  it('the enemy King adjacent to a Stunner is fully unaffected', () => {
+    let board = place(createEmptyBoard(), 'd4', 'RE', 'A');
+    board = place(board, 'd5', 'ST', 'B');
+    expect(destinations(board, 'd4')).toHaveLength(8); // full king move set, including capturing d5 normally
+  });
+
+  it('an ally of the Stunner adjacent to it is unaffected (freeze is enemy-only)', () => {
+    let board = place(createEmptyBoard(), 'd4', 'PE', 'B');
+    board = place(board, 'd5', 'ST', 'B');
+    expect(destinations(board, 'd4').length).toBeGreaterThan(0);
+  });
+
+  it('a piece two squares away from the Stunner is unaffected', () => {
+    let board = place(createEmptyBoard(), 'd4', 'PE', 'A');
+    board = place(board, 'd6', 'ST', 'B');
+    expect(destinations(board, 'd4').length).toBeGreaterThan(0);
+  });
+
+  it('a frozen piece whose slide moves cannot reach the Stunner at all loses every move, with no exception', () => {
+    // A Bishop only ever reaches squares of its own color; d4 is dark, e4 (adjacent, orthogonal)
+    // is a square a Bishop could never step on regardless of the Stunner, so there is no possible
+    // Stunner-capturing move — the freeze leaves it with exactly zero legal moves.
+    let board = place(createEmptyBoard(), 'd4', 'AL', 'A');
+    board = place(board, 'e4', 'ST', 'B');
+    expect(destinations(board, 'd4')).toEqual([]);
+  });
+});
+
 describe('Golem (GL) — armatura blocks capture by weak attackers', () => {
   it('cannot be captured by an attacker at or below the 14pt armor threshold', () => {
     let board = place(createEmptyBoard(), 'd4', 'CA', 'A'); // Cavallo, 12pt

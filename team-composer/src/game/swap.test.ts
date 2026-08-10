@@ -65,4 +65,11 @@ describe('getSwapTargets — Queen-style line of sight', () => {
     board = place(board, 'e4', 'IQ', 'B');
     expect(getSwapTargets(board, 'd4', 'A')).toEqual([]);
   });
+
+  it('is empty when the Mistico itself is adjacent to an enemy Stunner', () => {
+    let board = place(createEmptyBoard(), 'd4', 'MI', 'A');
+    board = place(board, 'd8', 'CA', 'A');
+    board = place(board, 'e4', 'ST', 'B');
+    expect(getSwapTargets(board, 'd4', 'A')).toEqual([]);
+  });
 });

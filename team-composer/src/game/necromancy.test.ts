@@ -42,6 +42,12 @@ describe('getRevivalSquares', () => {
     board = place(board, 'e4', 'IQ', 'B');
     expect(getRevivalSquares(board, 'd4', 'A')).toEqual([]);
   });
+
+  it('is empty when the Necromante itself is adjacent to an enemy Stunner', () => {
+    let board = place(createEmptyBoard(), 'd4', 'NE', 'A');
+    board = place(board, 'e4', 'ST', 'B');
+    expect(getRevivalSquares(board, 'd4', 'A')).toEqual([]);
+  });
 });
 
 describe('getRevivableSiglas', () => {

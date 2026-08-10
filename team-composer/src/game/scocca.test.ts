@@ -94,4 +94,11 @@ describe('getScoccaTargets — aura interactions (README §7)', () => {
     board = place(board, 'e8', 'IQ', 'A'); // ...but this Inquisitore silences that Paladino
     expect(getScoccaTargets(board, 'd4', 'A')).toEqual(['d7']);
   });
+
+  it('is empty when the Arciere itself is adjacent to an enemy Stunner', () => {
+    let board = place(createEmptyBoard(), 'd4', 'AR', 'A');
+    board = place(board, 'd7', 'PE', 'B');
+    board = place(board, 'd5', 'ST', 'B'); // adjacent to the Arciere
+    expect(getScoccaTargets(board, 'd4', 'A')).toEqual([]);
+  });
 });

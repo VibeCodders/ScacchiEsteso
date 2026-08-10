@@ -498,5 +498,15 @@ export function generatePseudoLegalMoves(
       moves.push(move);
     }
   }
+
+  const isFrozen = pieceDef.sigla !== KING_SIGLA && isAdjacentToEnemyStunner(board, from, piece.owner, getPieceDef, dimensions);
+  if (isFrozen) {
+    return moves.filter((m) => {
+      if (!m.isCapture || !m.capturedCoord) return false;
+      const captured = getPieceAt(board, m.capturedCoord);
+      return Boolean(captured && getPieceDef(captured.sigla).stunAura);
+    });
+  }
+
   return moves;
 }

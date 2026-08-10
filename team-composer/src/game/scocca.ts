@@ -12,6 +12,8 @@ import {
 } from './board';
 import { isPathClear } from './lineOfSight';
 import { isShieldedByEgida, isSilenced } from './auras';
+import { isAdjacentToEnemyStunner } from './stun';
+import { getPieceDef } from './moveEngine';
 
 const SCOCCA_DISTANCES = [3, 4] as const;
 
@@ -33,6 +35,7 @@ export function canUseScocca(pieceDef: Piece): boolean {
  */
 export function getScoccaTargets(board: BoardState, from: Coord, owner: Owner, dimensions: BoardDimensions = DEFAULT_BOARD_DIMENSIONS): Coord[] {
   if (isSilenced(board, from, owner, dimensions)) return [];
+  if (isAdjacentToEnemyStunner(board, from, owner, getPieceDef, dimensions)) return [];
 
   const { file, rank } = coordToFileRank(from);
   const results: Coord[] = [];

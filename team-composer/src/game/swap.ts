@@ -10,6 +10,8 @@ import {
 } from './board';
 import { castRay, type Vector } from './lineOfSight';
 import { isSilenced } from './auras';
+import { isAdjacentToEnemyStunner } from './stun';
+import { getPieceDef } from './moveEngine';
 
 /** Same 8-direction table as moveEngine.ts's ABSOLUTE_DIRECTION_VECTORS, duplicated here per the
  *  codebase's existing convention of not sharing this kind of small constant across modules. */
@@ -31,6 +33,7 @@ export function canSwap(pieceDef: Piece): boolean {
  */
 export function getSwapTargets(board: BoardState, from: Coord, owner: Owner, dimensions: BoardDimensions = DEFAULT_BOARD_DIMENSIONS): Coord[] {
   if (isSilenced(board, from, owner, dimensions)) return [];
+  if (isAdjacentToEnemyStunner(board, from, owner, getPieceDef, dimensions)) return [];
 
   const results: Coord[] = [];
 
