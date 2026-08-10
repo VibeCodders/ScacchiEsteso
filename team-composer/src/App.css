@@ -359,6 +359,147 @@
 .punti-diff-over { background: #3b1a1a; color: #f87171; }
 .punti-diff-under { background: #3b2e1a; color: #fbbf24; }
 
+.low-confidence-badge {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #fbbf24;
+  background: #3b2e1a;
+  padding: 1px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+  cursor: help;
+}
+
+.punti-table-sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.punti-table-sortable:hover {
+  color: #f1f5f9;
+}
+
+.sort-arrow {
+  color: #60a5fa;
+}
+
+.punti-table-empty {
+  text-align: center;
+  color: #64748b;
+  padding: 20px;
+}
+
+.punti-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.punti-filter-input {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  padding: 6px 10px;
+  color: #f1f5f9;
+  font-size: 0.85rem;
+  min-width: 220px;
+}
+
+.punti-low-confidence-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: #94a3b8;
+  cursor: pointer;
+}
+
+.scatter-chart-wrapper {
+  margin-bottom: 20px;
+  padding: 12px;
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: 6px;
+}
+
+.scatter-chart {
+  width: 100%;
+  height: auto;
+  max-height: 360px;
+}
+
+.scatter-gridline {
+  stroke: #1e293b;
+  stroke-width: 1;
+}
+
+.scatter-tick-label {
+  fill: #64748b;
+  font-size: 9px;
+}
+
+.scatter-axis-label {
+  fill: #94a3b8;
+  font-size: 10px;
+}
+
+.scatter-reference-line {
+  stroke: #475569;
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
+}
+
+.scatter-point {
+  transition: opacity 0.1s ease;
+}
+
+.scatter-point-group {
+  cursor: pointer;
+}
+
+.scatter-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 10px;
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+.scatter-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.scatter-legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+.scatter-legend-shape {
+  width: 10px;
+  height: 10px;
+  display: inline-block;
+  background: #94a3b8;
+}
+
+.scatter-legend-shape-diamond {
+  transform: rotate(45deg);
+  width: 8px;
+  height: 8px;
+}
+
+.scatter-legend-shape-circle {
+  border-radius: 50%;
+}
+
 .piece-detail-overlay {
   position: fixed;
   inset: 0;

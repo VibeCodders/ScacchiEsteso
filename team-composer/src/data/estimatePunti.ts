@@ -33,10 +33,26 @@ interface Stage1Features {
   leapMobility: number;
   isPawnCategory: number;
   extraEntries: number;
+  resistance: number;
+  immunityCount: number;
+  rangedCapture: number;
+  meleeOnlyCapture: number;
+  extraActionFlags: number;
+}
+
+/** Count of minor "advantageous" boolean flags not already represented by `alternativeActions` —
+ *  aggregated into one feature instead of four separate columns so the parameter count stays sane
+ *  against the ~20-piece stage-1 training set (see `stage1TrainingSet`). */
+function extraActionFlagsOf(piece: Piece): number {
+  return [piece.secondoMovimentoPostCattura, piece.silenzioAttacchiADistanza, piece.saltaInterposizioni, piece.egida]
+    .filter(Boolean).length;
 }
 
 /** Purely structural features used for the mobility-only ("stage 1") regression — no notion of
- *  special mechanics here, those are handled separately in stage 2 (see `specialMechanicBonus`). */
+ *  special mechanics here, those are handled separately in stage 2 (see `specialMechanicBonus`).
+ *  Includes durability/utility properties (`resistance`, `immunityTypes`, ranged/melee-only capture,
+ *  minor action flags) that were previously ignored entirely by the estimator despite being real
+ *  drivers of a piece's in-game power. */
 function stage1FeaturesOf(piece: Piece): Stage1Features {
   let stepSlideMobility = 0;
   let leapMobility = 0;
@@ -50,17 +66,33 @@ function stage1FeaturesOf(piece: Piece): Stage1Features {
     leapMobility,
     isPawnCategory: piece.categoria === 'pedone' ? 1 : 0,
     extraEntries: Math.max(0, piece.moves.length - 1),
+    resistance: piece.resistance,
+    immunityCount: piece.immunityTypes.length,
+    rangedCapture: piece.catturaADistanza ? 1 : 0,
+    meleeOnlyCapture: piece.catturaSoloInMischia ? 1 : 0,
+    extraActionFlags: extraActionFlagsOf(piece),
   };
 }
 
 function stage1FeatureVector(f: Stage1Features): number[] {
-  return [1, f.stepSlideMobility, f.leapMobility, f.isPawnCategory, f.extraEntries];
+  return [
+    1,
+    f.stepSlideMobility,
+    f.leapMobility,
+    f.isPawnCategory,
+    f.extraEntries,
+    f.resistance,
+    f.immunityCount,
+    f.rangedCapture,
+    f.meleeOnlyCapture,
+    f.extraActionFlags,
+  ];
 }
 
 /**
  * Solves `X·β ≈ y` in the least-squares sense via the normal equations `(XᵀX)β = Xᵀy`, solved by
  * Gaussian elimination with partial pivoting. `X` is n×k (first column is normally the intercept,
- * a column of 1s); `y` is length n. No external dependency — the matrices here are tiny (k ≤ 6).
+ * a column of 1s); `y` is length n. No external dependency — the matrices here are tiny (k ≤ 10).
  */
 function solveLeastSquares(X: number[][], y: number[]): number[] {
   const k = X[0].length;
@@ -108,12 +140,14 @@ function stage1TrainingSet(): Piece[] {
 }
 
 /**
- * Stage-1 regression coefficients (intercept, stepSlideMobility, leapMobility, isPawnCategory,
- * extraEntries), fit via `solveLeastSquares` against every "pure movement" roster piece (~20
- * pieces for 5 parameters — a far healthier ratio than a single global slope). Computed once at
- * module load from the live roster (cheap: a ~20×5 matrix) rather than hardcoded from a one-off
- * script run, so it can never silently go stale the way a hand-copied constant could — this is
- * the same lesson the roster-reading `--roster` CLI mode already applies.
+ * Stage-1 regression coefficients — one per `stage1FeatureVector` column (intercept,
+ * stepSlideMobility, leapMobility, isPawnCategory, extraEntries, resistance, immunityCount,
+ * rangedCapture, meleeOnlyCapture, extraActionFlags) — fit via `solveLeastSquares` against every
+ * "pure movement" roster piece (~20 pieces for 10 parameters — still a healthier ratio than a
+ * single global slope, though tighter than before now that durability/utility features were added).
+ * Computed once at module load from the live roster (cheap: a ~20×10 matrix) rather than hardcoded
+ * from a one-off script run, so it can never silently go stale the way a hand-copied constant could
+ * — this is the same lesson the roster-reading `--roster` CLI mode already applies.
  */
 function fitStage1Coefficients(): number[] {
   const trainingSet = stage1TrainingSet();
@@ -128,10 +162,12 @@ function stage1Coefficients(): number[] {
   return stage1CoefficientsCache;
 }
 
+function dotProduct(a: number[], b: number[]): number {
+  return a.reduce((sum, value, i) => sum + value * b[i], 0);
+}
+
 function stage1Estimate(piece: Piece): number {
-  const [intercept, coeffStepSlide, coeffLeap, coeffPawn, coeffExtraEntries] = stage1Coefficients();
-  const f = stage1FeaturesOf(piece);
-  return intercept + coeffStepSlide * f.stepSlideMobility + coeffLeap * f.leapMobility + coeffPawn * f.isPawnCategory + coeffExtraEntries * f.extraEntries;
+  return dotProduct(stage1Coefficients(), stage1FeatureVector(stage1FeaturesOf(piece)));
 }
 
 /**
@@ -145,7 +181,12 @@ function stage1Estimate(piece: Piece): number {
  * regression term the way the stage-1 mobility coefficients are. It will only become a genuine fit
  * once the roster has multiple pieces sharing the same mechanic.
  */
-function computeMechanicBonusTable(): Record<string, number> {
+interface MechanicBonusEntry {
+  value: number;
+  sampleCount: number;
+}
+
+function computeMechanicBonusTable(): Record<string, MechanicBonusEntry> {
   const bonuses: Record<string, number[]> = {};
   for (const piece of ROSTER) {
     if (piece.sigla === 'RE') continue;
@@ -157,24 +198,37 @@ function computeMechanicBonusTable(): Record<string, number> {
       (bonuses.armatura ??= []).push(piece.punti - baseline);
     }
   }
-  const table: Record<string, number> = {};
+  const table: Record<string, MechanicBonusEntry> = {};
   for (const [type, samples] of Object.entries(bonuses)) {
-    table[type] = samples.reduce((a, b) => a + b, 0) / samples.length;
+    table[type] = { value: samples.reduce((a, b) => a + b, 0) / samples.length, sampleCount: samples.length };
   }
   return table;
 }
 
-let mechanicBonusTableCache: Record<string, number> | null = null;
-function mechanicBonusTable(): Record<string, number> {
+let mechanicBonusTableCache: Record<string, MechanicBonusEntry> | null = null;
+function mechanicBonusTable(): Record<string, MechanicBonusEntry> {
   if (!mechanicBonusTableCache) mechanicBonusTableCache = computeMechanicBonusTable();
   return mechanicBonusTableCache;
 }
 
+/** Confidence tier for a mechanic bonus based on how many roster pieces it was averaged over — a
+ *  bonus derived from a single example is not a statistical fit, just the one observed correction
+ *  (see the limitation documented on `computeMechanicBonusTable`), so it's surfaced distinctly from
+ *  one backed by several pieces. */
+function confidenceForSampleCount(sampleCount: number): 'low' | 'medium' | 'high' {
+  if (sampleCount <= 1) return 'low';
+  if (sampleCount === 2) return 'medium';
+  return 'high';
+}
+
+function piecesMechanicTypes(piece: Piece): string[] {
+  const types = piece.alternativeActions.map((a) => a.type);
+  return piece.armatura ? [...types, 'armatura'] : types;
+}
+
 function specialMechanicBonus(piece: Piece): number {
   const table = mechanicBonusTable();
-  const fromActions = piece.alternativeActions.reduce((sum, action) => sum + (table[action.type] ?? 0), 0);
-  const fromArmatura = piece.armatura ? (table.armatura ?? 0) : 0;
-  return fromActions + fromArmatura;
+  return piecesMechanicTypes(piece).reduce((sum, type) => sum + (table[type]?.value ?? 0), 0);
 }
 
 export interface PuntiEstimate {
@@ -185,6 +239,11 @@ export interface PuntiEstimate {
     mobilityContribution: number;
     compoundContribution: number;
     specialMechanicBonus: number;
+    /** 'low' if any mechanic on this piece has a bonus averaged over a single roster example;
+     *  'high' if the piece has no special mechanics at all or all are backed by 3+ examples. */
+    mechanicConfidence: 'low' | 'medium' | 'high';
+    /** Mechanic type names (e.g. 'armatura', 'danno_ad_area') whose bonus rests on a single example. */
+    lowConfidenceMechanics: string[];
   };
 }
 
@@ -200,6 +259,19 @@ export function estimatePunti(piece: Piece): PuntiEstimate {
   const [, coeffStepSlide, coeffLeap, , coeffExtraEntries] = stage1Coefficients();
   const f = stage1FeaturesOf(piece);
   const mechanicBonus = specialMechanicBonus(piece);
+  const table = mechanicBonusTable();
+  const mechanicTypes = piecesMechanicTypes(piece);
+  const lowConfidenceMechanics = mechanicTypes.filter(
+    (type) => confidenceForSampleCount(table[type]?.sampleCount ?? 0) === 'low',
+  );
+  const confidenceRank = { low: 0, medium: 1, high: 2 } as const;
+  const mechanicConfidence = mechanicTypes.reduce<'low' | 'medium' | 'high'>(
+    (worst, type) => {
+      const tier = confidenceForSampleCount(table[type]?.sampleCount ?? 0);
+      return confidenceRank[tier] < confidenceRank[worst] ? tier : worst;
+    },
+    'high',
+  );
 
   return {
     suggestedPunti: Math.max(0, Math.round(stage1Estimate(piece) + mechanicBonus)),
@@ -209,6 +281,8 @@ export function estimatePunti(piece: Piece): PuntiEstimate {
       mobilityContribution: coeffStepSlide * f.stepSlideMobility + coeffLeap * f.leapMobility,
       compoundContribution: coeffExtraEntries * f.extraEntries,
       specialMechanicBonus: mechanicBonus,
+      mechanicConfidence,
+      lowConfidenceMechanics,
     },
   };
 }

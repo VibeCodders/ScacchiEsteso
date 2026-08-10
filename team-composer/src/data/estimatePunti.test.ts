@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { estimatePunti, estimatorFitQuality } from './estimatePunti';
 import { getPieceDef } from '../game/moveEngine';
+import { pieces as ROSTER } from './pieces';
 
 // Mobility-only pieces (no alternativeActions, no armatura) used as a regression guard on the
 // stage-1 OLS fit. This roster's punti are hand-balanced, not derived from a formula, so a linear
@@ -69,6 +70,36 @@ describe('estimatePunti — new pieces produce non-negative, distinct suggestion
     expect(du).toBeGreaterThanOrEqual(0);
     expect(du).toBeLessThan(el);
     expect(el).toBeLessThan(ti);
+  });
+});
+
+describe('estimatePunti — mechanic confidence', () => {
+  it('a piece with armatura (single roster example) is flagged as low confidence', () => {
+    const armored = ROSTER.find((p) => p.armatura);
+    expect(armored).toBeDefined();
+    const { breakdown } = estimatePunti(armored!);
+    expect(breakdown.mechanicConfidence).toBe('low');
+    expect(breakdown.lowConfidenceMechanics).toContain('armatura');
+  });
+
+  it('a pure-movement piece with no special mechanics is high confidence', () => {
+    const { breakdown } = estimatePunti(getPieceDef('AL'));
+    expect(breakdown.mechanicConfidence).toBe('high');
+    expect(breakdown.lowConfidenceMechanics).toEqual([]);
+  });
+});
+
+describe('estimatePunti — durability/utility features are no longer ignored', () => {
+  it('higher resistance, all else equal, never lowers the suggestion', () => {
+    const base = getPieceDef('AL');
+    const tougher = { ...base, resistance: base.resistance + 5 };
+    expect(estimatePunti(tougher).suggestedPunti).toBeGreaterThanOrEqual(estimatePunti(base).suggestedPunti);
+  });
+
+  it('more immunity types, all else equal, never lowers the suggestion', () => {
+    const base = getPieceDef('AL');
+    const moreImmune = { ...base, immunityTypes: [...base.immunityTypes, 'veleno', 'fuoco'] };
+    expect(estimatePunti(moreImmune).suggestedPunti).toBeGreaterThanOrEqual(estimatePunti(base).suggestedPunti);
   });
 });
 
