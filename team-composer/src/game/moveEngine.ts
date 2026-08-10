@@ -234,6 +234,60 @@ function generateCheckersJumpMoves(board: BoardState, from: Coord, owner: Owner,
   return results;
 }
 
+const ALL_DIRECTIONS: readonly Direction[] = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'];
+
+/** A single available hop for a Coniglio mid-chain (or as the first jump): the landing square and
+ *  the enemy square that would be captured if the chain stops immediately after this hop. Unlike
+ *  generateCheckersJumpMoves, capture is NOT baked in here — the hurdle is reported but nothing is
+ *  removed from the board; only the caller (turnManager, once the whole chain ends) finalizes a
+ *  capture, and only for the last hop's hurdle. */
+export interface RabbitHopOption {
+  to: Coord;
+  hurdle: Coord;
+}
+
+/**
+ * All single-hop checkers-style jump options from `from`: an enemy at distance 1 in one of the 8
+ * directions, with the distance-2 landing square EMPTY. `from` may be the piece's original square
+ * (first hop of the turn) or its current mid-chain square (subsequent hops) — the caller
+ * re-invokes this after each hop with the new `from`. Re-jumping the same still-present enemy back
+ * and forth is generated identically to any other hop — that is legal per the confirmed rules,
+ * since nothing is actually removed from the board until the whole chain ends.
+ */
+export function getRabbitHopOptions(board: BoardState, from: Coord, owner: Owner, dimensions: BoardDimensions): RabbitHopOption[] {
+  const results: RabbitHopOption[] = [];
+  const { file: fromFile, rank: fromRank } = coordToFileRank(from);
+
+  for (const relDir of ALL_DIRECTIONS) {
+    const vector = ABSOLUTE_DIRECTION_VECTORS[toAbsoluteDirection(relDir, owner)];
+    const hurdle = fileRankToCoord(fromFile + vector.df, fromRank + vector.dr, dimensions);
+    const to = fileRankToCoord(fromFile + vector.df * 2, fromRank + vector.dr * 2, dimensions);
+    if (!hurdle || !to) continue;
+
+    const hurdleOccupant = getPieceAt(board, hurdle);
+    const landingOccupant = getPieceAt(board, to);
+    if (hurdleOccupant && hurdleOccupant.owner !== owner && !landingOccupant) {
+      results.push({ to, hurdle });
+    }
+  }
+
+  return results;
+}
+
+/** The King-step fallback for a Coniglio: only meaningful to call when getRabbitHopOptions returns
+ *  none. Plain 1-square-in-8-directions step with normal blocking/capture rules. */
+export function getRabbitKingStepMoves(board: BoardState, from: Coord, owner: Owner, dimensions: BoardDimensions): GeneratedMove[] {
+  const kingStepEntry: Move = {
+    directions: [...ALL_DIRECTIONS],
+    minSteps: 1,
+    maxSteps: 1,
+    capture: true,
+    captureMode: 'melee',
+    movementType: 'step',
+  };
+  return generateStepOrSlideMoves(board, from, owner, kingStepEntry, 1, false, dimensions);
+}
+
 const DIAGONAL_DIRECTIONS: readonly Direction[] = ['ne', 'nw', 'se', 'sw'];
 
 /**

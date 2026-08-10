@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createInitialGameState, applyTurn, skipExtraMove, applyScocca, applySwap, applyRevive } from './turnManager';
+import { createInitialGameState, applyTurn, skipExtraMove, applyScocca, applySwap, applyRevive, stopRabbitChain, getLegalMovesForTurn, RABBIT_CHAIN_SAFETY_CAP } from './turnManager';
 import { createEmptyBoard, createPieceInstance, setPieceAt, type BoardState, type Coord } from './board';
 import { generatePseudoLegalMoves } from './moveEngine';
 
@@ -411,6 +411,148 @@ describe('applyTurn — Berserker bonus move (README §4.2)', () => {
 
     const result = skipExtraMove(state);
     expect(result.ok).toBe(false);
+  });
+});
+
+describe('Coniglio (CN) — checkers-style jump-chain with deferred, single final capture', () => {
+  it('when a jump is available, only hop destinations are legal — the King-step fallback is excluded even though geometrically available', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'CN', 'A');
+    board = place(board, 'e5', 'PE', 'B'); // adjacent enemy, f6 empty — a hop is available
+    const state = createInitialGameState(board, 'A');
+
+    expect(getLegalMovesForTurn(state, 'd4').map((m) => m.to)).toEqual(['f6']);
+  });
+
+  it('with no jump available, falls back to the King-step move set', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'CN', 'A');
+    const state = createInitialGameState(board, 'A');
+
+    expect(getLegalMovesForTurn(state, 'd4').map((m) => m.to).sort()).toHaveLength(8);
+  });
+
+  it('playing a hop keeps the turn with the same player, sets pendingRabbitChain, and does not yet remove the hurdle or push a history entry', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'CN', 'A');
+    board = place(board, 'e5', 'PE', 'B');
+    const state = createInitialGameState(board, 'A');
+
+    const result = applyTurn(state, 'd4', 'f6');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.state.turn).toBe('A');
+    expect(result.state.turnNumber).toBe(1);
+    expect(result.state.pendingRabbitChain).toEqual({ from: 'd4', at: 'f6', lastHurdle: 'e5', hopCount: 1 });
+    expect(result.state.board.get('e5')?.sigla).toBe('PE'); // hurdle not captured yet
+    expect(result.state.board.get('f6')?.sigla).toBe('CN'); // piece relocated
+    expect(result.state.board.get('d4')).toBeUndefined();
+    expect(result.state.history).toHaveLength(0);
+  });
+
+  it('allows re-jumping the same still-present enemy back and forth mid-chain', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'CN', 'A');
+    board = place(board, 'e5', 'PE', 'B');
+    let state = createInitialGameState(board, 'A');
+    state = (applyTurn(state, 'd4', 'f6') as { ok: true; state: typeof state }).state;
+
+    // f6 -> d4 jumps back over the same e5 enemy in the opposite direction.
+    const result = applyTurn(state, 'f6', 'd4');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.pendingRabbitChain).toEqual({ from: 'd4', at: 'd4', lastHurdle: 'e5', hopCount: 2 });
+    expect(result.state.board.get('e5')?.sigla).toBe('PE'); // still not captured
+  });
+
+  it('only the piece at the chain\'s current square may act — attempting to move a different piece is rejected', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'CN', 'A');
+    board = place(board, 'e5', 'PE', 'B');
+    board = place(board, 'a1', 'TO', 'A');
+    let state = createInitialGameState(board, 'A');
+    state = (applyTurn(state, 'd4', 'f6') as { ok: true; state: typeof state }).state;
+
+    const result = applyTurn(state, 'a1', 'a4');
+    expect(result.ok).toBe(false);
+  });
+
+  it('stopRabbitChain captures only the last-jumped hurdle, leaves earlier chain hurdles on the board, pushes exactly one history entry, and passes the turn', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'CN', 'A');
+    board = place(board, 'e5', 'PE', 'B'); // first hurdle, d4 -> f6
+    board = place(board, 'e7', 'PG', 'B'); // second hurdle, f6 -> d8
+    let state = createInitialGameState(board, 'A');
+    state = (applyTurn(state, 'd4', 'f6') as { ok: true; state: typeof state }).state;
+    state = (applyTurn(state, 'f6', 'd8') as { ok: true; state: typeof state }).state;
+
+    const result = stopRabbitChain(state);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.state.board.get('e7')).toBeUndefined(); // last-jumped hurdle: captured
+    expect(result.state.board.get('e5')?.sigla).toBe('PE'); // earlier hurdle: still on the board
+    expect(result.state.board.get('d8')?.sigla).toBe('CN');
+    expect(result.state.pendingRabbitChain).toBeNull();
+    expect(result.state.turn).toBe('B');
+    expect(result.state.turnNumber).toBe(2);
+    expect(result.state.history).toHaveLength(1);
+    expect(result.state.history[0]).toMatchObject({
+      from: 'd4', to: 'd8', sigla: 'CN', isCapture: true, capturedCoord: 'e7', capturedSigla: 'PG',
+    });
+    expect(result.state.captured.B.map((p) => p.sigla)).toEqual(['PG']);
+  });
+
+  it('stopRabbitChain is rejected when there is no pending chain', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    const state = createInitialGameState(board, 'A');
+    expect(stopRabbitChain(state).ok).toBe(false);
+  });
+
+  it('a hop that would leave the mover\'s own king in check is excluded from the legal set', () => {
+    // King on d1, Coniglio on d4 blocking a Rook's file check from d8; jumping off the file
+    // (d4 -> f6, ignoring the e5 hurdle) would expose the King, so it must not be offered —
+    // the piece falls back to its King-step move instead.
+    let board = place(createEmptyBoard(), 'd1', 'RE', 'A');
+    board = place(board, 'h8', 'RE', 'B');
+    board = place(board, 'd4', 'CN', 'A');
+    board = place(board, 'e5', 'PE', 'B');
+    board = place(board, 'd8', 'TO', 'B');
+    const state = createInitialGameState(board, 'A');
+
+    const destinations = getLegalMovesForTurn(state, 'd4').map((m) => m.to);
+    expect(destinations).not.toContain('f6');
+    expect(destinations).toContain('d3'); // King-step fallback still available
+  });
+
+  it('caps the total number of hops in a single chain as a safety net against unbounded loops', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'CN', 'A');
+    board = place(board, 'e5', 'PE', 'B');
+    let state = createInitialGameState(board, 'A');
+
+    // Bounce d4 <-> f6 over the same e5 enemy until the safety cap is reached.
+    let at: 'd4' | 'f6' = 'd4';
+    for (let i = 0; i < RABBIT_CHAIN_SAFETY_CAP; i++) {
+      const to: 'd4' | 'f6' = at === 'd4' ? 'f6' : 'd4';
+      const result = applyTurn(state, at, to);
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      state = result.state;
+      at = to;
+    }
+
+    const beyondCap = applyTurn(state, at, at === 'd4' ? 'f6' : 'd4');
+    expect(beyondCap.ok).toBe(false);
   });
 });
 

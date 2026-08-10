@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { generatePseudoLegalMoves } from './moveEngine';
+import { generatePseudoLegalMoves, getRabbitHopOptions, getRabbitKingStepMoves } from './moveEngine';
 import { createEmptyBoard, createPieceInstance, setPieceAt, type BoardState } from './board';
 
 function place(board: BoardState, coord: string, sigla: string, owner: 'A' | 'B' = 'A', hasMoved = false) {
@@ -357,6 +357,54 @@ describe('Rinoceronte (RN) — union of 1-step and bishop-slide', () => {
     expect(moves).toContain('f6'); // capture on first obstruction
     expect(moves).not.toContain('g7');
     expect(moves).toContain('d5'); // king-step distance-1 unaffected
+  });
+});
+
+describe('getRabbitHopOptions (Coniglio building block) — checkers-style hop geometry, deferred capture', () => {
+  it('returns one hop per adjacent enemy with an empty landing square', () => {
+    let board = place(createEmptyBoard(), 'd4', 'CN', 'A');
+    board = place(board, 'e5', 'PE', 'B');
+    const hops = getRabbitHopOptions(board, 'd4', 'A', { width: 8, height: 8 });
+    expect(hops).toEqual([{ to: 'f6', hurdle: 'e5' }]);
+  });
+
+  it('returns nothing for an adjacent enemy whose landing square is occupied', () => {
+    let board = place(createEmptyBoard(), 'd4', 'CN', 'A');
+    board = place(board, 'e5', 'PE', 'B');
+    board = place(board, 'f6', 'PE', 'A');
+    const hops = getRabbitHopOptions(board, 'd4', 'A', { width: 8, height: 8 });
+    expect(hops).toEqual([]);
+  });
+
+  it('returns nothing for an adjacent ally — only enemies can be jumped', () => {
+    let board = place(createEmptyBoard(), 'd4', 'CN', 'A');
+    board = place(board, 'e5', 'PE', 'A');
+    const hops = getRabbitHopOptions(board, 'd4', 'A', { width: 8, height: 8 });
+    expect(hops).toEqual([]);
+  });
+
+  it('finds hops in all 8 directions, not just diagonal', () => {
+    let board = place(createEmptyBoard(), 'd4', 'CN', 'A');
+    board = place(board, 'd5', 'PE', 'B'); // orthogonal north
+    const hops = getRabbitHopOptions(board, 'd4', 'A', { width: 8, height: 8 });
+    expect(hops).toEqual([{ to: 'd6', hurdle: 'd5' }]);
+  });
+});
+
+describe('getRabbitKingStepMoves (Coniglio building block) — plain 1-step fallback', () => {
+  it('behaves like a plain King entry: 8 destinations from the center of an empty board', () => {
+    const board = place(createEmptyBoard(), 'd4', 'CN', 'A');
+    const moves = getRabbitKingStepMoves(board, 'd4', 'A', { width: 8, height: 8 });
+    expect(moves.map((m) => m.to).sort()).toHaveLength(8);
+  });
+
+  it('captures a King-step enemy in melee mode', () => {
+    let board = place(createEmptyBoard(), 'd4', 'CN', 'A');
+    board = place(board, 'd5', 'PE', 'B');
+    const moves = getRabbitKingStepMoves(board, 'd4', 'A', { width: 8, height: 8 });
+    const capture = moves.find((m) => m.to === 'd5');
+    expect(capture?.isCapture).toBe(true);
+    expect(capture?.captureMode).toBe('melee');
   });
 });
 

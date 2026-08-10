@@ -8,7 +8,7 @@ import { canUseScocca, getScoccaTargets } from '../game/scocca';
 import { canSwap, getSwapTargets } from '../game/swap';
 import { canRevive, getRevivalSquares, getRevivableSiglas } from '../game/necromancy';
 import { canMimic, getOrphanThreats } from '../game/orphan';
-import { createInitialGameState, applyTurn, applyScocca, applySwap, applyRevive, getLegalMovesForTurn, skipExtraMove, type GameState } from '../game/turnManager';
+import { createInitialGameState, applyTurn, applyScocca, applySwap, applyRevive, getLegalMovesForTurn, skipExtraMove, stopRabbitChain, type GameState } from '../game/turnManager';
 import { chooseBotAction, applyBotAction } from '../game/bot';
 import { pieces, sortSiglasByPunti } from '../data/pieces';
 import type { Coord, Owner } from '../game/board';
@@ -50,7 +50,7 @@ function GameScreen() {
   const [orphanMimicSource, setOrphanMimicSource] = useState<Coord | null>(null);
   const [actionMode, setActionMode] = useState<'scocca' | 'swap' | 'revive' | null>(null);
 
-  const effectiveSelected = gameState?.pendingExtraMove ?? selected;
+  const effectiveSelected = gameState?.pendingExtraMove ?? gameState?.pendingRabbitChain?.at ?? selected;
 
   const botOwner: Owner | null = mode === 'pvc' ? (humanOwner === 'A' ? 'B' : 'A') : null;
   const isGameOver = (state: GameState) => state.status === 'checkmate' || state.status === 'stalemate' || state.status === 'anti_stalemate';
@@ -225,6 +225,13 @@ function GameScreen() {
       return; // no other square is selectable while the Berserker's bonus move is pending
     }
 
+    if (gameState.pendingRabbitChain) {
+      if (legalDestinations.includes(coord)) {
+        attemptMove(gameState.pendingRabbitChain.at, coord);
+      }
+      return; // no other square is selectable while the Coniglio's jump-chain is pending
+    }
+
     if (actionMode && selected) {
       if (legalDestinations.includes(coord)) {
         if (actionMode === 'scocca') commitScocca(selected, coord);
@@ -262,6 +269,7 @@ function GameScreen() {
   const handleDragStart = (coord: Coord) => {
     if (gameOver || isBotTurn || pendingPromotion || pendingRevival || pendingMimicChoice) return;
     if (gameState.pendingExtraMove) return; // the bonus square is already the effective selection
+    if (gameState.pendingRabbitChain) return; // the chain's current square is already the effective selection
     const pieceHere = gameState.board.get(coord);
     if (pieceHere && pieceHere.owner === gameState.turn) {
       selectPiece(coord);
@@ -270,6 +278,18 @@ function GameScreen() {
 
   const handleSkipExtraMove = () => {
     const result = skipExtraMove(gameState);
+    if (result.ok) {
+      setGameState(result.state);
+      setOrientation(result.state.turn);
+      setSelected(null);
+      setError(null);
+    } else {
+      setError(result.reason);
+    }
+  };
+
+  const handleStopRabbitChain = () => {
+    const result = stopRabbitChain(gameState);
     if (result.ok) {
       setGameState(result.state);
       setOrientation(result.state.turn);
@@ -312,7 +332,7 @@ function GameScreen() {
             onSquareClick={handleSquareClick}
             highlightedSquares={legalDestinations}
             selectedSquare={effectiveSelected}
-            onPieceDragStart={gameOver || isBotTurn || pendingPromotion || pendingRevival || pendingMimicChoice || gameState.pendingExtraMove || actionMode ? undefined : handleDragStart}
+            onPieceDragStart={gameOver || isBotTurn || pendingPromotion || pendingRevival || pendingMimicChoice || gameState.pendingExtraMove || gameState.pendingRabbitChain || actionMode ? undefined : handleDragStart}
             onSquareDrop={gameOver || isBotTurn || pendingPromotion || pendingRevival || pendingMimicChoice || actionMode ? undefined : handleSquareClick}
             flashSquares={lastMoveFlashSquares}
             flashVersion={gameState.history.length}
@@ -321,19 +341,19 @@ function GameScreen() {
             <button className="btn-improve" onClick={() => setOrientation((o) => (o === 'A' ? 'B' : 'A'))}>
               🔄 Gira scacchiera (vista: {ownerLabel(orientation)})
             </button>
-            {selected && !gameState.pendingExtraMove && canUseScocca(getPieceDef(gameState.board.get(selected)!.sigla))
+            {selected && !gameState.pendingExtraMove && !gameState.pendingRabbitChain && canUseScocca(getPieceDef(gameState.board.get(selected)!.sigla))
               && getScoccaTargets(gameState.board, selected, gameState.board.get(selected)!.owner).length > 0 && (
               <button className="btn-auto" onClick={() => setActionMode((m) => (m === 'scocca' ? null : 'scocca'))}>
                 {actionMode === 'scocca' ? '↩️ Annulla Scoccare' : '🏹 Scoccare'}
               </button>
             )}
-            {selected && !gameState.pendingExtraMove && canSwap(getPieceDef(gameState.board.get(selected)!.sigla))
+            {selected && !gameState.pendingExtraMove && !gameState.pendingRabbitChain && canSwap(getPieceDef(gameState.board.get(selected)!.sigla))
               && getSwapTargets(gameState.board, selected, gameState.board.get(selected)!.owner).length > 0 && (
               <button className="btn-auto" onClick={() => setActionMode((m) => (m === 'swap' ? null : 'swap'))}>
                 {actionMode === 'swap' ? '↩️ Annulla Scambio' : '🔀 Scambia posizione'}
               </button>
             )}
-            {selected && !gameState.pendingExtraMove && canRevive(getPieceDef(gameState.board.get(selected)!.sigla))
+            {selected && !gameState.pendingExtraMove && !gameState.pendingRabbitChain && canRevive(getPieceDef(gameState.board.get(selected)!.sigla))
               && getRevivableSiglas(gameState.captured[gameState.board.get(selected)!.owner]).length > 0
               && getRevivalSquares(gameState.board, selected, gameState.board.get(selected)!.owner).length > 0 && (
               <button className="btn-auto" onClick={() => setActionMode((m) => (m === 'revive' ? null : 'revive'))}>
@@ -353,6 +373,16 @@ function GameScreen() {
             <div className="panel" style={{ textAlign: 'center' }}>
               <p>⚔️ Movimento extra Berserker disponibile (senza cattura).</p>
               <button className="btn-reset" onClick={handleSkipExtraMove}>Salta movimento extra</button>
+            </div>
+          )}
+
+          {gameState.pendingRabbitChain && !isBotTurn && (
+            <div className="panel" style={{ textAlign: 'center' }}>
+              <p>
+                🐇 Catena di salti del Coniglio: continua saltando un altro nemico, oppure fermati per catturare{' '}
+                {gameState.board.get(gameState.pendingRabbitChain.lastHurdle)?.sigla} in {gameState.pendingRabbitChain.lastHurdle}.
+              </p>
+              <button className="btn-reset" onClick={handleStopRabbitChain}>Ferma la catena e cattura</button>
             </div>
           )}
 

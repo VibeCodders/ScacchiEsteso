@@ -12,6 +12,7 @@ import {
   applySwap,
   applyRevive,
   skipExtraMove,
+  stopRabbitChain,
   getLegalMovesForTurn,
   type ApplyTurnResult,
   type GameState,
@@ -36,7 +37,8 @@ export type BotAction =
   | { kind: 'scocca'; from: Coord; target: Coord }
   | { kind: 'swap'; from: Coord; target: Coord }
   | { kind: 'revive'; from: Coord; target: Coord; sigla: string }
-  | { kind: 'skipExtraMove' };
+  | { kind: 'skipExtraMove' }
+  | { kind: 'stopRabbitChain' };
 
 export function applyBotAction(state: GameState, action: BotAction): ApplyTurnResult {
   switch (action.kind) {
@@ -50,6 +52,8 @@ export function applyBotAction(state: GameState, action: BotAction): ApplyTurnRe
       return applyRevive(state, action.from, action.target, action.sigla);
     case 'skipExtraMove':
       return skipExtraMove(state);
+    case 'stopRabbitChain':
+      return stopRabbitChain(state);
   }
 }
 
@@ -63,6 +67,15 @@ export function generateBotActions(state: GameState, owner: Owner): BotAction[] 
       actions.push({ kind: 'move', from, to: move.to });
     }
     actions.push({ kind: 'skipExtraMove' });
+    return actions;
+  }
+
+  if (state.pendingRabbitChain) {
+    const from = state.pendingRabbitChain.at;
+    for (const move of getLegalMovesForTurn(state, from)) {
+      actions.push({ kind: 'move', from, to: move.to });
+    }
+    actions.push({ kind: 'stopRabbitChain' });
     return actions;
   }
 

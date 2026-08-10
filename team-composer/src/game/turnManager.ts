@@ -3,6 +3,7 @@ import {
   coordToFileRank,
   fileRankToCoord,
   getPieceAt,
+  movePiece,
   removePieceAt,
   setPieceAt,
   swapPieces,
@@ -13,7 +14,7 @@ import {
   type Owner,
   type PieceInstance,
 } from './board';
-import { applyMove, getPieceDef, type GeneratedMove } from './moveEngine';
+import { applyMove, getPieceDef, getRabbitHopOptions, getRabbitKingStepMoves, type GeneratedMove, type RabbitHopOption } from './moveEngine';
 import { getLegalMoves, isCheckmate, isKingInCheck, isStalemate } from './check';
 import { getPromotionOptions, isPromotionMove } from './promotion';
 import { canUseScocca, getScoccaTargets } from './scocca';
@@ -78,6 +79,15 @@ export interface GameState {
    */
   pendingExtraMove: Coord | null;
   /**
+   * Set while a Coniglio's checkers-style jump-chain is in progress: `from` is the piece's
+   * ORIGINAL square this turn, `at` is its current (post-hop) square, `lastHurdle` is the enemy
+   * square that would be captured if the chain stops now. `applyTurn` only accepts further hops
+   * from `at`; `stopRabbitChain` finalizes the turn, capturing only `lastHurdle` — every other
+   * enemy jumped earlier in the chain remains on the board. Mutually exclusive with
+   * `pendingExtraMove` by construction (no piece has both mechanics).
+   */
+  pendingRabbitChain: { from: Coord; at: Coord; lastHurdle: Coord; hopCount: number } | null;
+  /**
    * README §8.1 — consecutive turns (plies) with no capture and no pawn-category move. Resets to
    * 0 on any capture, any "pedone"-category piece move, a Mistico swap, or a Necromante revival
    * (per the user's clarification: any board-changing special action counts as progress, not just
@@ -123,6 +133,7 @@ export function createInitialGameState(board: BoardState, firstTurn: Owner = 'A'
     status: computeStatus(board, firstTurn, 0, dimensions),
     enPassantTarget: null,
     pendingExtraMove: null,
+    pendingRabbitChain: null,
     turnsSinceProgress: 0,
   };
 }
@@ -155,6 +166,56 @@ function computeEnPassantCapture(
   return { from, to: enPassantTarget, isCapture: true, capturedCoord, captureMode: 'melee', movementType: 'step' };
 }
 
+/** Safety cap on the total number of hops in a single Coniglio chain — purely to bound the
+ *  worst case (re-jumping the same enemy back and forth is legal and unbounded in principle);
+ *  no normal game ever approaches this. */
+export const RABBIT_CHAIN_SAFETY_CAP = 100;
+
+/** A hop doesn't remove any piece from the board (capture is deferred), so "does this hop leave
+ *  my own king in check" is evaluated by relocating the mover only, never removing the hurdle. */
+function isRabbitHopKingSafe(board: BoardState, hop: RabbitHopOption, owner: Owner, from: Coord, dimensions: BoardDimensions): boolean {
+  const resultingBoard = movePiece(board, from, hop.to);
+  return !isKingInCheck(resultingBoard, owner, dimensions);
+}
+
+function rabbitHopsToMoves(board: BoardState, hops: RabbitHopOption[], owner: Owner, from: Coord, dimensions: BoardDimensions): GeneratedMove[] {
+  return hops
+    .filter((hop) => isRabbitHopKingSafe(board, hop, owner, from, dimensions))
+    .map((hop) => ({ from, to: hop.to, isCapture: false, captureMode: 'leap' as const, movementType: 'leap' as const }));
+}
+
+/** Legal moves/hops for a Coniglio's FIRST action of the turn (not mid-chain): if any hops are
+ *  available from `from` AND at least one survives king-safety filtering, those are the only
+ *  legal destinations (jump takes priority over the King-step fallback); otherwise falls back to
+ *  the King-step move — including when every geometrically available hop is pinned-illegal, since
+ *  a jump nobody may legally play isn't really "available" for this piece's own priority rule. */
+function getRabbitFirstMoveOptions(state: GameState, from: Coord, owner: Owner): GeneratedMove[] {
+  const hops = getRabbitHopOptions(state.board, from, owner, state.dimensions);
+  const safeHops = rabbitHopsToMoves(state.board, hops, owner, from, state.dimensions);
+  if (safeHops.length > 0) return safeHops;
+
+  return getRabbitKingStepMoves(state.board, from, owner, state.dimensions).filter((move) => {
+    const resultingBoard = applyMove(state.board, move);
+    return !isKingInCheck(resultingBoard, owner, state.dimensions);
+  });
+}
+
+/** Legal next-hop destinations for a Coniglio already mid-chain. */
+function getRabbitChainContinuationOptions(state: GameState): GeneratedMove[] {
+  if (!state.pendingRabbitChain) return [];
+  const { at } = state.pendingRabbitChain;
+  const piece = getPieceAt(state.board, at);
+  if (!piece) return [];
+  const hops = getRabbitHopOptions(state.board, at, piece.owner, state.dimensions);
+  return rabbitHopsToMoves(state.board, hops, piece.owner, at, state.dimensions);
+}
+
+/** The hurdle that would be captured if the chain stopped right after this hop, from the same
+ *  set of options `getRabbitFirstMoveOptions`/`getRabbitChainContinuationOptions` computed. */
+function findRabbitHurdle(board: BoardState, from: Coord, to: Coord, owner: Owner, dimensions: BoardDimensions): Coord | undefined {
+  return getRabbitHopOptions(board, from, owner, dimensions).find((hop) => hop.to === to)?.hurdle;
+}
+
 /**
  * Legal moves for the piece at `from`, including the en passant capture when currently available.
  * If the piece is an Orfano currently threatened (README: "ha tutti i poteri di chi lo tiene in
@@ -166,6 +227,13 @@ function computeEnPassantCapture(
 export function getLegalMovesForTurn(state: GameState, from: Coord, orphanMimicSource?: Coord): GeneratedMove[] {
   const piece = getPieceAt(state.board, from);
   if (!piece) return [];
+
+  if (getPieceDef(piece.sigla).catenaSaltiConCatturaFinale) {
+    if (state.pendingRabbitChain) {
+      return from === state.pendingRabbitChain.at ? getRabbitChainContinuationOptions(state) : [];
+    }
+    return getRabbitFirstMoveOptions(state, from, piece.owner);
+  }
 
   if (canMimic(getPieceDef(piece.sigla))) {
     const threats = getOrphanThreats(state.board, from, piece.owner, state.dimensions);
@@ -270,6 +338,7 @@ function finalizeTurn(state: GameState, piece: PieceInstance, move: GeneratedMov
     winner: resolveWinner(status, outcome.nextBoard, piece.owner, state.dimensions),
     enPassantTarget: computeEnPassantTargetAfter(piece, move, state.dimensions),
     pendingExtraMove: null,
+    pendingRabbitChain: null,
     turnsSinceProgress,
   };
 }
@@ -287,12 +356,96 @@ function enterExtraMovePhase(state: GameState, piece: PieceInstance, outcome: Mo
     winner: undefined,
     enPassantTarget: null,
     pendingExtraMove: outcome.historyEntry.to,
+    pendingRabbitChain: null,
     turnsSinceProgress: state.turnsSinceProgress, // the turn isn't finalized yet — resolved once the bonus move (or a skip) completes it
   };
 }
 
 function triggersExtraMove(pieceDef: ReturnType<typeof getPieceDef>, move: GeneratedMove): boolean {
   return Boolean(pieceDef.secondoMovimentoPostCattura) && move.isCapture && move.captureMode === 'melee';
+}
+
+/** A Coniglio move is a hop (rather than its King-step fallback) exactly when it came from
+ *  getRabbitHopOptions — the only Coniglio moves with captureMode 'leap'; the King-step fallback
+ *  always has captureMode 'melee'. */
+function isRabbitHop(pieceDef: ReturnType<typeof getPieceDef>, move: GeneratedMove): boolean {
+  return Boolean(pieceDef.catenaSaltiConCatturaFinale) && move.captureMode === 'leap';
+}
+
+/** Enters (or continues) a Coniglio's jump-chain: relocates the piece without capturing anything
+ *  (capture is deferred until the chain ends), keeps the turn with the acting player, and does
+ *  not push a history entry yet — the whole chain becomes exactly one history entry, pushed by
+ *  `stopRabbitChain`. */
+function enterRabbitChainPhase(state: GameState, piece: PieceInstance, chainFrom: Coord, hop: GeneratedMove, hurdle: Coord): GameState {
+  const nextBoard = movePiece(state.board, hop.from, hop.to);
+  const hopCount = (state.pendingRabbitChain?.hopCount ?? 0) + 1;
+  return {
+    board: nextBoard,
+    dimensions: state.dimensions,
+    turn: piece.owner,
+    turnNumber: state.turnNumber,
+    history: state.history,
+    captured: state.captured,
+    status: computeStatus(nextBoard, piece.owner, state.turnsSinceProgress, state.dimensions),
+    winner: undefined,
+    enPassantTarget: null,
+    pendingExtraMove: null,
+    pendingRabbitChain: { from: chainFrom, at: hop.to, lastHurdle: hurdle, hopCount },
+    turnsSinceProgress: state.turnsSinceProgress, // not finalized yet — resolved once the chain stops
+  };
+}
+
+/**
+ * Ends a Coniglio's jump-chain (README: only the LAST enemy jumped over is actually captured;
+ * every other enemy hopped earlier in the chain remains on the board). Pushes exactly one
+ * `HistoryEntry` for the whole chain (original square → final square) and finalizes the turn.
+ */
+export function stopRabbitChain(state: GameState): ApplyTurnResult {
+  if (!state.pendingRabbitChain) {
+    return { ok: false, reason: 'Nessuna catena di salti da fermare.' };
+  }
+  const { from, at, lastHurdle } = state.pendingRabbitChain;
+  const piece = getPieceAt(state.board, at);
+  const capturedPiece = getPieceAt(state.board, lastHurdle);
+  if (!piece || !capturedPiece) {
+    return { ok: false, reason: 'Stato della catena di salti non valido.' };
+  }
+
+  const nextBoard = removePieceAt(state.board, lastHurdle);
+  const nextCaptured: Record<Owner, PieceInstance[]> = { ...state.captured, [capturedPiece.owner]: [...state.captured[capturedPiece.owner], capturedPiece] };
+
+  const historyEntry: HistoryEntry = {
+    turnNumber: state.turnNumber,
+    owner: piece.owner,
+    from,
+    to: at,
+    sigla: piece.sigla,
+    isCapture: true,
+    capturedCoord: lastHurdle,
+    capturedSigla: capturedPiece.sigla,
+  };
+
+  const nextTurn: Owner = piece.owner === 'A' ? 'B' : 'A';
+  const turnsSinceProgress = 0; // a capture — always progress
+  const status = computeStatus(nextBoard, nextTurn, turnsSinceProgress, state.dimensions);
+
+  return {
+    ok: true,
+    state: {
+      board: nextBoard,
+      dimensions: state.dimensions,
+      turn: nextTurn,
+      turnNumber: state.turnNumber + 1,
+      history: [...state.history, historyEntry],
+      captured: nextCaptured,
+      status,
+      winner: resolveWinner(status, nextBoard, piece.owner, state.dimensions),
+      enPassantTarget: null,
+      pendingExtraMove: null,
+      pendingRabbitChain: null,
+      turnsSinceProgress,
+    },
+  };
 }
 
 /**
@@ -318,6 +471,24 @@ export function applyTurn(state: GameState, from: Coord, to: Coord, promotionCho
     return { ok: false, reason: 'Non è il turno di questo giocatore.' };
   }
 
+  if (state.pendingRabbitChain) {
+    if (from !== state.pendingRabbitChain.at) {
+      return { ok: false, reason: 'Devi continuare (o fermare) la catena di salti del Coniglio.' };
+    }
+    if (state.pendingRabbitChain.hopCount >= RABBIT_CHAIN_SAFETY_CAP) {
+      return { ok: false, reason: 'Limite massimo di salti raggiunto: ferma la catena.' };
+    }
+    const hop = getRabbitChainContinuationOptions(state).find((m) => m.to === to);
+    if (!hop) {
+      return { ok: false, reason: `Salto non legale: ${from} → ${to}.` };
+    }
+    const hurdle = findRabbitHurdle(state.board, from, to, piece.owner, state.dimensions);
+    if (!hurdle) {
+      return { ok: false, reason: `Salto non legale: ${from} → ${to}.` };
+    }
+    return { ok: true, state: enterRabbitChainPhase(state, piece, state.pendingRabbitChain.from, hop, hurdle) };
+  }
+
   if (state.pendingExtraMove) {
     if (from !== state.pendingExtraMove) {
       return { ok: false, reason: 'Devi prima completare (o saltare) il movimento extra del Berserker.' };
@@ -340,6 +511,15 @@ export function applyTurn(state: GameState, from: Coord, to: Coord, promotionCho
   }
 
   const pieceDef = getPieceDef(piece.sigla);
+
+  if (isRabbitHop(pieceDef, move)) {
+    const hurdle = findRabbitHurdle(state.board, from, to, piece.owner, state.dimensions);
+    if (!hurdle) {
+      return { ok: false, reason: `Salto non legale: ${from} → ${to}.` };
+    }
+    return { ok: true, state: enterRabbitChainPhase(state, piece, from, move, hurdle) };
+  }
+
   if (isPromotionMove(pieceDef, piece.owner, to, state.dimensions)) {
     const options = getPromotionOptions(pieceDef);
     if (!promotionChoice) {
@@ -379,6 +559,7 @@ export function skipExtraMove(state: GameState): ApplyTurnResult {
       status,
       winner: resolveWinner(status, state.board, state.turn, state.dimensions),
       pendingExtraMove: null,
+      pendingRabbitChain: null,
       turnsSinceProgress,
     },
   };
@@ -396,6 +577,9 @@ export function applyScocca(state: GameState, from: Coord, target: Coord): Apply
   }
   if (state.pendingExtraMove) {
     return { ok: false, reason: 'Devi prima completare (o saltare) il movimento extra del Berserker.' };
+  }
+  if (state.pendingRabbitChain) {
+    return { ok: false, reason: 'Devi prima continuare (o fermare) la catena di salti del Coniglio.' };
   }
 
   const piece = getPieceAt(state.board, from);
@@ -455,6 +639,7 @@ export function applyScocca(state: GameState, from: Coord, target: Coord): Apply
       winner: resolveWinner(status, nextBoard, piece.owner, state.dimensions),
       enPassantTarget: null,
       pendingExtraMove: null,
+      pendingRabbitChain: null,
       turnsSinceProgress,
     },
   };
@@ -471,6 +656,9 @@ export function applySwap(state: GameState, from: Coord, target: Coord): ApplyTu
   }
   if (state.pendingExtraMove) {
     return { ok: false, reason: 'Devi prima completare (o saltare) il movimento extra del Berserker.' };
+  }
+  if (state.pendingRabbitChain) {
+    return { ok: false, reason: 'Devi prima continuare (o fermare) la catena di salti del Coniglio.' };
   }
 
   const piece = getPieceAt(state.board, from);
@@ -524,6 +712,7 @@ export function applySwap(state: GameState, from: Coord, target: Coord): ApplyTu
       winner: resolveWinner(status, nextBoard, piece.owner, state.dimensions),
       enPassantTarget: null,
       pendingExtraMove: null,
+      pendingRabbitChain: null,
       turnsSinceProgress,
     },
   };
@@ -541,6 +730,9 @@ export function applyRevive(state: GameState, from: Coord, target: Coord, sigla:
   }
   if (state.pendingExtraMove) {
     return { ok: false, reason: 'Devi prima completare (o saltare) il movimento extra del Berserker.' };
+  }
+  if (state.pendingRabbitChain) {
+    return { ok: false, reason: 'Devi prima continuare (o fermare) la catena di salti del Coniglio.' };
   }
 
   const piece = getPieceAt(state.board, from);
@@ -605,6 +797,7 @@ export function applyRevive(state: GameState, from: Coord, target: Coord, sigla:
       winner: resolveWinner(status, nextBoard, piece.owner, state.dimensions),
       enPassantTarget: null,
       pendingExtraMove: null,
+      pendingRabbitChain: null,
       turnsSinceProgress,
     },
   };
