@@ -205,6 +205,23 @@ describe('chooseBotAction', () => {
     expect(['d1', 'd2', 'f1', 'f2']).toContain(action.cloneSquare);
   });
 
+  it('iterative deepening: a 1-ply bot hangs its Queen on a defended Pawn; a 2-ply bot keeps it', () => {
+    // A: RE e1, RA d1 · B: RE e8, PE d7 (defended by B's King). RAxd7 looks like +7 to a 1-ply
+    // search, but B's King recaptures — the 2-ply search sees the Queen (37) go for a Pawn (7)
+    // and prefers a quiet Queen move instead.
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd1', 'RA', 'A');
+    board = place(board, 'd7', 'PE', 'B');
+    const state = createInitialGameState(board, 'A');
+
+    const shallow = chooseBotAction(state, 'A', 5); // 1 ply
+    expect(shallow).toEqual({ kind: 'move', from: 'd1', to: 'd7' });
+
+    const deep = chooseBotAction(state, 'A', 10); // 2 plies
+    expect(deep).not.toEqual({ kind: 'move', from: 'd1', to: 'd7' });
+  });
+
   it('never leaves its own King in check', () => {
     let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
     board = place(board, 'e5', 'TO', 'A'); // blocks a check along the e-file

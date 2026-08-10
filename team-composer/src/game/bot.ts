@@ -304,30 +304,72 @@ function minimax(
 
 /**
  * Picks the best action for `owner` to play from `state` via alpha-beta minimax over every legal
- * action (movement and all special abilities). Returns null if there is nothing legal to do (the
- * caller shouldn't normally reach this — the game would already have ended).
+ * action (movement and all special abilities), searched iteratively: depth 1, 2, … up to the
+ * difficulty's target depth. Each iteration reorders the actions by how they scored in the
+ * previous one (best first) so alpha-beta prunes more, and the answer of the deepest *completed*
+ * iteration is returned — if the wall-clock budget runs out mid-iteration, the previous
+ * iteration's (already sound) answer is kept instead of a half-searched deeper one. Returns null
+ * if there is nothing legal to do (the caller shouldn't normally reach this — the game would
+ * already have ended).
  */
 export function chooseBotAction(state: GameState, owner: Owner, difficulty: BotDifficulty): BotAction | null {
   const actions = orderActions(state, owner, generateBotActions(state, owner));
   if (actions.length === 0) return null;
 
-  const depth = difficultyToDepth(difficulty);
+  const maxDepth = difficultyToDepth(difficulty);
   const deadline = Date.now() + difficultyTimeBudgetMs(difficulty);
-  let bestAction = actions[0];
-  let bestValue = -Infinity;
-  let alpha = -Infinity;
-  const beta = Infinity;
 
-  for (const action of actions) {
-    const result = applyBotAction(state, action);
-    if (!result.ok) continue;
-    const value = minimax(result.state, depth - 1, alpha, beta, owner, deadline);
-    if (value > bestValue) {
-      bestValue = value;
-      bestAction = action;
+  // Difficulty 1 = 0 plies: no lookahead at all — pick the action whose resulting position scores
+  // best under the static evaluation (the equivalent of a depth-0 minimax over the root actions).
+  if (maxDepth === 0) {
+    let bestAction = actions[0];
+    let bestValue = -Infinity;
+    for (const action of actions) {
+      if (Date.now() >= deadline) break;
+      const result = applyBotAction(state, action);
+      if (!result.ok) continue;
+      const value = evaluate(result.state, owner);
+      if (value > bestValue) {
+        bestValue = value;
+        bestAction = action;
+      }
     }
-    alpha = Math.max(alpha, bestValue);
-    if (Date.now() >= deadline) break;
+    return bestAction;
+  }
+
+  let ordering = actions;
+  const previousScores = new Map<BotAction, number>();
+  let bestAction = actions[0];
+
+  for (let depth = 1; depth <= maxDepth; depth++) {
+    // Best-first ordering from the previous iteration's scores makes alpha-beta cut the most.
+    const iterationOrdering = [...ordering].sort((a, b) => (previousScores.get(b) ?? 0) - (previousScores.get(a) ?? 0));
+
+    let iterationBest: BotAction | null = null;
+    let iterationBestValue = -Infinity;
+    let alpha = -Infinity;
+    const beta = Infinity;
+    let interrupted = false;
+
+    for (const action of iterationOrdering) {
+      if (Date.now() >= deadline) {
+        interrupted = true;
+        break;
+      }
+      const result = applyBotAction(state, action);
+      if (!result.ok) continue;
+      const value = minimax(result.state, depth - 1, alpha, beta, owner, deadline);
+      previousScores.set(action, value);
+      if (value > iterationBestValue) {
+        iterationBestValue = value;
+        iterationBest = action;
+      }
+      alpha = Math.max(alpha, iterationBestValue);
+    }
+
+    if (interrupted) break; // time ran out mid-iteration — keep the previous completed iteration's answer
+    if (iterationBest) bestAction = iterationBest;
+    ordering = iterationOrdering;
   }
 
   return bestAction;
