@@ -65,6 +65,54 @@ describe('computePieceRangeSquares — checkers-style jump (Pedone di Dama)', ()
   });
 });
 
+describe('computePieceRangeSquares — diagonal 1-step (Duca)', () => {
+  it('reports the 4 diagonal squares from a central square', () => {
+    const { moveSquares, captureSquares } = computePieceRangeSquares(getPieceDef('DU'), 'A', 'd4');
+    const expected = ['c3', 'c5', 'e3', 'e5'];
+    expect([...moveSquares].sort()).toEqual(expected.sort());
+    expect([...captureSquares].sort()).toEqual(expected.sort());
+  });
+});
+
+describe('computePieceRangeSquares — diagonal 1-2 jump ignoring intervening piece (Elefante)', () => {
+  it('reports both distance-1 and distance-2 diagonal squares from a central square', () => {
+    const { moveSquares, captureSquares } = computePieceRangeSquares(getPieceDef('EL'), 'A', 'd4');
+    const expected = ['c3', 'c5', 'e3', 'e5', 'b2', 'b6', 'f2', 'f6'];
+    expect([...moveSquares].sort()).toEqual(expected.sort());
+    expect([...captureSquares].sort()).toEqual(expected.sort());
+  });
+});
+
+describe('computePieceRangeSquares — union of 1-step and knight-leap (Generale)', () => {
+  it('combines both move sets into 16 destinations from a central square', () => {
+    const { moveSquares } = computePieceRangeSquares(getPieceDef('GE'), 'A', 'd4');
+    expect(moveSquares).toHaveLength(16);
+  });
+});
+
+describe('computePieceRangeSquares — union of 1-step and rook-slide (Tigre)', () => {
+  it('combines both move sets into 18 destinations from a central square', () => {
+    const { moveSquares } = computePieceRangeSquares(getPieceDef('TI'), 'A', 'd4');
+    expect(moveSquares).toHaveLength(18);
+  });
+});
+
+describe('computePieceRangeSquares — union of 1-step and bishop-slide (Rinoceronte)', () => {
+  it('combines both move sets into 17 destinations from a central square', () => {
+    const { moveSquares } = computePieceRangeSquares(getPieceDef('RN'), 'A', 'd4');
+    expect(moveSquares).toHaveLength(17);
+  });
+});
+
+describe('computePieceRangeSquares — simplified single-hop illustration (Coniglio)', () => {
+  it('shows the 8 king-step squares plus 8 illustrative single-hop landing squares, with the 8 adjacent squares as captures', () => {
+    const { moveSquares, captureSquares } = computePieceRangeSquares(getPieceDef('CN'), 'A', 'd4');
+    expect(moveSquares).toHaveLength(16);
+    const expectedCaptures = ['c3', 'c5', 'e3', 'e5', 'd3', 'd5', 'c4', 'e4'];
+    expect([...captureSquares].sort()).toEqual(expectedCaptures.sort());
+  });
+});
+
 describe('computePieceRangeSquares — color-restricted entries (Camaleonte)', () => {
   it('only applies the move entry matching the color of the starting square', () => {
     // d4 is a dark square ("scura"): the diagonal 4-step ("chiare") entry must not contribute,

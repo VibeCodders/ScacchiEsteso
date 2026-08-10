@@ -266,6 +266,100 @@ describe('Damone (DM) — like DA but omnidirectional (obtained only via promoti
   });
 });
 
+describe('Duca (DU) — diagonal 1-step, standard blocking/capture', () => {
+  it('has 4 destinations from d4 on an empty board', () => {
+    const board = place(createEmptyBoard(), 'd4', 'DU');
+    expect(destinations(board, 'd4')).toEqual(['c3', 'c5', 'e3', 'e5'].sort());
+  });
+
+  it('cannot step 2 squares diagonally', () => {
+    const board = place(createEmptyBoard(), 'd4', 'DU');
+    expect(destinations(board, 'd4')).not.toContain('b2');
+  });
+
+  it('captures a diagonal enemy at distance 1', () => {
+    let board = place(createEmptyBoard(), 'd4', 'DU', 'A');
+    board = place(board, 'e5', 'PE', 'B');
+    const moves = generatePseudoLegalMoves(board, 'd4');
+    expect(moves.find((m) => m.to === 'e5')?.isCapture).toBe(true);
+  });
+
+  it('is blocked (not captured) by a diagonal ally at distance 1', () => {
+    let board = place(createEmptyBoard(), 'd4', 'DU', 'A');
+    board = place(board, 'e5', 'PE', 'A');
+    expect(destinations(board, 'd4')).not.toContain('e5');
+  });
+});
+
+describe('Elefante (EL) — diagonal 1-2, ignores intervening piece', () => {
+  it('has 8 destinations from d4 on an empty board', () => {
+    const board = place(createEmptyBoard(), 'd4', 'EL');
+    expect(destinations(board, 'd4')).toHaveLength(8);
+  });
+
+  it('reaches the distance-2 square even when an ally occupies the distance-1 square', () => {
+    let board = place(createEmptyBoard(), 'd4', 'EL', 'A');
+    board = place(board, 'e5', 'PE', 'A'); // ally at distance 1, ignored
+    expect(destinations(board, 'd4')).toContain('f6');
+  });
+
+  it('reaches and independently captures the distance-1 enemy while still reaching distance-2', () => {
+    let board = place(createEmptyBoard(), 'd4', 'EL', 'A');
+    board = place(board, 'e5', 'PE', 'B'); // enemy at distance 1
+    const moves = generatePseudoLegalMoves(board, 'd4');
+    expect(moves.find((m) => m.to === 'e5')?.isCapture).toBe(true);
+    expect(moves.map((m) => m.to)).toContain('f6');
+  });
+
+  it('cannot land on the distance-2 square when it is occupied, regardless of distance-1', () => {
+    let board = place(createEmptyBoard(), 'd4', 'EL', 'A');
+    board = place(board, 'f6', 'PE', 'A'); // ally on the landing square
+    expect(destinations(board, 'd4')).not.toContain('f6');
+    expect(destinations(board, 'd4')).toContain('e5'); // distance-1 in that direction still reachable
+  });
+});
+
+describe('Generale (GE) — union of 1-step and knight-leap (Paladino pattern)', () => {
+  it('combines both move sets into 16 destinations from d4 on an empty board', () => {
+    const board = place(createEmptyBoard(), 'd4', 'GE');
+    expect(destinations(board, 'd4')).toHaveLength(16);
+  });
+});
+
+describe('Tigre (TI) — union of 1-step and rook-slide', () => {
+  it('has 18 destinations from d4 on an empty board (4 diagonal king-steps + 14 rook squares)', () => {
+    const board = place(createEmptyBoard(), 'd4', 'TI');
+    expect(destinations(board, 'd4')).toHaveLength(18);
+  });
+
+  it('a blocker 2 squares along the rook line stops the slide there, independent of the king-step entry', () => {
+    let board = place(createEmptyBoard(), 'd4', 'TI', 'A');
+    board = place(board, 'd6', 'PE', 'B');
+    const moves = destinations(board, 'd4');
+    expect(moves).toContain('d5');
+    expect(moves).toContain('d6'); // capture on first obstruction
+    expect(moves).not.toContain('d7');
+    expect(moves).toContain('d3'); // king-step distance-1 unaffected
+  });
+});
+
+describe('Rinoceronte (RN) — union of 1-step and bishop-slide', () => {
+  it('has 17 destinations from d4 on an empty board (4 orthogonal king-steps + 13 bishop squares)', () => {
+    const board = place(createEmptyBoard(), 'd4', 'RN');
+    expect(destinations(board, 'd4')).toHaveLength(17);
+  });
+
+  it('a blocker 2 squares along the bishop line stops the slide there, independent of the king-step entry', () => {
+    let board = place(createEmptyBoard(), 'd4', 'RN', 'A');
+    board = place(board, 'f6', 'PE', 'B');
+    const moves = destinations(board, 'd4');
+    expect(moves).toContain('e5');
+    expect(moves).toContain('f6'); // capture on first obstruction
+    expect(moves).not.toContain('g7');
+    expect(moves).toContain('d5'); // king-step distance-1 unaffected
+  });
+});
+
 describe('Golem (GL) — armatura blocks capture by weak attackers', () => {
   it('cannot be captured by an attacker at or below the 14pt armor threshold', () => {
     let board = place(createEmptyBoard(), 'd4', 'CA', 'A'); // Cavallo, 12pt
