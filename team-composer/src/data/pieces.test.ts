@@ -28,13 +28,21 @@ describe('sortByPunti', () => {
   });
 
   it('breaks a point-cost tie by sigla, alphabetically', () => {
-    // Torre (TO) and Orfano (OR) are both 26pt — the sigla must decide, not incidental array position.
-    const to = pieces.find((p) => p.sigla === 'TO')!;
-    const or_ = pieces.find((p) => p.sigla === 'OR')!;
-    expect(to.punti).toBe(or_.punti);
+    // Colosso (CO) and Tigre (TI) are tied on punti — the sigla must decide, not incidental array
+    // position. (Not hardcoded to a specific pair of siglas being tied at a specific value: that
+    // relationship drifts every time punti values are rebalanced, e.g. after re-running the punti
+    // estimator — this test just needs *some* tied pair, found dynamically below.)
+    const puntiCounts = new Map<number, string[]>();
+    for (const p of pieces) puntiCounts.set(p.punti, [...(puntiCounts.get(p.punti) ?? []), p.sigla]);
+    const tiedSiglas = [...puntiCounts.values()].find((siglas) => siglas.length >= 2)!;
+    expect(tiedSiglas).toBeDefined();
+    const [siglaA, siglaB] = [...tiedSiglas].sort().slice(0, 2);
+    const a = pieces.find((p) => p.sigla === siglaA)!;
+    const b = pieces.find((p) => p.sigla === siglaB)!;
+    expect(a.punti).toBe(b.punti);
 
-    expect(sortByPunti([to, or_])).toEqual([or_, to]); // 'OR' < 'TO'
-    expect(sortByPunti([or_, to])).toEqual([or_, to]); // stable regardless of input order
+    expect(sortByPunti([b, a])).toEqual([a, b]); // alphabetical tie-break
+    expect(sortByPunti([a, b])).toEqual([a, b]); // stable regardless of input order
   });
 
   it('never leaves two equal-punti pieces in non-alphabetical order anywhere in a full sort', () => {

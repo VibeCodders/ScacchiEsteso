@@ -143,7 +143,11 @@ describe('autoFillTeam — respects the optional distinct-special-types limit', 
   it('prefers reinforcing an already-present special type over introducing a new one, even when a slot is still free', () => {
     const start = new Map<string, number>([[KING_SIGLA, 1], ['CO', 1]]);
     const startCost = computeBudgetSpent(start, pieces); // King + CO
-    const effectiveRules = { ...rules, budget: startCost + 45, maxPiecesTotal: rules.maxPiecesTotal };
+    // +50 headroom (verified empirically, re-check after any punti rebalance): comfortably more
+    // than a second CO costs, and enough room left over for other classic/special picks too — so
+    // the optimizer genuinely chooses reinforcement over diversifying, not just runs out of room
+    // for anything else.
+    const effectiveRules = { ...rules, budget: startCost + 50, maxPiecesTotal: rules.maxPiecesTotal };
 
     const result = autoFillTeam(start, effectiveRules, 3); // plenty of room for new types too
     expect(result.team.get('CO')).toBe(2); // reinforced, not diluted into a new type
