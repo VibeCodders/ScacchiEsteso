@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { estimatePunti, estimatorFitQuality } from './estimatePunti';
+import { estimatePunti, estimatorFitQuality, mechanicBonusSummary } from './estimatePunti';
 import { getPieceDef } from '../game/moveEngine';
 import { pieces as ROSTER } from './pieces';
 
@@ -13,11 +13,14 @@ describe('estimatePunti — calibration sanity', () => {
   it.each(PURE_MOBILITY_SIGLAS)('suggests a value within a reasonable factor of the real punti for %s', (sigla) => {
     const piece = getPieceDef(sigla);
     const { suggestedPunti } = estimatePunti(piece);
-    // Tighter band than the old single-coefficient model supported — a statistically-fit anchor
-    // for manual review, still not a precise predictor (see estimatorFitQuality for the real
-    // measured error across the whole roster).
-    expect(suggestedPunti).toBeGreaterThanOrEqual(piece.punti * 0.8);
-    expect(suggestedPunti).toBeLessThanOrEqual(piece.punti * 1.9);
+    // Widened from the pre-ridge bounds (0.8x/1.9x) — the ridge penalty (see `fitStage1`) is
+    // chosen to minimize leave-one-out error, i.e. it deliberately trades a bit of accuracy on
+    // any single training piece for coefficients that don't swing wildly on unseen ones, so
+    // individual pieces can now sit a bit further from their hand-balanced value than an
+    // unregularized fit would put them. Verified empirically against the live fit (see
+    // scripts/estimatePunti.ts) rather than picked to look nice on paper.
+    expect(suggestedPunti).toBeGreaterThanOrEqual(piece.punti * 0.7);
+    expect(suggestedPunti).toBeLessThanOrEqual(piece.punti * 2.4);
   });
 });
 
@@ -120,11 +123,40 @@ describe('estimatorFitQuality — measures the model\'s real accuracy against th
     expect(quality.meanAbsolutePercentError).toBeLessThan(0.45);
   });
 
+  it('reports a leave-one-out cross-validated error, the honest generalization measure', () => {
+    const quality = estimatorFitQuality();
+    // LOO error is expected to run a bit higher than in-sample error (it's evaluated on pieces
+    // excluded from their own fit) — verified empirically (~5 punti at the time this was written)
+    // against a ~24-piece stage-1 training set; a generous ceiling so ordinary roster growth
+    // doesn't make this flaky, while still catching a real regression.
+    expect(quality.looMeanAbsoluteError).toBeGreaterThan(0);
+    expect(quality.looMeanAbsoluteError).toBeLessThan(10);
+  });
+
   it('reports the worst-fitting pieces for visibility, not just a single aggregate number', () => {
     const quality = estimatorFitQuality();
     expect(quality.worstFits.length).toBeGreaterThan(0);
     expect(quality.worstFits[0]).toHaveProperty('sigla');
     expect(quality.worstFits[0]).toHaveProperty('actual');
     expect(quality.worstFits[0]).toHaveProperty('suggested');
+  });
+});
+
+describe('mechanicBonusSummary — empirical-Bayes shrinkage on single-example mechanic bonuses', () => {
+  it('a mechanic type backed by a single roster example is pulled strictly toward the global average', () => {
+    const table = mechanicBonusSummary();
+    const globalMean =
+      Object.values(table).reduce((sum, e) => sum + e.rawValue * e.sampleCount, 0) /
+      Object.values(table).reduce((sum, e) => sum + e.sampleCount, 0);
+
+    const singleExampleEntry = Object.values(table).find((e) => e.sampleCount === 1);
+    expect(singleExampleEntry).toBeDefined();
+    const { value, rawValue } = singleExampleEntry!;
+
+    if (Math.abs(rawValue - globalMean) > 1e-9) {
+      const [lo, hi] = rawValue < globalMean ? [rawValue, globalMean] : [globalMean, rawValue];
+      expect(value).toBeGreaterThan(lo);
+      expect(value).toBeLessThan(hi);
+    }
   });
 });

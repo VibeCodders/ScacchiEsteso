@@ -11,12 +11,13 @@ function main() {
     const e = estimatePunti(p);
     const delta = e.suggestedPunti - p.punti;
     const sign = delta > 0 ? '+' : '';
-    console.log(`${p.sigla}\tactual=${p.punti}\tsuggested=${e.suggestedPunti}\t(${sign}${delta})\tstepSlide=${e.breakdown.stepSlideMobility.toFixed(2)}\tleap=${e.breakdown.leapMobility.toFixed(2)}`);
+    console.log(`${p.sigla}\tactual=${p.punti}\tsuggested=${e.suggestedPunti}\t(${sign}${delta})\tstepSlideMove=${e.breakdown.stepSlideMoveMobility.toFixed(2)}\tstepSlideCapture=${e.breakdown.stepSlideCaptureMobility.toFixed(2)}\tleapMove=${e.breakdown.leapMoveMobility.toFixed(2)}\tleapCapture=${e.breakdown.leapCaptureMobility.toFixed(2)}`);
   }
 
   const quality = estimatorFitQuality();
   console.log('\n--- fit quality ---');
   console.log(`mean absolute error: ${quality.meanAbsoluteError.toFixed(2)} punti`);
+  console.log(`leave-one-out mean absolute error (stage 1 only): ${quality.looMeanAbsoluteError.toFixed(2)} punti`);
   console.log(`mean absolute percent error: ${(quality.meanAbsolutePercentError * 100).toFixed(1)}%`);
   console.log('worst fits:', quality.worstFits.map((f) => `${f.sigla} (actual ${f.actual}, suggested ${f.suggested})`).join(', '));
 }
