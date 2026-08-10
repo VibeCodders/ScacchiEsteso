@@ -50,6 +50,11 @@ export interface HistoryEntry {
   revivedSigla?: string;
   /** Squares destroyed by a Colosso's "danno ad area" triggered by this capture, if any. */
   areaDamageCoords?: Coord[];
+  /** True for a Swapper's two-ally swap; `swapSquares` holds the two squares swapped (order not
+   *  meaningful) since — unlike Mistico's `isSwap` — neither is guaranteed to be the acting
+   *  piece's own `from` square. */
+  isSwapperSwap?: boolean;
+  swapSquares?: [Coord, Coord];
 }
 
 export interface GameState {
@@ -119,6 +124,7 @@ function isProgressEntry(entry: HistoryEntry): boolean {
   if (entry.isCapture) return true;
   if (entry.isSwap) return true;
   if (entry.isRevival) return true;
+  if (entry.isSwapperSwap) return true;
   return getPieceDef(entry.sigla).categoria === 'pedone';
 }
 
