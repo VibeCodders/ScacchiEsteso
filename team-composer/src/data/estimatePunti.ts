@@ -1,16 +1,19 @@
-import type { Move, Piece } from '../types';
+import type { ActionModalita, Move, Piece } from '../types';
 import { computePieceRangeSquares } from '../game/pieceInfo';
 import { pieces as ROSTER } from './pieces';
-import type { Coord } from '../game/board';
+import { allCoords, type Coord } from '../game/board';
 
 /**
- * Representative squares sampled to approximate a piece's average mobility: 8 squares balanced
- * across board region (center/edge/near-corner) AND square color (4 light + 4 dark), so
- * color-restricted entries (e.g. Camaleonte) aren't biased by which squares happen to be sampled.
- * Pure function of the piece's `moves` data — no board or occupancy involved, same spirit as
- * pieceInfo.ts's encyclopedia computation.
+ * Every square of the standard board, used to compute a piece's *exact* average mobility rather
+ * than approximating it from a handful of sampled squares. Exhaustive rather than sampled because
+ * the roster is small (34 pieces) and `computePieceRangeSquares` is cheap, so there's no real cost
+ * to dropping the sampling approximation — this also means color-restricted entries (e.g.
+ * Camaleonte) are evaluated against the board's true light/dark square distribution instead of
+ * whichever colors happened to land in an 8-square sample. Board-size-agnostic in principle
+ * (`allCoords` takes `dimensions`), but deliberately fixed to the default 8x8 here — scaling this
+ * estimate to non-standard board sizes is out of scope for now.
  */
-const SAMPLE_SQUARES: Coord[] = ['d4', 'e5', 'b2', 'g7', 'a4', 'h5', 'b7', 'g2'];
+const ALL_SQUARES: Coord[] = allCoords();
 
 function entryIgnoresBlocking(entry: Move): boolean {
   return Boolean(entry.jump) || entry.leapPattern !== undefined;
@@ -29,7 +32,7 @@ interface EntryMobility {
  *  count reachable purely as non-capturing moves. */
 function entryMobility(piece: Piece, entry: Move): EntryMobility {
   const isolated: Piece = { ...piece, moves: [entry] };
-  const samples = SAMPLE_SQUARES.map((sq) => computePieceRangeSquares(isolated, 'A', sq));
+  const samples = ALL_SQUARES.map((sq) => computePieceRangeSquares(isolated, 'A', sq));
   const moveCount = samples.reduce((sum, s) => sum + s.moveSquares.length, 0) / samples.length;
   const captureCount = samples.reduce((sum, s) => sum + s.captureSquares.length, 0) / samples.length;
   return { moveCount, captureCount };
@@ -132,19 +135,22 @@ const STAGE1_FEATURE_NAMES = [
  * `(XᵀX + λI)β = Xᵀy`, solved by Gaussian elimination with partial pivoting. `X` is n×k (first
  * column is normally the intercept, a column of 1s); `y` is length n. `lambda` defaults to 0
  * (ordinary least squares) — the intercept column (index 0) is never regularized, since shrinking
- * the intercept toward 0 would bias every prediction, not just stabilize the slopes. No external
- * dependency — the matrices here are tiny (k ≤ 12).
+ * the intercept toward 0 would bias every prediction, not just stabilize the slopes. `weights`
+ * (default: all 1s) lets a caller down-weight specific rows — used by `solveRobustLeastSquares` to
+ * implement IRLS without duplicating the normal-equations assembly. No external dependency — the
+ * matrices here are tiny (k ≤ 12).
  */
-function solveLeastSquares(X: number[][], y: number[], lambda = 0): number[] {
+function solveLeastSquares(X: number[][], y: number[], lambda = 0, weights?: number[]): number[] {
   const k = X[0].length;
   const XtX: number[][] = Array.from({ length: k }, () => new Array(k).fill(0));
   const Xty: number[] = new Array(k).fill(0);
 
   for (let row = 0; row < X.length; row++) {
+    const w = weights ? weights[row] : 1;
     for (let i = 0; i < k; i++) {
-      Xty[i] += X[row][i] * y[row];
+      Xty[i] += w * X[row][i] * y[row];
       for (let j = 0; j < k; j++) {
-        XtX[i][j] += X[row][i] * X[row][j];
+        XtX[i][j] += w * X[row][i] * X[row][j];
       }
     }
   }
@@ -172,6 +178,43 @@ function solveLeastSquares(X: number[][], y: number[], lambda = 0): number[] {
   return augmented.map((row, i) => (Math.abs(row[i]) < 1e-10 ? 0 : row[k] / row[i]));
 }
 
+/** Beyond this absolute residual (in punti), a training example's influence on the fit switches
+ *  from quadratic (ordinary least squares) to linear (Huber) — chosen to line up with
+ *  `CLOSE_ENOUGH_ABS_DIFF` in the UI (a piece the fit misses by more than "close enough" shouldn't
+ *  get to keep dragging every coefficient toward itself at full quadratic strength). */
+const HUBER_DELTA = 3;
+const IRLS_MAX_ITERATIONS = 15;
+const IRLS_CONVERGENCE_TOL = 1e-3;
+
+/** Huber weight for a residual: 1 inside `delta` (full quadratic influence, same as OLS), shrinking
+ *  toward 0 as `|residual|` grows beyond it (the example still pulls the fit, just proportionally
+ *  less the further it sits from everyone else). */
+function huberWeight(residual: number, delta: number): number {
+  const abs = Math.abs(residual);
+  return abs <= delta ? 1 : delta / abs;
+}
+
+/**
+ * Iteratively reweighted least squares with a Huber weight: refits `solveLeastSquares` a handful of
+ * times, each time down-weighting rows whose current residual exceeds `HUBER_DELTA`, so a couple of
+ * stubborn worst-fit pieces (see `estimatorFitQuality().worstFits`) can't single-handedly deform the
+ * coefficients that every other piece's estimate depends on. Warm-started from the plain ridge fit;
+ * stops once the coefficients stop moving (`IRLS_CONVERGENCE_TOL`) or after `IRLS_MAX_ITERATIONS`.
+ * No external dependency, same spirit as `solveLeastSquares` itself.
+ */
+function solveRobustLeastSquares(X: number[][], y: number[], lambda: number): number[] {
+  let beta = solveLeastSquares(X, y, lambda);
+  for (let iter = 0; iter < IRLS_MAX_ITERATIONS; iter++) {
+    const residuals = X.map((row, i) => dotProduct(beta, row) - y[i]);
+    const weights = residuals.map((r) => huberWeight(r, HUBER_DELTA));
+    const newBeta = solveLeastSquares(X, y, lambda, weights);
+    const shift = Math.sqrt(newBeta.reduce((sum, v, i) => sum + (v - beta[i]) ** 2, 0));
+    beta = newBeta;
+    if (shift < IRLS_CONVERGENCE_TOL) break;
+  }
+  return beta;
+}
+
 /** Pieces with no special mechanic (no `alternativeActions`, no `armatura`) and not the King —
  *  even though the King now carries a nominal punti value (used only to size the team budget; it
  *  can't actually be traded for other pieces or left out of a team, so it isn't a mobility-priced
@@ -187,16 +230,17 @@ function stage1TrainingSet(): Piece[] {
  *  ~24 examples — a thin ratio where unregularized OLS coefficients are known to be unstable). */
 const RIDGE_LAMBDA_CANDIDATES = [0, 0.5, 1, 2, 4, 8];
 
-/** Mean absolute leave-one-out error for a given ridge penalty: refit on every (n-1)-piece subset
- *  and score the held-out piece, which is what actually predicts how the model behaves on a piece
- *  it wasn't tuned against — unlike in-sample error, which the ridge penalty could otherwise be
- *  picked to minimize trivially by overfitting. */
+/** Mean absolute leave-one-out error for a given ridge penalty: refit (via the same robust IRLS fit
+ *  used for the final model — otherwise lambda would be tuned for a different model than the one
+ *  actually deployed) on every (n-1)-piece subset and score the held-out piece, which is what
+ *  actually predicts how the model behaves on a piece it wasn't tuned against — unlike in-sample
+ *  error, which the ridge penalty could otherwise be picked to minimize trivially by overfitting. */
 function looMeanAbsoluteError(X: number[][], y: number[], lambda: number): number {
   let totalAbsError = 0;
   for (let holdout = 0; holdout < X.length; holdout++) {
     const trainX = X.filter((_, i) => i !== holdout);
     const trainY = y.filter((_, i) => i !== holdout);
-    const beta = solveLeastSquares(trainX, trainY, lambda);
+    const beta = solveRobustLeastSquares(trainX, trainY, lambda);
     const predicted = dotProduct(beta, X[holdout]);
     totalAbsError += Math.abs(predicted - y[holdout]);
   }
@@ -211,12 +255,12 @@ interface Stage1Fit {
 
 /**
  * Stage-1 regression: fits `stage1FeatureVector` coefficients against every "pure movement"
- * roster piece via `solveLeastSquares`, choosing the ridge penalty `lambda` that minimizes
- * leave-one-out error rather than fixing it at 0 (plain OLS) or picking it by hand. Computed once
- * at module load from the live roster (cheap: a ~24×12 matrix, and only 6 lambda candidates ×
- * 24 LOO refits) rather than hardcoded from a one-off script run, so it can never silently go
- * stale the way a hand-copied constant could — this is the same lesson the roster-reading CLI
- * script already applies.
+ * roster piece via `solveRobustLeastSquares` (ridge + Huber IRLS, see above), choosing the ridge
+ * penalty `lambda` that minimizes leave-one-out error rather than fixing it at 0 (plain OLS) or
+ * picking it by hand. Computed once at module load from the live roster (cheap: a ~24×12 matrix,
+ * and only 6 lambda candidates × 24 LOO refits, each a handful of IRLS iterations) rather than
+ * hardcoded from a one-off script run, so it can never silently go stale the way a hand-copied
+ * constant could — this is the same lesson the roster-reading CLI script already applies.
  */
 function fitStage1(): Stage1Fit {
   const trainingSet = stage1TrainingSet();
@@ -233,7 +277,7 @@ function fitStage1(): Stage1Fit {
     }
   }
 
-  return { coefficients: solveLeastSquares(X, y, bestLambda), lambda: bestLambda, looMeanAbsoluteError: bestLoo };
+  return { coefficients: solveRobustLeastSquares(X, y, bestLambda), lambda: bestLambda, looMeanAbsoluteError: bestLoo };
 }
 
 let stage1FitCache: Stage1Fit | null = null;
@@ -268,66 +312,302 @@ export function stage1ModelSummary(): Stage1ModelSummary {
   };
 }
 
+/** A special-mechanic action in the normalized shape stage 2 works with — `AlternativeAction`
+ *  entries already fit this shape; `armatura` (a boolean + separate `armaturaMaxCosto` field on
+ *  `Piece`, not an `AlternativeAction`) is converted into one via `mechanicActionsOf` so every
+ *  mechanic can be treated uniformly. Exported so callers (e.g. the piece designer UI) can build a
+ *  hypothetical mechanic — including a `type` never seen in the roster — and price it via
+ *  `predictMechanicBonus`. */
+export interface MechanicActionInput {
+  type: string;
+  modalita?: ActionModalita;
+  params: Record<string, unknown>;
+}
+
+/** Every special-mechanic action a piece carries, `armatura` normalized alongside
+ *  `alternativeActions` (see `MechanicActionInput`). */
+function mechanicActionsOf(piece: Piece): MechanicActionInput[] {
+  const actions: MechanicActionInput[] = piece.alternativeActions.map((a) => ({ type: a.type, modalita: a.modalita, params: a.params }));
+  if (piece.armatura) {
+    actions.push({ type: 'armatura', modalita: 'passiva', params: { armaturaMaxCosto: piece.armaturaMaxCosto ?? 0 } });
+  }
+  return actions;
+}
+
+function piecesMechanicTypes(piece: Piece): string[] {
+  return mechanicActionsOf(piece).map((a) => a.type);
+}
+
+interface MechanicFeatures {
+  radius: number;
+  directionCount: number;
+  intensityValue: number;
+  targetsAllies: number;
+  isPassive: number;
+  isOnCapture: number;
+}
+
+const MECHANIC_FEATURE_NAMES = [
+  'Intercetta',
+  'Raggio',
+  'Ampiezza direzionale/distanze',
+  'Intensità numerica',
+  'Coinvolge alleati',
+  'Passiva',
+  'Su cattura',
+] as const;
+
+/** Scales a matched "intensity" parameter (e.g. `armaturaMaxCosto`) down to roughly the same order
+ *  of magnitude as the other stage-2 features — a raw threshold like "costo ≤ 14" would otherwise
+ *  dwarf every other feature's coefficient. */
+const MECHANIC_INTENSITY_SCALE = 10;
+
+/** Sum of the lengths of every array in `params` whose key name looks like a set of directions or
+ *  distances (matches both `direzioni` on aura-style mechanics and `distanze` on `scocca`) — a
+ *  generic proxy for "how wide is this mechanic's angular/range coverage" that doesn't need to know
+ *  the mechanic's `type` up front. */
+function countRangeArrays(params: Record<string, unknown>): number {
+  return Object.entries(params)
+    .filter(([key, v]) => Array.isArray(v) && /direzion|distanz/i.test(key))
+    .reduce((sum, [, v]) => sum + (v as unknown[]).length, 0);
+}
+
+/** First numeric value in `params` whose key name suggests a magnitude/threshold ("Costo", "Max",
+ *  "Valore") — e.g. `armaturaMaxCosto`. Generic by design (see `mechanicFeaturesOf`). */
+function firstNumericParamMatching(params: Record<string, unknown>, pattern: RegExp): number | undefined {
+  for (const [key, value] of Object.entries(params)) {
+    if (pattern.test(key) && typeof value === 'number') return value;
+  }
+  return undefined;
+}
+
 /**
- * Additive adjustment per `alternativeActions[i].type`, computed as the average
- * (actualPunti - stage1Estimate) across roster pieces carrying that action type, using the
- * improved stage-1 formula above as the baseline being corrected, then pulled toward the average
- * bonus across *all* special-mechanic pieces via empirical-Bayes shrinkage (see
- * `shrinkMechanicBonus`). IMPORTANT LIMITATION, stated plainly rather than glossed over: every
- * mechanic in the current roster has exactly ONE example piece (e.g. only Colosso has
- * `danno_ad_area`, only Necromante has `rianimazione_pedone`) — with a single data point per
- * mechanic, the raw per-type average is just "the one observed correction"; shrinkage doesn't
- * manufacture more data, it only tempers how literally that single observation is trusted by
- * blending it with the global tendency of special mechanics to add value at all.
+ * Maps a mechanic's free-form `params` (a `Record<string, unknown>` that varies per `type`, see
+ * `pieces.json`) to a small, generic numeric feature vector — by pattern-matching PARAMETER NAMES
+ * (`raggio`→radius, `*direzioni*`/`*distanze*`→directionCount, `*Costo*`/`*Max*`/`*Valore*`→
+ * intensity, `includeAlleati`/`target` containing "alleat"→targetsAllies) rather than switching on
+ * `type`. A per-type switch would silently fall back to "no special mechanic" for any type never
+ * seen before; name-pattern matching lets a brand new mechanic that follows the roster's existing
+ * naming convention still produce a meaningful feature vector, which is what makes
+ * `predictMechanicBonus` able to extrapolate at all. KNOWN LIMITATION, stated plainly: a future
+ * mechanic using non-conventional parameter names degrades to "a bare special mechanic" (every
+ * feature but the `modalita`-derived ones at 0) rather than crashing or producing NaN — a
+ * reasonable floor, not a silently wrong answer.
  */
-export interface MechanicBonusEntry {
-  /** Bonus actually applied by the estimator — the raw per-type average shrunk toward the global
-   *  mean special-mechanic bonus, more strongly so the fewer examples back it up. */
-  value: number;
-  /** The un-shrunk per-type average, kept for transparency (shown in the model panel) — this is
-   *  what the estimator used to apply outright before shrinkage was introduced. */
-  rawValue: number;
-  sampleCount: number;
+function mechanicFeaturesOf(action: MechanicActionInput): MechanicFeatures {
+  const { params, modalita } = action;
+  const target = params.target;
+  return {
+    radius: typeof params.raggio === 'number' ? params.raggio : 0,
+    directionCount: countRangeArrays(params),
+    intensityValue: (firstNumericParamMatching(params, /costo|max|valore/i) ?? 0) / MECHANIC_INTENSITY_SCALE,
+    targetsAllies: params.includeAlleati === true || (typeof target === 'string' && target.includes('alleat')) ? 1 : 0,
+    isPassive: modalita === 'passiva' ? 1 : 0,
+    isOnCapture: modalita === 'sul_cattura' ? 1 : 0,
+  };
 }
 
-/** Empirical-Bayes shrinkage weight for a mechanic type backed by `sampleCount` roster examples:
- *  approaches 1 (trust the observed average) as `sampleCount` grows, and is 1/(1+k) for a single
- *  example. `k = 2` means a 1-example type keeps 1/3 of its raw value and borrows 2/3 from the
- *  global average — a deliberately generous pull toward the center given that literally every
- *  mechanic type today has exactly one example (see the limitation above); revisit `k` once the
- *  roster grows enough for some types to have multiple examples. */
-const MECHANIC_SHRINKAGE_K = 2;
-
-function shrinkMechanicBonus(rawValue: number, sampleCount: number, globalMean: number): number {
-  const weight = sampleCount / (sampleCount + MECHANIC_SHRINKAGE_K);
-  return weight * rawValue + (1 - weight) * globalMean;
+function mechanicFeatureVector(f: MechanicFeatures): number[] {
+  return [1, f.radius, f.directionCount, f.intensityValue, f.targetsAllies, f.isPassive, f.isOnCapture];
 }
 
-function computeMechanicBonusTable(): Record<string, MechanicBonusEntry> {
-  const bonuses: Record<string, number[]> = {};
-  const allMechanicBonuses: number[] = [];
+interface MechanicTrainingRow {
+  action: MechanicActionInput;
+  /** `punti - stage1Estimate`, i.e. the correction stage 2 needs to explain, split evenly across
+   *  the piece's mechanics if it carries more than one (none does today, but the roster will grow —
+   *  a linear split is a reasonable approximation at this scale rather than something requiring
+   *  iterative disentangling). */
+  observedBonus: number;
+}
+
+/** One training row per (piece, mechanic-on-that-piece) pair, rather than one constant per mechanic
+ *  `type` as before — lets stage 2 fit *shared* coefficients (see `mechanicFeatureVector`) across
+ *  every mechanic instead of an independent constant per type, which is what lets it generalize to
+ *  a type it has never seen (see `mechanicFeaturesOf`). */
+function mechanicRowsFromRoster(): MechanicTrainingRow[] {
+  const rows: MechanicTrainingRow[] = [];
   for (const piece of ROSTER) {
     if (piece.sigla === 'RE') continue;
+    const mechanics = mechanicActionsOf(piece);
+    if (mechanics.length === 0) continue;
     const baseline = stage1Estimate(piece);
-    const perPieceBonus = piece.punti - baseline;
-    for (const action of piece.alternativeActions) {
-      (bonuses[action.type] ??= []).push(perPieceBonus);
-      allMechanicBonuses.push(perPieceBonus);
+    const perMechanicBonus = (piece.punti - baseline) / mechanics.length;
+    for (const action of mechanics) {
+      rows.push({ action, observedBonus: perMechanicBonus });
     }
-    if (piece.armatura) {
-      (bonuses.armatura ??= []).push(perPieceBonus);
-      allMechanicBonuses.push(perPieceBonus);
+  }
+  return rows;
+}
+
+interface Stage2Fit {
+  coefficients: number[];
+  lambda: number;
+  looMeanAbsoluteError: number;
+  /** Empirical-Bayes shrinkage constant chosen by `chooseShrinkageK` — replaces the old fixed
+   *  `MECHANIC_SHRINKAGE_K`. */
+  shrinkageK: number;
+  shrinkageKLooMeanAbsoluteError: number;
+}
+
+const SHRINKAGE_K_CANDIDATES = [0.5, 1, 2, 4, 8];
+
+/**
+ * Chooses the empirical-Bayes shrinkage constant `K` the same way stage 1 chooses its ridge
+ * penalty: leave one mechanic instance out and see which `K` reproduces its actual bonus best.
+ * IMPORTANT CAVEAT, stated plainly rather than glossed over: the held-out row's "sample count" here
+ * counts *other* roster examples of the same `type`, excluding the held-out row itself — today
+ * every mechanic type has exactly one example, so that count is always 0 for every candidate `K`,
+ * forcing `weight = 0` (i.e. `predictedValue` alone) regardless of `K`. LOO therefore cannot yet
+ * discriminate between candidates — every `K` ties at the same error, and the smallest candidate is
+ * kept as a neutral default. This is the deliberately honest alternative to comparing the shrunk
+ * value against the held-out row's own *known* bonus while still counting that row toward its own
+ * sample size: that would be circular (the raw value is *defined* as exactly the target being
+ * validated against) and would always trivially prefer `K → 0`, i.e. no shrinkage at all. This
+ * selection only starts doing real discriminating work once the roster has 2+ pieces sharing a
+ * mechanic type, at which point a held-out row's same-type sibling supplies genuine, non-circular
+ * signal about how much to trust a raw per-type average.
+ */
+function chooseShrinkageK(rows: MechanicTrainingRow[], lambda: number): { k: number; looMeanAbsoluteError: number } {
+  const X = rows.map((r) => mechanicFeatureVector(mechanicFeaturesOf(r.action)));
+  const y = rows.map((r) => r.observedBonus);
+
+  let bestK = SHRINKAGE_K_CANDIDATES[0];
+  let bestLoo = Infinity;
+  for (const k of SHRINKAGE_K_CANDIDATES) {
+    let totalAbsError = 0;
+    for (let holdout = 0; holdout < rows.length; holdout++) {
+      const trainX = X.filter((_, i) => i !== holdout);
+      const trainY = y.filter((_, i) => i !== holdout);
+      const beta = solveRobustLeastSquares(trainX, trainY, lambda);
+      const predictedValue = dotProduct(beta, X[holdout]);
+      const othersOfSameType = rows.filter((r, i) => i !== holdout && r.action.type === rows[holdout].action.type);
+      const sampleCount = othersOfSameType.length;
+      const rawValue = sampleCount > 0
+        ? othersOfSameType.reduce((sum, r) => sum + r.observedBonus, 0) / sampleCount
+        : predictedValue; // no signal from other examples — weight below is 0 either way
+      const weight = sampleCount / (sampleCount + k);
+      const shrunk = weight * rawValue + (1 - weight) * predictedValue;
+      totalAbsError += Math.abs(shrunk - rows[holdout].observedBonus);
+    }
+    const loo = totalAbsError / rows.length;
+    if (loo < bestLoo) {
+      bestLoo = loo;
+      bestK = k;
+    }
+  }
+  return { k: bestK, looMeanAbsoluteError: bestLoo };
+}
+
+/**
+ * Stage-2 regression: fits `mechanicFeatureVector` coefficients against every (piece, mechanic)
+ * row in the roster (see `mechanicRowsFromRoster`), choosing the ridge penalty the same way stage 1
+ * does, then the shrinkage constant `K` via `chooseShrinkageK`. Replaces the old "one constant per
+ * mechanic type" table with a small model shared across all mechanics — see `mechanicFeaturesOf`
+ * for why that's what allows extrapolation to a mechanic type never seen in the roster.
+ */
+function fitStage2(): Stage2Fit {
+  const rows = mechanicRowsFromRoster();
+  const X = rows.map((r) => mechanicFeatureVector(mechanicFeaturesOf(r.action)));
+  const y = rows.map((r) => r.observedBonus);
+
+  let bestLambda = RIDGE_LAMBDA_CANDIDATES[0];
+  let bestLoo = Infinity;
+  for (const lambda of RIDGE_LAMBDA_CANDIDATES) {
+    const loo = looMeanAbsoluteError(X, y, lambda);
+    if (loo < bestLoo) {
+      bestLoo = loo;
+      bestLambda = lambda;
     }
   }
 
-  const globalMean = allMechanicBonuses.length > 0
-    ? allMechanicBonuses.reduce((a, b) => a + b, 0) / allMechanicBonuses.length
-    : 0;
+  const coefficients = solveRobustLeastSquares(X, y, bestLambda);
+  const { k, looMeanAbsoluteError: shrinkageKLoo } = chooseShrinkageK(rows, bestLambda);
+
+  return {
+    coefficients,
+    lambda: bestLambda,
+    looMeanAbsoluteError: bestLoo,
+    shrinkageK: k,
+    shrinkageKLooMeanAbsoluteError: shrinkageKLoo,
+  };
+}
+
+let stage2FitCache: Stage2Fit | null = null;
+function stage2Fit(): Stage2Fit {
+  if (!stage2FitCache) stage2FitCache = fitStage2();
+  return stage2FitCache;
+}
+
+/**
+ * Evaluates the stage-2 parametric model for an arbitrary mechanic action — including one whose
+ * `type` has never appeared in the roster, or an existing `type` with different `params` than any
+ * roster example — by mapping its `params` to the shared feature vector (`mechanicFeaturesOf`) and
+ * applying the fitted coefficients. This is what lets the estimator (and the piece designer UI)
+ * price a brand new special mechanic instead of silently returning 0 for anything outside the
+ * roster's exact catalog of known types.
+ */
+export function predictMechanicBonus(action: MechanicActionInput): number {
+  return dotProduct(stage2Fit().coefficients, mechanicFeatureVector(mechanicFeaturesOf(action)));
+}
+
+export interface Stage2ModelSummary {
+  features: { name: string; coefficient: number }[];
+  lambda: number;
+  shrinkageK: number;
+  looMeanAbsoluteError: number;
+}
+
+/** Exposes the fitted stage-2 model (coefficients, chosen ridge penalty and shrinkage K, their
+ *  cross-validated errors) so the UI can show why the estimator's mechanic bonus is what it is —
+ *  symmetric to `stage1ModelSummary`. */
+export function stage2ModelSummary(): Stage2ModelSummary {
+  const fit = stage2Fit();
+  return {
+    features: fit.coefficients.map((coefficient, i) => ({ name: MECHANIC_FEATURE_NAMES[i], coefficient })),
+    lambda: fit.lambda,
+    shrinkageK: fit.shrinkageK,
+    looMeanAbsoluteError: fit.looMeanAbsoluteError,
+  };
+}
+
+export interface MechanicBonusEntry {
+  /** Bonus actually applied by the estimator — the raw per-type average shrunk toward
+   *  `predictedValue` (the stage-2 model's own prediction), more strongly so the fewer roster
+   *  examples back the raw average up. */
+  value: number;
+  /** The un-shrunk per-type average of `punti - stage1Estimate` across roster pieces carrying this
+   *  mechanic type, kept for transparency (shown in the model panel). */
+  rawValue: number;
+  /** What the stage-2 parametric model predicts for this mechanic type's roster example(s) —
+   *  the "background" `rawValue` is shrunk toward, replacing the old flat global-mean background. */
+  predictedValue: number;
+  sampleCount: number;
+}
+
+function shrinkMechanicBonus(rawValue: number, sampleCount: number, predictedValue: number): number {
+  const weight = sampleCount / (sampleCount + stage2Fit().shrinkageK);
+  return weight * rawValue + (1 - weight) * predictedValue;
+}
+
+function computeMechanicBonusTable(): Record<string, MechanicBonusEntry> {
+  const rows = mechanicRowsFromRoster();
+  const byType = new Map<string, MechanicTrainingRow[]>();
+  for (const row of rows) {
+    const list = byType.get(row.action.type) ?? [];
+    list.push(row);
+    byType.set(row.action.type, list);
+  }
 
   const table: Record<string, MechanicBonusEntry> = {};
-  for (const [type, samples] of Object.entries(bonuses)) {
-    const rawValue = samples.reduce((a, b) => a + b, 0) / samples.length;
-    table[type] = { value: shrinkMechanicBonus(rawValue, samples.length, globalMean), rawValue, sampleCount: samples.length };
+  for (const [type, typeRows] of byType) {
+    const rawValue = typeRows.reduce((sum, r) => sum + r.observedBonus, 0) / typeRows.length;
+    const predictedValue = typeRows.reduce((sum, r) => sum + predictMechanicBonus(r.action), 0) / typeRows.length;
+    table[type] = {
+      value: shrinkMechanicBonus(rawValue, typeRows.length, predictedValue),
+      rawValue,
+      predictedValue,
+      sampleCount: typeRows.length,
+    };
   }
   return table;
 }
@@ -353,14 +633,21 @@ export function confidenceForSampleCount(sampleCount: number): 'low' | 'medium' 
   return 'high';
 }
 
-function piecesMechanicTypes(piece: Piece): string[] {
-  const types = piece.alternativeActions.map((a) => a.type);
-  return piece.armatura ? [...types, 'armatura'] : types;
-}
-
+/** Applies each of a piece's own mechanic actions through `predictMechanicBonus` (using that
+ *  piece's own `params`, not a roster "representative") shrunk toward the per-type roster average —
+ *  for the current roster (one example per type) this is numerically identical to looking up
+ *  `mechanicBonusTable()[type].value` directly, but computing it per-action keeps behavior correct
+ *  once a type has multiple roster examples with different `params`, and for a hypothetical piece
+ *  (piece designer) whose mechanic `params` differ from any roster example of the same type. */
 function specialMechanicBonus(piece: Piece): number {
   const table = mechanicBonusTable();
-  return piecesMechanicTypes(piece).reduce((sum, type) => sum + (table[type]?.value ?? 0), 0);
+  return mechanicActionsOf(piece).reduce((sum, action) => {
+    const entry = table[action.type];
+    const rawValue = entry?.rawValue ?? 0;
+    const sampleCount = entry?.sampleCount ?? 0;
+    const predictedValue = predictMechanicBonus(action);
+    return sum + shrinkMechanicBonus(rawValue, sampleCount, predictedValue);
+  }, 0);
 }
 
 export interface PuntiEstimate {
