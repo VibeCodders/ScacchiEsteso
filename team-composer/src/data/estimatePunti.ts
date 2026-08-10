@@ -652,6 +652,15 @@ function specialMechanicBonus(piece: Piece): number {
 
 export interface PuntiEstimate {
   suggestedPunti: number;
+  /** Plausible range around `suggestedPunti`, built from `marginOfError` (see below) — a heuristic
+   *  band anchored to real cross-validation error, not a formal statistical confidence interval
+   *  (the training sets are far too small — ~24 pieces for stage 1, 11 mechanic instances for stage
+   *  2 — to support one). Floored at 1 on the low side, same reasoning as `suggestedPunti`. */
+  confidenceInterval: { low: number; high: number };
+  /** Half-width of `confidenceInterval`: the stage-1 leave-one-out error, plus the stage-2
+   *  leave-one-out error if the piece carries any special mechanic. Exposed raw (not just as the
+   *  interval) so callers like the scatter chart can draw it without reconstructing it. */
+  marginOfError: number;
   breakdown: {
     stepSlideMoveMobility: number;
     stepSlideCaptureMobility: number;
@@ -701,10 +710,18 @@ export function estimatePunti(piece: Piece): PuntiEstimate {
     coeffLeapMove * Math.sqrt(f.leapMoveMobility) +
     coeffLeapCapture * Math.sqrt(f.leapCaptureMobility);
 
+  // A piece costing 0 punti would be free to field — every real piece costs at least 1 (in
+  // practice the cheapest, Paggio, costs 2), so the floor is 1, not 0.
+  const suggestedPunti = Math.max(1, Math.round(stage1Estimate(piece) + mechanicBonus));
+  const marginOfError = stage1Fit().looMeanAbsoluteError + (mechanicTypes.length > 0 ? stage2Fit().looMeanAbsoluteError : 0);
+
   return {
-    // A piece costing 0 punti would be free to field — every real piece costs at least 1 (in
-    // practice the cheapest, Paggio, costs 2), so the floor is 1, not 0.
-    suggestedPunti: Math.max(1, Math.round(stage1Estimate(piece) + mechanicBonus)),
+    suggestedPunti,
+    confidenceInterval: {
+      low: Math.max(1, Math.round(suggestedPunti - marginOfError)),
+      high: Math.round(suggestedPunti + marginOfError),
+    },
+    marginOfError,
     breakdown: {
       stepSlideMoveMobility: f.stepSlideMoveMobility,
       stepSlideCaptureMobility: f.stepSlideCaptureMobility,
