@@ -51,6 +51,16 @@ describe('isKingInCheck', () => {
     board = place(board, 'd6', 'RB', 'A');
     expect(isKingInCheck(board, 'B')).toBe(true);
   });
+
+  it('freezing an unrelated enemy piece via a Stunner does not interfere with a separate piece delivering check', () => {
+    // c4 (owned by B) sits adjacent to the Stunner at d5 and is frozen, but that must not affect
+    // whether the entirely separate Rook at e8 is correctly detected as checking A's King at e1.
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'TO', 'B');
+    board = place(board, 'd5', 'ST', 'A');
+    board = place(board, 'c4', 'PE', 'B'); // adjacent to A's Stunner — frozen, but irrelevant to the check below
+    expect(isKingInCheck(board, 'A')).toBe(true);
+  });
 });
 
 describe('getLegalMoves — filters moves that would leave the mover\'s own King in check', () => {
