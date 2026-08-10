@@ -1,5 +1,5 @@
 import type { Direction, Move, Piece } from '../types';
-import { coordToFileRank, fileRankToCoord, type Coord, type Owner } from './board';
+import { coordToFileRank, fileRankToCoord, DEFAULT_BOARD_DIMENSIONS, type Coord, type Owner } from './board';
 
 interface Vector { df: number; dr: number }
 
@@ -91,6 +91,47 @@ export function computePieceRangeSquares(pieceDef: Piece, owner: Owner, from: Co
 
   for (const moveEntry of pieceDef.moves) {
     if (!passesColorRestriction(moveEntry, from)) continue;
+
+    if (moveEntry.movementType === 'speciale' && pieceDef.rimbalzoUnico) {
+      // Illustrative only: shows the deterministic edge-bounce (mirrors moveEngine.ts's
+      // walkDiagonalSegment edge logic against the default board size); the obstacle-bounce case
+      // can't be shown here since this module has no board/occupancy to bounce off of.
+      for (const relDir of moveEntry.directions) {
+        const v = ABSOLUTE_DIRECTION_VECTORS[toAbsoluteDirection(relDir, owner)];
+        const { file: fromFile, rank: fromRank } = coordToFileRank(from);
+
+        let lastGood: Coord | null = null;
+        let edgeAxis: 'file' | 'rank' | 'both' | null = null;
+        for (let dist = 1; ; dist++) {
+          const file = fromFile + v.df * dist;
+          const rank = fromRank + v.dr * dist;
+          const fileOut = file < 0 || file >= DEFAULT_BOARD_DIMENSIONS.width;
+          const rankOut = rank < 1 || rank > DEFAULT_BOARD_DIMENSIONS.height;
+          if (fileOut || rankOut) {
+            edgeAxis = fileOut && rankOut ? 'both' : fileOut ? 'file' : 'rank';
+            break;
+          }
+          const to = offsetCoord(from, v.df * dist, v.dr * dist)!;
+          visit(to, to, moveEntry.capture, true);
+          lastGood = to;
+        }
+        if (!lastGood || !edgeAxis) continue;
+
+        const reflected: Vector = {
+          df: edgeAxis === 'file' || edgeAxis === 'both' ? -v.df : v.df,
+          dr: edgeAxis === 'rank' || edgeAxis === 'both' ? -v.dr : v.dr,
+        };
+        const { file: pivotFile, rank: pivotRank } = coordToFileRank(lastGood);
+        for (let dist = 1; ; dist++) {
+          const file = pivotFile + reflected.df * dist;
+          const rank = pivotRank + reflected.dr * dist;
+          if (file < 0 || file >= DEFAULT_BOARD_DIMENSIONS.width || rank < 1 || rank > DEFAULT_BOARD_DIMENSIONS.height) break;
+          const to = offsetCoord(lastGood, reflected.df * dist, reflected.dr * dist)!;
+          visit(to, to, moveEntry.capture, true);
+        }
+      }
+      continue;
+    }
 
     if (moveEntry.leapPattern === 'L') {
       for (const { df, dr } of KNIGHT_OFFSETS) {

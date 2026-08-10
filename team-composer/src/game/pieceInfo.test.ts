@@ -113,6 +113,14 @@ describe('computePieceRangeSquares — simplified single-hop illustration (Conig
   });
 });
 
+describe('computePieceRangeSquares — bounce slide, edge-bounce only (Rimbalzatore)', () => {
+  it('illustrates the single-edge reflection from a near-edge square', () => {
+    // from d6, "ne" hits the top edge after e7,f8, then reflects to "se": g7, h6.
+    const { moveSquares } = computePieceRangeSquares(getPieceDef('RB'), 'A', 'd6');
+    expect(moveSquares).toEqual(expect.arrayContaining(['e7', 'f8', 'g7', 'h6']));
+  });
+});
+
 describe('computePieceRangeSquares — color-restricted entries (Camaleonte)', () => {
   it('only applies the move entry matching the color of the starting square', () => {
     // d4 is a dark square ("scura"): the diagonal 4-step ("chiare") entry must not contribute,
