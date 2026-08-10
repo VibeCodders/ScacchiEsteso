@@ -65,6 +65,19 @@ export interface Piece {
    *  enemy is actually captured when the player stops; the King-step fallback move is only
    *  offered when no jump is currently available. Drives turnManager's pendingRabbitChain flow. */
   catenaSaltiConCatturaFinale?: boolean;
+  /** True only for Rimbalzatore (RB): diagonal slide that may reflect off the board edge or an
+   *  obstacle at most once. Its single Move entry uses movementType "speciale" and is dispatched
+   *  to generateBounceSlideMoves instead of generateStepOrSlideMoves. */
+  rimbalzoUnico?: boolean;
+  /** True only for Swapper (SW): in addition to a King-style move, may swap two allied pieces
+   *  that are each within its own 8 adjacent squares (one of the two may be the Swapper's own
+   *  square). Drives getSwapperCandidateSquares / applySwapperSwap. */
+  scambioTraDueAlleati?: boolean;
+  /** True only for Stunner (ST): every enemy piece (except the King) on one of its 8 adjacent
+   *  squares is frozen — no legal moves/special actions except a move that captures the Stunner
+   *  itself. Checked by moveEngine.ts's generatePseudoLegalMoves and by every alternative-action
+   *  module (scocca.ts, swap.ts, necromancy.ts, swapper.ts). */
+  stunAura?: boolean;
 }
 
 export interface TeamMember {
