@@ -19,6 +19,7 @@ import { getLegalMoves, isCheckmate, isKingInCheck, isStalemate } from './check'
 import { getPromotionOptions, isPromotionMove } from './promotion';
 import { canUseScocca, getScoccaTargets } from './scocca';
 import { canSwap, getSwapTargets } from './swap';
+import { canSwapperSwap, getSwapperCandidateSquares } from './swapper';
 import { canRevive, getRevivalSquares, getRevivableSiglas } from './necromancy';
 import { getAreaDamageVictims, triggersAreaDamage } from './areaDamage';
 import { canMimic, getMimicMoves, getOrphanThreats } from './orphan';
@@ -703,6 +704,86 @@ export function applySwap(state: GameState, from: Coord, target: Coord): ApplyTu
     sigla: piece.sigla,
     isCapture: false,
     isSwap: true,
+  };
+
+  return {
+    ok: true,
+    state: {
+      board: nextBoard,
+      dimensions: state.dimensions,
+      turn: nextTurn,
+      turnNumber: state.turnNumber + 1,
+      history: [...state.history, historyEntry],
+      captured: state.captured,
+      status,
+      winner: resolveWinner(status, nextBoard, piece.owner, state.dimensions),
+      enPassantTarget: null,
+      pendingExtraMove: null,
+      pendingRabbitChain: null,
+      turnsSinceProgress,
+    },
+  };
+}
+
+/**
+ * Plays a Swapper's two-ally swap as the turn's action: swaps squareA <-> squareB, both of which
+ * must be in getSwapperCandidateSquares(from) — the Swapper's own square counts as one candidate,
+ * so one of the two may be the Swapper itself (exactly like Mistico's swap) or both may be two
+ * OTHER allies adjacent to the Swapper. Rejected if it would leave the acting player's own King
+ * in check (README §3.2).
+ */
+export function applySwapperSwap(state: GameState, from: Coord, squareA: Coord, squareB: Coord): ApplyTurnResult {
+  if (GAME_OVER_STATUSES.has(state.status)) {
+    return { ok: false, reason: 'La partita è terminata.' };
+  }
+  if (state.pendingExtraMove) {
+    return { ok: false, reason: 'Devi prima completare (o saltare) il movimento extra del Berserker.' };
+  }
+  if (state.pendingRabbitChain) {
+    return { ok: false, reason: 'Devi prima continuare (o fermare) la catena di salti del Coniglio.' };
+  }
+
+  const piece = getPieceAt(state.board, from);
+  if (!piece) {
+    return { ok: false, reason: `Nessun pezzo in ${from}.` };
+  }
+  if (piece.owner !== state.turn) {
+    return { ok: false, reason: 'Non è il turno di questo giocatore.' };
+  }
+
+  const pieceDef = getPieceDef(piece.sigla);
+  if (!canSwapperSwap(pieceDef)) {
+    return { ok: false, reason: 'Questo pezzo non può scambiare due alleati.' };
+  }
+  if (squareA === squareB) {
+    return { ok: false, reason: 'Le due caselle devono essere diverse.' };
+  }
+
+  const candidates = getSwapperCandidateSquares(state.board, from, piece.owner, state.dimensions);
+  if (!candidates.includes(squareA) || !candidates.includes(squareB)) {
+    return { ok: false, reason: `Scambio non valido: ${squareA} <-> ${squareB}.` };
+  }
+
+  const nextBoard = swapPieces(state.board, squareA, squareB);
+
+  if (isKingInCheck(nextBoard, piece.owner, state.dimensions)) {
+    return { ok: false, reason: 'Questa azione lascerebbe il tuo Re sotto scacco.' };
+  }
+
+  const nextTurn: Owner = piece.owner === 'A' ? 'B' : 'A';
+  const turnsSinceProgress = 0; // a swap — always progress, per the user's clarification (mirrors applySwap)
+  const status = computeStatus(nextBoard, nextTurn, turnsSinceProgress, state.dimensions);
+
+  const swappedPiece = getPieceAt(state.board, squareA)!;
+  const historyEntry: HistoryEntry = {
+    turnNumber: state.turnNumber,
+    owner: piece.owner,
+    from: squareA,
+    to: squareB,
+    sigla: swappedPiece.sigla,
+    isCapture: false,
+    isSwapperSwap: true,
+    swapSquares: [squareA, squareB],
   };
 
   return {

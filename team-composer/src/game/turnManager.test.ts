@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createInitialGameState, applyTurn, skipExtraMove, applyScocca, applySwap, applyRevive, stopRabbitChain, getLegalMovesForTurn, RABBIT_CHAIN_SAFETY_CAP } from './turnManager';
+import { createInitialGameState, applyTurn, skipExtraMove, applyScocca, applySwap, applySwapperSwap, applyRevive, stopRabbitChain, getLegalMovesForTurn, RABBIT_CHAIN_SAFETY_CAP } from './turnManager';
 import { createEmptyBoard, createPieceInstance, setPieceAt, type BoardState, type Coord } from './board';
 import { generatePseudoLegalMoves } from './moveEngine';
 
@@ -712,6 +712,91 @@ describe('applySwap — Mistico position swap', () => {
 
     const result = applySwap(state, 'd4', 'd5');
     expect(result.ok).toBe(false);
+  });
+});
+
+describe('applySwapperSwap — Swapper two-ally swap', () => {
+  it('swaps two OTHER allies adjacent to the Swapper, leaving the Swapper itself unmoved', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'SW', 'A');
+    board = place(board, 'd5', 'CA', 'A');
+    board = place(board, 'c3', 'PE', 'A');
+    const state = createInitialGameState(board, 'A');
+
+    const result = applySwapperSwap(state, 'd4', 'd5', 'c3');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.state.board.get('d4')?.sigla).toBe('SW'); // unmoved
+    expect(result.state.board.get('c3')?.sigla).toBe('CA');
+    expect(result.state.board.get('d5')?.sigla).toBe('PE');
+    expect(result.state.turn).toBe('B');
+    expect(result.state.history[0]).toMatchObject({ isSwapperSwap: true, swapSquares: ['d5', 'c3'] });
+  });
+
+  it('swaps the Swapper itself with one adjacent ally (own square as one endpoint)', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'SW', 'A');
+    board = place(board, 'd5', 'CA', 'A');
+    const state = createInitialGameState(board, 'A');
+
+    const result = applySwapperSwap(state, 'd4', 'd4', 'd5');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.state.board.get('d5')?.sigla).toBe('SW');
+    expect(result.state.board.get('d4')?.sigla).toBe('CA');
+  });
+
+  it('rejects a swap where a square is not one of the Swapper\'s candidates', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'SW', 'A');
+    board = place(board, 'd5', 'CA', 'A');
+    board = place(board, 'd8', 'PE', 'A'); // not adjacent to the Swapper
+    const state = createInitialGameState(board, 'A');
+
+    expect(applySwapperSwap(state, 'd4', 'd5', 'd8').ok).toBe(false);
+  });
+
+  it('rejects swapping a square with itself', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'SW', 'A');
+    board = place(board, 'd5', 'CA', 'A');
+    const state = createInitialGameState(board, 'A');
+
+    expect(applySwapperSwap(state, 'd4', 'd5', 'd5').ok).toBe(false);
+  });
+
+  it('rejects a swap that would leave the acting player\'s own King in check', () => {
+    let board = place(createEmptyBoard(), 'a1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'SW', 'A');
+    board = place(board, 'd5', 'CA', 'A');
+    board = place(board, 'c3', 'PE', 'A');
+    board = place(board, 'a8', 'TO', 'B'); // checks the King on a1 right now
+    const state = createInitialGameState(board, 'A');
+    expect(state.status).toBe('check');
+
+    expect(applySwapperSwap(state, 'd4', 'd5', 'c3').ok).toBe(false);
+  });
+
+  it('resets turnsSinceProgress to 0 (a swap always counts as progress)', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'SW', 'A');
+    board = place(board, 'd5', 'CA', 'A');
+    board = place(board, 'c3', 'PE', 'A');
+    let state = createInitialGameState(board, 'A');
+    state = { ...state, turnsSinceProgress: 5 };
+
+    const result = applySwapperSwap(state, 'd4', 'd5', 'c3');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.turnsSinceProgress).toBe(0);
   });
 });
 

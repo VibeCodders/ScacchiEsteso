@@ -62,6 +62,35 @@ describe('generateBotActions', () => {
     const choices = promotionActions.map((a) => (a.kind === 'move' ? a.promotionChoice : undefined)).sort();
     expect(choices).toEqual(['AL', 'CA', 'PE', 'SP'].sort());
   });
+
+  it('enumerates swapperSwap actions for a Swapper with eligible allies, and applyBotAction dispatches them', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'SW', 'A');
+    board = place(board, 'd5', 'CA', 'A');
+    board = place(board, 'c3', 'PE', 'A');
+    const state = createInitialGameState(board, 'A');
+
+    const swapActions = generateBotActions(state, 'A').filter((a) => a.kind === 'swapperSwap');
+    expect(swapActions.length).toBeGreaterThan(0);
+
+    const action = swapActions[0];
+    if (action.kind !== 'swapperSwap') throw new Error('expected swapperSwap');
+    const result = applyBotAction(state, action);
+    expect(result.ok).toBe(true);
+  });
+
+  it('a piece frozen by an enemy Stunner contributes only its Stunner-capture action, if any', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'TO', 'A');
+    board = place(board, 'd5', 'ST', 'B'); // adjacent Stunner, directly capturable by the Rook
+    const state = createInitialGameState(board, 'A');
+
+    const actions = generateBotActions(state, 'A').filter((a) => a.kind === 'move' && a.from === 'd4');
+    expect(actions).toHaveLength(1);
+    expect(actions[0]).toMatchObject({ kind: 'move', from: 'd4', to: 'd5' });
+  });
 });
 
 describe('chooseBotAction', () => {

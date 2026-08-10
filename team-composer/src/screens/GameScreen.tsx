@@ -6,9 +6,10 @@ import { getPieceDef } from '../game/moveEngine';
 import { getPromotionOptions, isPromotionMove } from '../game/promotion';
 import { canUseScocca, getScoccaTargets } from '../game/scocca';
 import { canSwap, getSwapTargets } from '../game/swap';
+import { canSwapperSwap, getSwapperCandidateSquares } from '../game/swapper';
 import { canRevive, getRevivalSquares, getRevivableSiglas } from '../game/necromancy';
 import { canMimic, getOrphanThreats } from '../game/orphan';
-import { createInitialGameState, applyTurn, applyScocca, applySwap, applyRevive, getLegalMovesForTurn, skipExtraMove, stopRabbitChain, type GameState } from '../game/turnManager';
+import { createInitialGameState, applyTurn, applyScocca, applySwap, applySwapperSwap, applyRevive, getLegalMovesForTurn, skipExtraMove, stopRabbitChain, type GameState } from '../game/turnManager';
 import { chooseBotAction, applyBotAction } from '../game/bot';
 import { pieces, sortSiglasByPunti } from '../data/pieces';
 import type { Coord, Owner } from '../game/board';
@@ -48,7 +49,8 @@ function GameScreen() {
   const [pendingRevival, setPendingRevival] = useState<PendingRevival | null>(null);
   const [pendingMimicChoice, setPendingMimicChoice] = useState<PendingMimicChoice | null>(null);
   const [orphanMimicSource, setOrphanMimicSource] = useState<Coord | null>(null);
-  const [actionMode, setActionMode] = useState<'scocca' | 'swap' | 'revive' | null>(null);
+  const [actionMode, setActionMode] = useState<'scocca' | 'swap' | 'revive' | 'swapperSwap' | null>(null);
+  const [swapperFirstSquare, setSwapperFirstSquare] = useState<Coord | null>(null);
 
   const effectiveSelected = gameState?.pendingExtraMove ?? gameState?.pendingRabbitChain?.at ?? selected;
 
@@ -66,6 +68,7 @@ function GameScreen() {
       setOrientation(result.state.turn);
       setSelected(null);
       setActionMode(null);
+      setSwapperFirstSquare(null);
       setOrphanMimicSource(null);
       setPendingMimicChoice(null);
       setError(null);
@@ -84,8 +87,13 @@ function GameScreen() {
     if (actionMode === 'revive') {
       return mover ? getRevivalSquares(gameState.board, effectiveSelected, mover.owner) : [];
     }
+    if (actionMode === 'swapperSwap') {
+      if (!mover) return [];
+      const candidates = getSwapperCandidateSquares(gameState.board, effectiveSelected, mover.owner);
+      return swapperFirstSquare ? candidates.filter((c) => c !== swapperFirstSquare) : candidates;
+    }
     return getLegalMovesForTurn(gameState, effectiveSelected, orphanMimicSource ?? undefined).map((m) => m.to);
-  }, [gameState, effectiveSelected, actionMode, orphanMimicSource]);
+  }, [gameState, effectiveSelected, actionMode, orphanMimicSource, swapperFirstSquare]);
 
   if (!deployedBoard || !gameState) {
     return (
@@ -131,6 +139,7 @@ function GameScreen() {
   const selectPiece = (coord: Coord) => {
     setSelected(coord);
     setActionMode(null);
+    setSwapperFirstSquare(null);
     setError(null);
     setOrphanMimicSource(null);
     setPendingMimicChoice(null);
@@ -171,6 +180,7 @@ function GameScreen() {
       setOrientation(result.state.turn);
       setSelected(null);
       setActionMode(null);
+      setSwapperFirstSquare(null);
       setError(null);
     } else {
       setError(result.reason);
@@ -184,6 +194,21 @@ function GameScreen() {
       setOrientation(result.state.turn);
       setSelected(null);
       setActionMode(null);
+      setSwapperFirstSquare(null);
+      setError(null);
+    } else {
+      setError(result.reason);
+    }
+  };
+
+  const commitSwapperSwap = (from: Coord, squareA: Coord, squareB: Coord) => {
+    const result = applySwapperSwap(gameState, from, squareA, squareB);
+    if (result.ok) {
+      setGameState(result.state);
+      setOrientation(result.state.turn);
+      setSelected(null);
+      setActionMode(null);
+      setSwapperFirstSquare(null);
       setError(null);
     } else {
       setError(result.reason);
@@ -197,6 +222,7 @@ function GameScreen() {
       setOrientation(result.state.turn);
       setSelected(null);
       setActionMode(null);
+      setSwapperFirstSquare(null);
       setPendingRevival(null);
       setError(null);
     } else {
@@ -232,6 +258,17 @@ function GameScreen() {
       return; // no other square is selectable while the Coniglio's jump-chain is pending
     }
 
+    if (actionMode === 'swapperSwap' && selected) {
+      if (legalDestinations.includes(coord)) {
+        if (!swapperFirstSquare) {
+          setSwapperFirstSquare(coord); // first pick — no commit yet
+        } else {
+          commitSwapperSwap(selected, swapperFirstSquare, coord);
+        }
+      }
+      return;
+    }
+
     if (actionMode && selected) {
       if (legalDestinations.includes(coord)) {
         if (actionMode === 'scocca') commitScocca(selected, coord);
@@ -252,6 +289,7 @@ function GameScreen() {
       if (coord === selected) {
         setSelected(null);
         setActionMode(null);
+        setSwapperFirstSquare(null);
         setOrphanMimicSource(null);
         setPendingMimicChoice(null);
       } else {
@@ -262,6 +300,7 @@ function GameScreen() {
 
     setSelected(null);
     setActionMode(null);
+    setSwapperFirstSquare(null);
     setOrphanMimicSource(null);
     setPendingMimicChoice(null);
   };
@@ -353,6 +392,12 @@ function GameScreen() {
                 {actionMode === 'swap' ? '↩️ Annulla Scambio' : '🔀 Scambia posizione'}
               </button>
             )}
+            {selected && !gameState.pendingExtraMove && !gameState.pendingRabbitChain && canSwapperSwap(getPieceDef(gameState.board.get(selected)!.sigla))
+              && getSwapperCandidateSquares(gameState.board, selected, gameState.board.get(selected)!.owner).length > 1 && (
+              <button className="btn-auto" onClick={() => { setActionMode((m) => (m === 'swapperSwap' ? null : 'swapperSwap')); setSwapperFirstSquare(null); }}>
+                {actionMode === 'swapperSwap' ? '↩️ Annulla Scambio' : '🔁 Scambia due alleati'}
+              </button>
+            )}
             {selected && !gameState.pendingExtraMove && !gameState.pendingRabbitChain && canRevive(getPieceDef(gameState.board.get(selected)!.sigla))
               && getRevivableSiglas(gameState.captured[gameState.board.get(selected)!.owner]).length > 0
               && getRevivalSquares(gameState.board, selected, gameState.board.get(selected)!.owner).length > 0 && (
@@ -364,6 +409,8 @@ function GameScreen() {
           {actionMode === 'scocca' && <p>🏹 Modalità Scoccare: seleziona un bersaglio nemico a 3-4 caselle.</p>}
           {actionMode === 'swap' && <p>🔀 Modalità Scambio: seleziona un alleato in linea di vista libera (riga, colonna o diagonale).</p>}
           {actionMode === 'revive' && <p>🧟 Modalità Rianimazione: seleziona una casella vuota adiacente.</p>}
+          {actionMode === 'swapperSwap' && !swapperFirstSquare && <p>🔁 Scambio: seleziona la prima casella (un alleato adiacente, o lo Swapper stesso).</p>}
+          {actionMode === 'swapperSwap' && swapperFirstSquare && <p>🔁 Scambio: seleziona la seconda casella da scambiare con {swapperFirstSquare}.</p>}
           {orphanMimicSource && (
             <p>🎭 L'Orfano è sotto scacco: imita {gameState.board.get(orphanMimicSource)?.sigla} da {orphanMimicSource}.</p>
           )}

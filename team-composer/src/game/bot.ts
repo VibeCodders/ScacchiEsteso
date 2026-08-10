@@ -3,6 +3,7 @@ import { getPieceDef } from './moveEngine';
 import { getPromotionOptions, isPromotionMove } from './promotion';
 import { canUseScocca, getScoccaTargets } from './scocca';
 import { canSwap, getSwapTargets } from './swap';
+import { canSwapperSwap, getSwapperCandidatePairs } from './swapper';
 import { canRevive, getRevivalSquares, getRevivableSiglas } from './necromancy';
 import { canMimic, getOrphanThreats } from './orphan';
 import { computeMaterialScore } from './antiStalemate';
@@ -10,6 +11,7 @@ import {
   applyTurn,
   applyScocca,
   applySwap,
+  applySwapperSwap,
   applyRevive,
   skipExtraMove,
   stopRabbitChain,
@@ -36,6 +38,7 @@ export type BotAction =
   | { kind: 'move'; from: Coord; to: Coord; promotionChoice?: string; orphanMimicSource?: Coord }
   | { kind: 'scocca'; from: Coord; target: Coord }
   | { kind: 'swap'; from: Coord; target: Coord }
+  | { kind: 'swapperSwap'; from: Coord; squareA: Coord; squareB: Coord }
   | { kind: 'revive'; from: Coord; target: Coord; sigla: string }
   | { kind: 'skipExtraMove' }
   | { kind: 'stopRabbitChain' };
@@ -48,6 +51,8 @@ export function applyBotAction(state: GameState, action: BotAction): ApplyTurnRe
       return applyScocca(state, action.from, action.target);
     case 'swap':
       return applySwap(state, action.from, action.target);
+    case 'swapperSwap':
+      return applySwapperSwap(state, action.from, action.squareA, action.squareB);
     case 'revive':
       return applyRevive(state, action.from, action.target, action.sigla);
     case 'skipExtraMove':
@@ -115,6 +120,12 @@ export function generateBotActions(state: GameState, owner: Owner): BotAction[] 
     if (canSwap(pieceDef)) {
       for (const target of getSwapTargets(state.board, from, owner, state.dimensions)) {
         actions.push({ kind: 'swap', from, target });
+      }
+    }
+
+    if (canSwapperSwap(pieceDef)) {
+      for (const [squareA, squareB] of getSwapperCandidatePairs(state.board, from, owner, state.dimensions)) {
+        actions.push({ kind: 'swapperSwap', from, squareA, squareB });
       }
     }
 
