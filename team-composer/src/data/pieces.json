@@ -17,7 +17,7 @@
   {
     "sigla": "PG",
     "descrizione": "Paggio",
-    "punti": 3,
+    "punti": 5,
     "categoria": "pedone",
     "classico": false,
     "regole": "Si muove di una casella in verticale. Non cattura.",
@@ -128,7 +128,7 @@
   {
     "sigla": "TO",
     "descrizione": "Torre",
-    "punti": 26,
+    "punti": 27,
     "categoria": "base",
     "classico": true,
     "regole": "Si muove in orizzontale o verticale per un numero illimitato di caselle.",
@@ -143,7 +143,7 @@
   {
     "sigla": "SP",
     "descrizione": "Spettro",
-    "punti": 17,
+    "punti": 15,
     "categoria": "base",
     "classico": false,
     "regole": "Si muove di massimo 2 caselle in diagonale. Ignora le interposizioni. Cattura sulla casella di arrivo.",
@@ -159,7 +159,7 @@
   {
     "sigla": "CT",
     "descrizione": "Catapulta",
-    "punti": 9,
+    "punti": 11,
     "categoria": "base",
     "classico": false,
     "regole": "Si muovi di 1 o 2 caselle in orizzontale. Ignora le interposizioni. Cattura sulla casella di arrivo.",
@@ -175,7 +175,7 @@
   {
     "sigla": "CM",
     "descrizione": "Camaleonte",
-    "punti": 30,
+    "punti": 31,
     "categoria": "base",
     "classico": false,
     "regole": "Si muove come Alfiere per un massimo di 4 caselle sulle caselle chiare e come Torre per un massimo di 3 caselle sulle caselle scure. Può anche muoversi di 1 casella in qualsiasi direzione.",
@@ -192,7 +192,7 @@
   {
     "sigla": "BE",
     "descrizione": "Berserker",
-    "punti": 32,
+    "punti": 39,
     "categoria": "base",
     "classico": false,
     "regole": "Si muove di massimo 2 caselle in qualsiasi direzione. Furia bellica: dopo una cattura in mischia riuscita, ottiene un secondo movimento extra immediato, senza possibilità di cattura durante quel movimento aggiuntivo.",
@@ -228,7 +228,7 @@
   {
     "sigla": "IQ",
     "descrizione": "Inquisitore",
-    "punti": 30,
+    "punti": 35,
     "categoria": "base",
     "classico": false,
     "regole": "Si muove in orizzontale o verticale per massimo 3 caselle. Silenzio: tutti i pezzi nemici nelle 8 caselle adiacenti perdono la possibilità di effettuare attacchi a distanza in orizzontale o verticale. L'effetto cessa immediatamente quando il pezzo nemico lascia l'aura.",
@@ -299,7 +299,7 @@
   {
     "sigla": "PA",
     "descrizione": "Paladino",
-    "punti": 48,
+    "punti": 51,
     "categoria": "base",
     "classico": false,
     "regole": "Si muove come il Cavallo oppure di 1 casella in qualsiasi direzione. Egida: i pezzi alleati nelle 8 caselle adiacenti sono protetti da attacchi a distanza. I nemici possono attaccarli solo con catture in mischia.",
@@ -318,7 +318,7 @@
   {
     "sigla": "CO",
     "descrizione": "Colosso",
-    "punti": 38,
+    "punti": 36,
     "categoria": "base",
     "classico": false,
     "regole": "Si muove di massimo 2 caselle in qualsiasi direzione. Danno ad area: quando cattura in mischia, distrugge automaticamente tutti i pezzi (alleati e nemici) che si trovano nelle quattro caselle ortogonalmente adiacenti alla propria casella di arrivo.",
@@ -336,7 +336,7 @@
   {
     "sigla": "RA",
     "descrizione": "Regina",
-    "punti": 36,
+    "punti": 37,
     "categoria": "base",
     "classico": true,
     "regole": "Si muove in qualsiasi direzione per un numero illimitato di caselle.",
@@ -370,7 +370,7 @@
   {
     "sigla": "CV",
     "descrizione": "Cavalletta",
-    "punti": 15,
+    "punti": 20,
     "categoria": "base",
     "classico": false,
     "regole": "Vedi Grasshopper su https://en.wikipedia.org/wiki/Grasshopper_(chess_variant)",
@@ -419,7 +419,7 @@
   {
     "sigla": "DU",
     "descrizione": "Duca",
-    "punti": 7,
+    "punti": 6,
     "categoria": "base",
     "classico": false,
     "regole": "Si muove di una casella in diagonale. Cattura in mischia.",
@@ -434,7 +434,7 @@
   {
     "sigla": "GE",
     "descrizione": "Generale",
-    "punti": 43,
+    "punti": 34,
     "categoria": "base",
     "classico": false,
     "regole": "Si muove come il Cavallo oppure di 1 casella in qualsiasi direzione.",
@@ -450,7 +450,7 @@
   {
     "sigla": "TI",
     "descrizione": "Tigre",
-    "punti": 35,
+    "punti": 36,
     "categoria": "base",
     "classico": false,
     "regole": "Si muove come la Torre oppure di 1 casella in qualsiasi direzione.",
@@ -482,7 +482,7 @@
   {
     "sigla": "CN",
     "descrizione": "Coniglio",
-    "punti": 42,
+    "punti": 41,
     "categoria": "base",
     "classico": false,
     "regole": "Se non ha salti disponibili, si muove come il Re (1 casella, cattura in mischia). Se ha un nemico adiacente in una delle 8 direzioni con la casella successiva libera, puo saltarlo senza catturarlo subito; dopo l'atterraggio, se c'e un altro nemico adiacente (anche lo stesso appena saltato) con casella successiva libera, puo continuare a saltare. Quando si ferma, solo l'ultimo nemico saltato viene catturato: tutti gli altri nemici saltati durante la catena restano in gioco.",
@@ -499,7 +499,7 @@
   {
     "sigla": "RB",
     "descrizione": "Rimbalzatore",
-    "punti": 30,
+    "punti": 29,
     "categoria": "base",
     "classico": false,
     "regole": "Muove in diagonale come un Alfiere, ma può rimbalzare una sola volta cambiando direzione: contro il bordo della scacchiera riflette l'asse superato (in un angolo riflette entrambi); contro un pezzo (alleato o nemico, mai catturato dal rimbalzo) prosegue in una delle due direzioni di riflessione possibili, a scelta del giocatore. Dopo il rimbalzo prosegue come una normale scivolata fino a un ostacolo o al bordo.",
@@ -533,7 +533,7 @@
   {
     "sigla": "ST",
     "descrizione": "Stunner",
-    "punti": 31,
+    "punti": 28,
     "categoria": "base",
     "classico": false,
     "regole": "Muove come un Re. Ogni pezzo nemico (tranne il Re avversario, sempre immune) che si trova su una delle 8 caselle adiacenti allo Stunner è completamente congelato: non ha alcuna mossa né azione speciale disponibile, tranne l'unica mossa che catturerebbe lo Stunner stesso.",
