@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { estimatePunti, estimatorFitQuality, mechanicBonusSummary } from './estimatePunti';
+import { estimatePunti, estimatorFitQuality, mechanicBonusSummary, predictMechanicBonus, stage2ModelSummary } from './estimatePunti';
 import { getPieceDef } from '../game/moveEngine';
 import { pieces as ROSTER } from './pieces';
 
@@ -153,20 +153,70 @@ describe('estimatorFitQuality — measures the model\'s real accuracy against th
 });
 
 describe('mechanicBonusSummary — empirical-Bayes shrinkage on single-example mechanic bonuses', () => {
-  it('a mechanic type backed by a single roster example is pulled strictly toward the global average', () => {
+  it('a mechanic type backed by a single roster example is pulled strictly toward the stage-2 model prediction', () => {
+    // Background shrunk toward changed from a flat global mean to the stage-2 parametric model's
+    // own prediction (`predictedValue`) — see `shrinkMechanicBonus`.
     const table = mechanicBonusSummary();
-    const globalMean =
-      Object.values(table).reduce((sum, e) => sum + e.rawValue * e.sampleCount, 0) /
-      Object.values(table).reduce((sum, e) => sum + e.sampleCount, 0);
-
     const singleExampleEntry = Object.values(table).find((e) => e.sampleCount === 1);
     expect(singleExampleEntry).toBeDefined();
-    const { value, rawValue } = singleExampleEntry!;
+    const { value, rawValue, predictedValue } = singleExampleEntry!;
 
-    if (Math.abs(rawValue - globalMean) > 1e-9) {
-      const [lo, hi] = rawValue < globalMean ? [rawValue, globalMean] : [globalMean, rawValue];
+    if (Math.abs(rawValue - predictedValue) > 1e-9) {
+      const [lo, hi] = rawValue < predictedValue ? [rawValue, predictedValue] : [predictedValue, rawValue];
       expect(value).toBeGreaterThan(lo);
       expect(value).toBeLessThan(hi);
     }
+  });
+});
+
+describe('stage2ModelSummary — parametric mechanic-bonus model', () => {
+  it('exposes one coefficient per stage-2 feature', () => {
+    const summary = stage2ModelSummary();
+    // Intercept + radius + directionCount + intensity + targetsAllies + isPassive + isOnCapture.
+    expect(summary.features).toHaveLength(7);
+    expect(summary.features.every((f) => Number.isFinite(f.coefficient))).toBe(true);
+    expect(Number.isFinite(summary.lambda)).toBe(true);
+    expect(Number.isFinite(summary.shrinkageK)).toBe(true);
+    expect(Number.isFinite(summary.looMeanAbsoluteError)).toBe(true);
+  });
+});
+
+describe('predictMechanicBonus — extrapolation to mechanic types outside the roster', () => {
+  it('produces a finite, plausible bonus for a mechanic type never seen in pieces.json', () => {
+    const bonus = predictMechanicBonus({
+      type: 'tipo_mai_visto_nel_roster',
+      modalita: 'passiva',
+      params: { raggio: 2, direzioni: ['n', 's', 'e', 'w'] },
+    });
+    expect(Number.isFinite(bonus)).toBe(true);
+    // A special mechanic should plausibly add value, not swing to an absurd extreme — loosely
+    // bounded against the scale of real roster punti values rather than an exact number, since the
+    // model is extrapolating from just 11 training rows.
+    expect(bonus).toBeGreaterThan(-20);
+    expect(bonus).toBeLessThan(40);
+  });
+
+  it('produces a finite bonus even for an action with no recognizable params', () => {
+    const bonus = predictMechanicBonus({ type: 'altro_tipo_ignoto', modalita: 'alternativa', params: {} });
+    expect(Number.isFinite(bonus)).toBe(true);
+  });
+});
+
+describe('estimatePunti — confidence interval', () => {
+  it('brackets the suggested value for every roster piece', () => {
+    for (const piece of ROSTER) {
+      if (piece.sigla === 'RE') continue;
+      const { suggestedPunti, confidenceInterval } = estimatePunti(piece);
+      expect(confidenceInterval.low).toBeLessThanOrEqual(suggestedPunti);
+      expect(confidenceInterval.high).toBeGreaterThanOrEqual(suggestedPunti);
+    }
+  });
+
+  it('margin of error is never negative, and is not smaller for a low-confidence mechanic piece than for a pure-movement piece', () => {
+    const pureMovement = estimatePunti(getPieceDef('AL'));
+    const armored = estimatePunti(ROSTER.find((p) => p.armatura)!);
+    expect(pureMovement.marginOfError).toBeGreaterThanOrEqual(0);
+    expect(armored.marginOfError).toBeGreaterThanOrEqual(0);
+    expect(armored.marginOfError).toBeGreaterThanOrEqual(pureMovement.marginOfError);
   });
 });
