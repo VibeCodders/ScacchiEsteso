@@ -422,6 +422,63 @@ function generateBounceSlideMoves(
   return results;
 }
 
+type BentSlideType = 'gryphon' | 'manticora';
+
+/**
+ * The Grifone (GR) / Manticora (MA) bent slide, the mirror-image fairy-piece pair: exactly one
+ * forced 1-square leg — diagonal for the Grifone, orthogonal for the Manticora — to an EMPTY
+ * pivot square (the first leg never captures and is blocked by any piece), followed by an
+ * unlimited slide along the two outward continuations (the legs that keep moving away from the
+ * origin), where ordinary slide blocking/capturing applies. The two candidate second-leg vectors
+ * for a first leg v1=(df,dr): the Grifone continues along the file (df,0) or rank (0,dr); the
+ * Manticora continues along the two diagonals away from the origin (df,±1) for an orthogonal
+ * step, or (±1,dr) for a vertical one.
+ */
+function generateBentSlideMoves(
+  board: BoardState,
+  from: Coord,
+  owner: Owner,
+  moveEntry: Move,
+  dimensions: BoardDimensions,
+  type: BentSlideType,
+): GeneratedMove[] {
+  const results: GeneratedMove[] = [];
+  const { file: fromFile, rank: fromRank } = coordToFileRank(from);
+
+  for (const relDir of moveEntry.directions) {
+    const v1 = ABSOLUTE_DIRECTION_VECTORS[toAbsoluteDirection(relDir, owner)];
+
+    const pivot = fileRankToCoord(fromFile + v1.df, fromRank + v1.dr, dimensions);
+    if (!pivot) continue;
+    if (getPieceAt(board, pivot)) continue; // first leg must be empty — no capture, no jumping
+
+    const secondLegs: Vector[] = type === 'gryphon'
+      ? [{ df: v1.df, dr: 0 }, { df: 0, dr: v1.dr }]
+      : v1.df !== 0
+        ? [{ df: v1.df, dr: 1 }, { df: v1.df, dr: -1 }]
+        : [{ df: 1, dr: v1.dr }, { df: -1, dr: v1.dr }];
+
+    for (const v2 of secondLegs) {
+      for (let dist = 1; dist <= moveEntry.maxSteps; dist++) {
+        const to = fileRankToCoord(fromFile + v1.df + v2.df * dist, fromRank + v1.dr + v2.dr * dist, dimensions);
+        if (!to) break;
+
+        const occupant = getPieceAt(board, to);
+        if (!occupant) {
+          results.push({ from, to, isCapture: false, captureMode: moveEntry.captureMode, movementType: moveEntry.movementType });
+        } else if (occupant.owner !== owner && moveEntry.capture) {
+          results.push({ from, to, isCapture: true, capturedCoord: to, captureMode: moveEntry.captureMode, movementType: moveEntry.movementType });
+          break;
+        } else {
+          break;
+        }
+      }
+    }
+  }
+
+  return results;
+}
+
 function generateMovesForEntry(
   board: BoardState,
   from: Coord,
@@ -436,6 +493,12 @@ function generateMovesForEntry(
 
   if (moveEntry.movementType === 'speciale' && pieceDef.rimbalzoUnico) {
     return generateBounceSlideMoves(board, from, piece.owner, moveEntry, dimensions);
+  }
+  if (moveEntry.movementType === 'speciale' && pieceDef.gryphon) {
+    return generateBentSlideMoves(board, from, piece.owner, moveEntry, dimensions, 'gryphon');
+  }
+  if (moveEntry.movementType === 'speciale' && pieceDef.manticora) {
+    return generateBentSlideMoves(board, from, piece.owner, moveEntry, dimensions, 'manticora');
   }
   if (moveEntry.leapPattern === 'L') {
     return generateKnightPatternMoves(board, from, piece.owner, moveEntry, dimensions);

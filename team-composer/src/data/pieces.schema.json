@@ -257,6 +257,12 @@
         "rimbalzoUnico": {
           "type": "boolean"
         },
+        "gryphon": {
+          "type": "boolean"
+        },
+        "manticora": {
+          "type": "boolean"
+        },
         "scambioTraDueAlleati": {
           "type": "boolean"
         },

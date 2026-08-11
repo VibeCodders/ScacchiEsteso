@@ -568,5 +568,21 @@
     ],
     "sdoppiamento": true,
     "riunione": true
+  },
+  {
+    "sigla": "GR",
+    "descrizione": "Grifone",
+    "punti": 32,
+    "categoria": "base",
+    "classico": false,
+    "regole": "Si muove di una casella in diagonale (che deve essere vuota), poi prosegue in orizzontale o verticale verso l'esterno per un numero illimitato di caselle. La cattura avviene solo sulla seconda tratta: la casella diagonale di passaggio non può contenere alcun pezzo.",
+    "moves": [
+      { "directions": ["ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 99, "capture": true, "captureMode": "melee", "movementType": "speciale", "note": "Prima tratta diagonale di 1 casella (vuota), poi scivolata ortogonale verso l'esterno; vedi generateBentSlideMoves." }
+    ],
+    "movimentoTipo": "speciale",
+    "resistance": 0,
+    "immunityTypes": [],
+    "alternativeActions": [],
+    "gryphon": true
   }
 ]

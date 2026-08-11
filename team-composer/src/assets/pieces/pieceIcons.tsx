@@ -180,6 +180,12 @@ const PIECE_SHAPES: Record<string, ReactElement> = {
       <polygon points="50,32 61,50 50,68 39,50" fillOpacity="0.35" />
     </g>
   ),
+  GR: (
+    <g>
+      <rect x="34" y="66" width="32" height="12" rx="3" />
+      <polygon points="50,12 58,26 72,20 62,38 78,44 62,50 66,64 50,56 34,64 38,50 22,44 38,38 28,20 42,26" />
+    </g>
+  ),
 };
 
 export interface PieceIconProps extends SVGProps<SVGSVGElement> {

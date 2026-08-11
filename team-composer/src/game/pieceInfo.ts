@@ -136,6 +136,33 @@ export function computePieceRangeSquares(pieceDef: Piece, owner: Owner, from: Co
       continue;
     }
 
+    if (moveEntry.movementType === 'speciale' && (pieceDef.gryphon || pieceDef.manticora)) {
+      // Illustrative only (no board/occupancy here): the first leg (diagonal for the Grifone,
+      // orthogonal for the Manticora) is a pure pivot and is never itself a destination; every
+      // square along the two outward second-leg continuations is shown as a plain move or capture
+      // landing. Mirrors moveEngine.ts's generateBentSlideMoves geometry.
+      for (const relDir of moveEntry.directions) {
+        const v = ABSOLUTE_DIRECTION_VECTORS[toAbsoluteDirection(relDir, owner)];
+        const pivot = offsetCoord(from, v.df, v.dr);
+        if (!pivot) continue;
+
+        const secondLegs: Vector[] = pieceDef.gryphon
+          ? [{ df: v.df, dr: 0 }, { df: 0, dr: v.dr }]
+          : v.df !== 0
+            ? [{ df: v.df, dr: 1 }, { df: v.df, dr: -1 }]
+            : [{ df: 1, dr: v.dr }, { df: -1, dr: v.dr }];
+
+        for (const v2 of secondLegs) {
+          for (let dist = 1; ; dist++) {
+            const to = offsetCoord(pivot, v2.df * dist, v2.dr * dist);
+            if (!to) break;
+            visit(to, to, moveEntry.capture, true);
+          }
+        }
+      }
+      continue;
+    }
+
     if (moveEntry.leapPattern === 'L') {
       for (const { df, dr } of KNIGHT_OFFSETS) {
         const to = offsetCoord(from, df, dr);

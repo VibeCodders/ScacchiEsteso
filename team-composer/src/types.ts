@@ -82,6 +82,14 @@ export interface Piece {
    *  obstacle at most once. Its single Move entry uses movementType "speciale" and is dispatched
    *  to generateBounceSlideMoves instead of generateStepOrSlideMoves. */
   rimbalzoUnico?: boolean;
+  /** True only for Grifone (GR): bent slide — exactly one diagonal step (to an EMPTY square, no
+   *  capture on the first leg), then an unlimited orthogonal slide outward along the file or rank
+   *  that the diagonal step moved away from. Dispatched to generateBentSlideMoves. */
+  gryphon?: boolean;
+  /** True only for Manticora (MA): the mirror image of the Grifone — exactly one orthogonal step
+   *  (to an EMPTY square), then an unlimited diagonal slide outward. Shares generateBentSlideMoves
+   *  with the Grifone, parameterized by which leg comes first. */
+  manticora?: boolean;
   /** True only for Swapper (SW): in addition to a King-style move, may swap two allied pieces
    *  that are each within its own 8 adjacent squares (one of the two may be the Swapper's own
    *  square). Drives getSwapperCandidateSquares / applySwapperSwap. */
