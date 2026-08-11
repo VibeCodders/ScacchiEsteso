@@ -137,6 +137,23 @@ function GameScreen() {
     return byOwner;
   }, [gameState]);
 
+  /** Distinct piece siglas of each owner that have been captured (no longer on the board), with
+   *  their captured count — the "captured" half of the "Pezzi in gioco" sidebar list. Miraggio
+   *  clones never reach `captured` (they leave the board but assign no punti), so this is exact. */
+  const capturedPiecesByOwner = useMemo(() => {
+    const byOwner: Record<Owner, Map<string, number>> = { A: new Map(), B: new Map() };
+    if (!gameState) return byOwner;
+    for (const piece of gameState.captured.A) {
+      const counts = byOwner.A;
+      counts.set(piece.sigla, (counts.get(piece.sigla) ?? 0) + 1);
+    }
+    for (const piece of gameState.captured.B) {
+      const counts = byOwner.B;
+      counts.set(piece.sigla, (counts.get(piece.sigla) ?? 0) + 1);
+    }
+    return byOwner;
+  }, [gameState]);
+
   /** Squares holding the REAL half of a split Miraggio — rendered with a marker only while the
    *  reveal toggle is on, and only for the player whose turn it is (hot-seat compromise: whoever
    *  is at the screen verifies their own pieces; the opponent's stays hidden). */
@@ -667,15 +684,16 @@ function GameScreen() {
       </Panel>
 
       <Panel title="♟️ Pezzi in gioco">
-        <p className="mb-2 text-xs text-slate-500">Premi "🔍 Info" per rileggere come si muove un pezzo, come nell'enciclopedia.</p>
+        <p className="mb-2 text-xs text-slate-500">Premi "🔍 Info" per rileggere come si muove un pezzo, come nell'enciclopedia. I pezzi catturati sono segnati in grigio.</p>
         {(['A', 'B'] as const).map((owner) => {
-          const siglas = sortSiglasByPunti([...boardPiecesByOwner[owner].keys()]);
-          if (siglas.length === 0) return null;
+          const onBoardSiglas = sortSiglasByPunti([...boardPiecesByOwner[owner].keys()]);
+          const capturedSiglas = sortSiglasByPunti([...capturedPiecesByOwner[owner].keys()]);
+          if (onBoardSiglas.length === 0 && capturedSiglas.length === 0) return null;
           return (
             <div key={owner} className="mb-3 last:mb-0">
               <h3 className="mb-1 text-sm font-semibold text-slate-800 dark:text-slate-200">{ownerLabel(owner)}</h3>
               <div className="flex flex-col gap-1">
-                {siglas.map((sigla) => {
+                {onBoardSiglas.map((sigla) => {
                   const count = boardPiecesByOwner[owner].get(sigla)!;
                   const def = getPieceDef(sigla);
                   return (
@@ -689,6 +707,32 @@ function GameScreen() {
                           {def.descrizione}
                           {count > 1 && ` ×${count}`}
                         </span>
+                      </div>
+                      <Button variant="auto" className="shrink-0 px-2 py-0.5 text-[0.68rem]" onClick={() => setInfoSigla(sigla)}>
+                        🔍 Info
+                      </Button>
+                    </div>
+                  );
+                })}
+                {capturedSiglas.map((sigla) => {
+                  const count = capturedPiecesByOwner[owner].get(sigla)!;
+                  const def = getPieceDef(sigla);
+                  return (
+                    <div
+                      key={`captured-${sigla}`}
+                      data-captured-row={sigla}
+                      className="flex items-center justify-between gap-2 rounded-md border border-dashed border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-950/60 px-2 py-1 opacity-70"
+                    >
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className="board-sidebar-piece-icon size-5 shrink-0 text-slate-400 dark:text-slate-500">
+                          <PieceIcon sigla={sigla} className="size-full" />
+                        </span>
+                        <span className="font-mono text-xs font-bold text-slate-400 line-through dark:text-slate-500">{sigla}</span>
+                        <span className="truncate text-[0.7rem] text-slate-400 dark:text-slate-500" title={`${def.descrizione} — ${def.punti} pt`}>
+                          {def.descrizione}
+                          {count > 1 && ` ×${count}`}
+                        </span>
+                        <span className="shrink-0 rounded bg-red-100 px-1 py-0.5 text-[0.6rem] font-semibold text-red-600 dark:bg-red-950/60 dark:text-red-400">💀 catturato</span>
                       </div>
                       <Button variant="auto" className="shrink-0 px-2 py-0.5 text-[0.68rem]" onClick={() => setInfoSigla(sigla)}>
                         🔍 Info

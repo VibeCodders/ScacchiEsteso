@@ -508,7 +508,7 @@ describe('GameScreen — Pezzi in gioco sidebar', () => {
     expect(dialog).toBeInTheDocument();
     // the full rules prose is shown, like in the encyclopedia
     expect(within(dialog).getByText(/si muove di una casella in orizzontale o verticale/i)).toBeInTheDocument();
-    expect(within(dialog).getByText(/Respingere/i)).not.toBeInTheDocument(); // MA has no special action — sanity on the shared descriptions
+    expect(within(dialog).queryByText('Respingere')).not.toBeInTheDocument(); // MA has no special action — sanity on the shared descriptions
 
     fireEvent.click(within(dialog).getByText(/✕ Chiudi/i));
     expect(screen.queryByRole('dialog', { name: /Dettagli — Manticora/i })).not.toBeInTheDocument();
@@ -523,8 +523,60 @@ describe('GameScreen — Pezzi in gioco sidebar', () => {
     fireEvent.click(document.querySelector('[data-piece-row="RP"] button')!);
 
     const dialog = screen.getByRole('dialog', { name: /Dettagli — Repulsore/i });
-    expect(within(dialog).getByText(/Respingere/i)).toBeInTheDocument();
-    expect(within(dialog).getByText(/spinge un nemico adiacente/i)).toBeInTheDocument();
+    expect(within(dialog).getByText('Respingere')).toBeInTheDocument(); // the special-action label
+    expect(within(dialog).getByText(/su una casella vuota/i)).toBeInTheDocument(); // its description (unique to the abilities list)
+  });
+
+  it('marks captured pieces as no longer on the board, and their info button still opens the rules', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'a1', 'TO', 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'a5', 'PE', 'B'); // will be captured
+    board = place(board, 'b5', 'PE', 'B'); // stays on the board
+    renderGame(board);
+
+    // Before the capture there is no captured row.
+    expect(document.querySelector('[data-captured-row="PE"]')).toBeNull();
+
+    // A's Torre captures B's Pedone on a5.
+    fireEvent.click(document.querySelector('[data-coord="a1"]')!);
+    fireEvent.click(document.querySelector('[data-coord="a5"]')!);
+
+    // The captured Pedone now appears in B's group, marked as captured, while the other Pedone
+    // (b5) keeps its normal on-board row.
+    const capturedRow = document.querySelector('[data-captured-row="PE"]');
+    expect(capturedRow).not.toBeNull();
+    expect(within(capturedRow as HTMLElement).getByText(/💀 catturato/)).toBeInTheDocument();
+    expect(document.querySelector('[data-piece-row="PE"]')).not.toBeNull();
+
+    // The info button on a captured row opens the same piece-detail modal as the encyclopedia.
+    fireEvent.click((capturedRow as HTMLElement).querySelector('button')!);
+    expect(screen.getByRole('dialog', { name: /Dettagli — Pedone/i })).toBeInTheDocument();
+  });
+
+  it('shows the captured count and drops the on-board row once all copies are gone', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'a1', 'TO', 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'a5', 'PE', 'B');
+    board = place(board, 'b5', 'PE', 'B');
+    renderGame(board);
+
+    // Capture a5.
+    fireEvent.click(document.querySelector('[data-coord="a1"]')!);
+    fireEvent.click(document.querySelector('[data-coord="a5"]')!);
+    // B's King shuffles.
+    fireEvent.click(document.querySelector('[data-coord="e8"]')!);
+    fireEvent.click(document.querySelector('[data-coord="d8"]')!);
+    // Capture b5 too: the Torre is already on a5 and b5 is adjacent.
+    fireEvent.click(document.querySelector('[data-coord="a5"]')!);
+    fireEvent.click(document.querySelector('[data-coord="b5"]')!);
+
+    // Both Pedoni are gone: the captured row shows ×2 and the on-board row disappeared.
+    const capturedRow = document.querySelector('[data-captured-row="PE"]');
+    expect(capturedRow).not.toBeNull();
+    expect(within(capturedRow as HTMLElement).getByText(/Pedone ×2/)).toBeInTheDocument();
+    expect(document.querySelector('[data-piece-row="PE"]')).toBeNull();
   });
 });
 
