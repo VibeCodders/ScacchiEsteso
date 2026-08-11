@@ -9,9 +9,36 @@ export function getMaxIdentical(piece: Piece, rules: Rules): number {
   return piece.maxIdentical ?? rules.maxIdenticalByCategory[piece.categoria] ?? rules.maxIdenticalDefault;
 }
 
+/**
+ * New placement rule (in addition to the existing limits — it never relaxes them). The max number
+ * of copies of a piece type is `x = round((d / punti)²)`, where `d` is the punti of the most
+ * expensive piece in the roster (dynamic: recomputed from the piece list passed in, so it follows
+ * any punti rebalance or a new stronger piece — today `d` is the Paladino at 51).
+ *
+ * Derived from the user's legend: c = punti / d, b = 1/c, a = b², x = round(a). For pieces costing
+ * `d/2` or less the formula yields 4 or more, so the classic "max 5 identical" rule still binds
+ * for everything cheap enough; it only tightens the cap on the most expensive pieces (the most
+ * expensive one is limited to 1 copy).
+ */
+export function getFormulaMaxIdentical(piece: Piece, pieces: Piece[]): number {
+  const mostExpensive = Math.max(...pieces.map((p) => p.punti));
+  if (piece.punti <= 0) return Number.POSITIVE_INFINITY;
+  const c = piece.punti / mostExpensive; // c = punteggio pezzo / d
+  const b = 1 / c;                        // b = 1/c
+  const a = b * b;                        // a = b²
+  return Math.round(a);                   // x = round(a)
+}
+
+/** Effective per-type cap: the formula-based cap and the existing rules both apply, so the binding
+ *  one is whichever is stricter. Never relaxes an existing limit (e.g. Miraggio's `maxIdentical: 1`
+ *  stays 1 even though the formula alone would allow more). */
+export function getEffectiveMaxIdentical(piece: Piece, pieces: Piece[], rules: Rules): number {
+  return Math.min(getMaxIdentical(piece, rules), getFormulaMaxIdentical(piece, pieces));
+}
+
 export function getMaxIdenticalBySigla(sigla: string, pieces: Piece[], rules: Rules): number {
   const piece = pieces.find((p) => p.sigla === sigla);
-  return piece ? getMaxIdentical(piece, rules) : rules.maxIdenticalDefault;
+  return piece ? getEffectiveMaxIdentical(piece, pieces, rules) : rules.maxIdenticalDefault;
 }
 
 export function countByCategory(team: Map<string, number>, pieces: Piece[], categoria: string): number {
@@ -82,7 +109,7 @@ export function canAddPieceType(
 ): boolean {
   if (piece.sigla === rules.kingSigla) return false;
   const currentCount = team.get(piece.sigla) ?? 0;
-  if (currentCount >= getMaxIdentical(piece, rules)) return false;
+  if (currentCount >= getEffectiveMaxIdentical(piece, pieces, rules)) return false;
   if (piece.categoria === 'pedone') {
     const maxPawns = rules.maxCountByCategory.pedone ?? rules.maxIdenticalDefault;
     if (countByCategory(team, pieces, 'pedone') + 1 > maxPawns) return false;
@@ -117,8 +144,8 @@ export function computeValidation(
   });
   const maxFiveOk = !maxIdenticalViolated;
   const maxFiveMsg = maxFiveOk
-    ? 'Nessun pezzo supera il proprio limite'
-    : 'Alcuni pezzi superano il proprio limite';
+    ? 'Nessun pezzo supera il proprio limite (max per tipo, incl. la regola dinamica)'
+    : 'Alcuni pezzi superano il proprio limite (max per tipo, incl. la regola dinamica)';
 
   const totalPawns = countByCategory(team, pieces, 'pedone');
   const maxPawns = rules.maxCountByCategory.pedone ?? rules.maxIdenticalDefault;

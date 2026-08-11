@@ -3,7 +3,7 @@ import type { ReactElement } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import TeamSelectScreen from './TeamSelectScreen';
 import { KING_SIGLA, pickablePieces, sortByPunti, pieces } from '../data/pieces';
-import { computeDistinctSpecialTypes } from '../data/validators';
+import { computeDistinctSpecialTypes, getFormulaMaxIdentical } from '../data/validators';
 import type { TeamMap } from '../context/gameSetup';
 import { ThemeProvider } from '../context/ThemeContext';
 
@@ -156,6 +156,46 @@ describe('TeamSelectScreen — optional max-distinct-special-types limit', () =>
 function memberSiglas(): string[] {
   return [...document.querySelectorAll('.team-member .member-sigla')].map((el) => el.textContent ?? '');
 }
+
+describe('TeamSelectScreen — new dynamic per-type cap x = round((d/punti)²)', () => {
+  it('explains the new placement rule in the roster panel', () => {
+    renderScreen(<TeamSelectScreen title="Test" onComplete={() => {}} />);
+    expect(screen.getByText(/Regola dinamica per tipo/i)).toBeInTheDocument();
+    expect(screen.getByText(/x = round\(\(d \/ punti\)²\)/i)).toBeInTheDocument();
+  });
+
+  it('blocks adding more copies of an expensive piece than the formula allows', () => {
+    const regina = pieces.find((p) => p.sigla === 'RA')!;
+    const raCap = getFormulaMaxIdentical(regina, pieces);
+    expect(raCap).toBeLessThan(5); // the formula must actually bind for this test to be meaningful
+
+    renderScreen(<TeamSelectScreen title="Test" onComplete={() => {}} />);
+    for (let i = 0; i < raCap; i++) {
+      fireEvent.click(screen.getByLabelText('Aggiungi Regina'));
+    }
+
+    // The card footer shows the effective (formula) cap.
+    expect(screen.getByText(new RegExp(`Nel team: ${raCap}/${raCap}`))).toBeInTheDocument();
+    // The team panel shows exactly raCap copies…
+    expect(screen.getByText(new RegExp(`${regina.punti}pt × ${raCap}`))).toBeInTheDocument();
+
+    // …and an extra click adds nothing.
+    fireEvent.click(screen.getByLabelText('Aggiungi Regina'));
+    expect(screen.queryByText(new RegExp(`${regina.punti}pt × ${raCap + 1}`))).not.toBeInTheDocument();
+    expect(screen.getByText(new RegExp(`${regina.punti}pt × ${raCap}`))).toBeInTheDocument();
+  });
+
+  it('still allows a cheap piece up to the old default cap of 5', () => {
+    const cheap = [...pickablePieces].filter((p) => p.sigla !== KING_SIGLA && p.punti > 0).sort((a, b) => a.punti - b.punti)[0];
+    renderScreen(<TeamSelectScreen title="Test" onComplete={() => {}} />);
+
+    for (let i = 0; i < 5; i++) {
+      fireEvent.click(screen.getByLabelText(`Aggiungi ${cheap.descrizione}`));
+    }
+    expect(screen.getByText(new RegExp(`${cheap.punti}pt × 5`))).toBeInTheDocument();
+    expect(screen.queryByText(new RegExp(`${cheap.punti}pt × 6`))).not.toBeInTheDocument();
+  });
+});
 
 describe('TeamSelectScreen — "Completa" and "Migliora" respect the distinct-special-types limit', () => {
   it('"Completa" never pushes the team past the configured limit, click after click', () => {

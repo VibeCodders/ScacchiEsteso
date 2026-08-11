@@ -155,6 +155,12 @@ function TeamSelectScreen({
     [team, maxDistinctSpecialTypes, effectiveRules],
   );
 
+  const formulaInfo = useMemo(() => {
+    const d = Math.max(...pieces.map((p) => p.punti));
+    const mostExpensive = pieces.find((p) => p.punti === d);
+    return { d, mostExpensiveName: mostExpensive?.descrizione ?? '' };
+  }, []);
+
   const filteredPieces = useMemo(() => {
     const byFilter = filter === 'all' ? pickablePieces : pickablePieces.filter((p: Piece) => p.classico === (filter === 'classico'));
     const query = search.trim().toLowerCase();
@@ -195,6 +201,13 @@ function TeamSelectScreen({
       }
     >
       <Panel title="📦 Roster Pezzi">
+        <p className="mb-3 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 text-xs text-slate-600 dark:text-slate-400">
+          <strong className="text-slate-700 dark:text-slate-300">Regola dinamica per tipo:</strong>{' '}
+          ogni tipo ammette al massimo <code>x = round((d / punti)²)</code> copie, dove{' '}
+          <code>d = {formulaInfo.d}</code> è il punteggio del pezzo più costoso del roster (oggi il{' '}
+          {formulaInfo.mostExpensiveName}, calcolato dinamicamente). Si somma ai limiti esistenti:{' '}
+          vale sempre il più restrittivo.
+        </p>
         <div className="mb-3 flex flex-wrap items-center gap-1.5">
           <input
             type="text"

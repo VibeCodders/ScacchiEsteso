@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { pieces, rules, KING_SIGLA } from './pieces';
 import {
   computeValidation, computeBudgetSpent, computeDistinctSpecialTypes, getMaxIdenticalBySigla,
+  getMaxIdentical, getFormulaMaxIdentical, getEffectiveMaxIdentical,
   canAddPieceType, wouldExceedSpecialTypesLimit,
 } from './validators';
+import { autoFillTeam } from './optimizer';
 
 function teamOf(entries: Array<[string, number]>): Map<string, number> {
   return new Map(entries);
@@ -210,6 +212,119 @@ describe('Miraggio — per-piece maxIdentical cap of 1', () => {
   it('canAddPieceType refuses a second Miraggio once one is present', () => {
     const team = teamOf([[KING_SIGLA, 1], ['MG', 1]]);
     expect(canAddPieceType(team, mirage, pieces, rules)).toBe(false);
+  });
+});
+
+describe('getFormulaMaxIdentical — new dynamic per-type cap x = round((d / punti)²)', () => {
+  const d = Math.max(...pieces.map((p) => p.punti));
+
+  it('caps the most expensive piece at exactly 1 copy', () => {
+    const mostExpensive = pieces.find((p) => p.punti === d)!;
+    expect(mostExpensive.punti).toBe(d);
+    expect(getFormulaMaxIdentical(mostExpensive, pieces)).toBe(1); // (d/d)² = 1
+  });
+
+  it('is stricter for more expensive pieces (a cheaper piece never has a lower cap)', () => {
+    const sorted = [...pieces].sort((a, b) => a.punti - b.punti);
+    for (let i = 1; i < sorted.length; i++) {
+      expect(getFormulaMaxIdentical(sorted[i], pieces))
+        .toBeLessThanOrEqual(getFormulaMaxIdentical(sorted[i - 1], pieces));
+    }
+  });
+
+  it('computes the exact formula on a synthetic roster, with d derived from that roster', () => {
+    const base = pieces[0];
+    const cheap = { ...base, punti: 5 };
+    const mid = { ...base, punti: 10 };
+    const top = { ...base, punti: 20 };
+    const roster = [cheap, mid, top]; // d = 20
+    expect(getFormulaMaxIdentical(top, roster)).toBe(1);   // (20/20)² = 1
+    expect(getFormulaMaxIdentical(mid, roster)).toBe(4);   // (20/10)² = 4
+    expect(getFormulaMaxIdentical(cheap, roster)).toBe(16); // (20/5)² = 16
+  });
+
+  it('is dynamic — raising the most expensive piece tightens every other cap', () => {
+    const base = pieces[0];
+    const at20 = { ...base, punti: 20 };
+    const top40 = { ...base, punti: 40 };
+    const top80 = { ...base, punti: 80 };
+    const withD40 = getFormulaMaxIdentical(at20, [top40, at20]);
+    const withD80 = getFormulaMaxIdentical(at20, [top80, at20]);
+    expect(withD40).toBe(4);  // (40/20)² = 4
+    expect(withD80).toBe(16); // (80/20)² = 16
+    expect(withD80).toBeGreaterThan(withD40);
+  });
+
+  it('never divides by zero — a punti-0 piece has no formula cap', () => {
+    const base = pieces[0];
+    const free = { ...base, punti: 0 };
+    expect(getFormulaMaxIdentical(free, pieces)).toBe(Number.POSITIVE_INFINITY);
+  });
+});
+
+describe('getEffectiveMaxIdentical — the formula and the existing limits both apply (strictest wins)', () => {
+  it('is the min of the existing cap and the formula cap for every piece in the roster', () => {
+    for (const piece of pieces) {
+      expect(getEffectiveMaxIdentical(piece, pieces, rules))
+        .toBe(Math.min(getMaxIdentical(piece, rules), getFormulaMaxIdentical(piece, pieces)));
+    }
+  });
+
+  it('never relaxes an existing per-piece cap (Miraggio stays at 1 despite a formula cap of 4)', () => {
+    const mirage = pieces.find((p) => p.sigla === 'MG')!;
+    expect(getFormulaMaxIdentical(mirage, pieces)).toBe(4); // 27pt with d=51: (51/27)² ≈ 3.57 → 4
+    expect(getEffectiveMaxIdentical(mirage, pieces, rules)).toBe(1);
+    expect(getMaxIdenticalBySigla('MG', pieces, rules)).toBe(1);
+  });
+
+  it('keeps the classic default for pieces cheap enough that the formula allows 5 or more', () => {
+    const cheap = [...pieces].filter((p) => p.punti > 0).sort((a, b) => a.punti - b.punti)[0];
+    expect(getFormulaMaxIdentical(cheap, pieces)).toBeGreaterThanOrEqual(5);
+    expect(getEffectiveMaxIdentical(cheap, pieces, rules))
+      .toBe(Math.min(getMaxIdentical(cheap, rules), getFormulaMaxIdentical(cheap, pieces)));
+  });
+});
+
+describe('new placement rule — enforcement in canAddPieceType / computeValidation', () => {
+  it('enforces the formula cap on a mid-priced piece (Regina): cap copies are legal, cap+1 is refused', () => {
+    const regina = pieces.find((p) => p.sigla === 'RA')!;
+    const cap = getFormulaMaxIdentical(regina, pieces);
+    expect(cap).toBeGreaterThanOrEqual(1);
+    expect(cap).toBeLessThan(getMaxIdentical(regina, rules)); // the formula must actually bind here
+
+    const atCap = teamOf([[KING_SIGLA, 1], ['RA', cap]]);
+    expect(computeValidation(atCap, pieces, rules).overall).toBe(true);
+    expect(canAddPieceType(atCap, regina, pieces, rules)).toBe(false);
+
+    const over = teamOf([[KING_SIGLA, 1], ['RA', cap + 1]]);
+    expect(computeValidation(over, pieces, rules).maxFive.valid).toBe(false);
+    expect(computeValidation(over, pieces, rules).overall).toBe(false);
+  });
+
+  it('caps the most expensive piece (today the Paladino) at exactly 1 copy', () => {
+    const d = Math.max(...pieces.map((p) => p.punti));
+    const mostExpensive = pieces.find((p) => p.punti === d)!;
+    const one = teamOf([[KING_SIGLA, 1], [mostExpensive.sigla, 1]]);
+    expect(computeValidation(one, pieces, rules).overall).toBe(true);
+    expect(canAddPieceType(one, mostExpensive, pieces, rules)).toBe(false);
+    const two = teamOf([[KING_SIGLA, 1], [mostExpensive.sigla, 2]]);
+    expect(computeValidation(two, pieces, rules).overall).toBe(false);
+  });
+
+  it('a cheap piece can still field the old maximum of 5 identical copies', () => {
+    const cheap = [...pieces].filter((p) => p.sigla !== KING_SIGLA && p.punti > 0).sort((a, b) => a.punti - b.punti)[0];
+    const five = teamOf([[KING_SIGLA, 1], [cheap.sigla, 5]]);
+    expect(computeValidation(five, pieces, rules).overall).toBe(true);
+  });
+
+  it('autoFillTeam never exceeds the formula cap either (it filters through canAddPieceType)', () => {
+    // A budget that only fits Regina copies: the optimizer must stop at the formula cap, not at 5.
+    const regina = pieces.find((p) => p.sigla === 'RA')!;
+    const cap = getFormulaMaxIdentical(regina, pieces);
+    const effectiveRules = { ...rules, budget: cap * regina.punti, maxPiecesTotal: cap + 1 };
+    const result = autoFillTeam(teamOf([[KING_SIGLA, 1]]), effectiveRules);
+    expect(result.team.get('RA') ?? 0).toBeLessThanOrEqual(cap);
+    expect(computeValidation(result.team, pieces, effectiveRules).overall).toBe(true);
   });
 });
 

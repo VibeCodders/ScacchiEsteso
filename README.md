@@ -6,9 +6,17 @@ Regole del gioco e della composizione degli eserciti. L'app (composizione team, 
 
 ## 1. Costi e limitazioni dell'esercito
 
-- **Budget punti disponibili:** 154, come tetto massimo — è consentito spendere meno del budget
+- **Budget punti disponibili:** 230, come tetto massimo — è consentito spendere meno del budget
   disponibile: schierare un esercito più leggero è una scelta legittima, non un errore.
 - **Pezzi per tipo:** massimo 5 pezzi identici.
+- **Limite dinamico per tipo (regola aggiuntiva):** in aggiunta al tetto di 5, ogni tipo ammette
+  al massimo `x = round((d / punti)²)` copie, dove `d` è il punteggio del pezzo più costoso del
+  roster (oggi il Paladino, 51 punti) e `punti` è il costo del pezzo in questione. Il limite è
+  dinamico: se entrasse nel roster un pezzo più costoso del Paladino, `d` salirebbe e tutti i
+  limiti si restringerebbero. Le due regole coesistono — vale sempre il limite più restrittivo:
+  la formula abbassa il tetto solo sui pezzi più cari (es. 1 Paladino, 1 Drago, 2 Regine,
+  2 Berserker, 2 Colossi, 3 Grifoni, 4 Torri), mentre per tutti gli altri resta in vigore il
+  tetto esistente (5, o il limite specifico del pezzo, es. 1 Miraggio).
 - **Pedoni:** massimo 8.
 - **Re:** obbligatoriamente 1 (costo gratuito, incluso nel conteggio dei pezzi ma non nel budget).
 - **Totale pezzi:** massimo 16.
