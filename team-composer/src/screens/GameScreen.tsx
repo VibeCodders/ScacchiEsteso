@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { playerLabel, useGameSetup } from '../context/gameSetup';
 import Board from '../components/Board';
+import PieceIcon from '../assets/pieces/pieceIcons';
 import { getPieceDef } from '../game/moveEngine';
 import { getPromotionOptions, isPromotionMove } from '../game/promotion';
 import { canUseScocca, getScoccaTargets } from '../game/scocca';
@@ -23,6 +24,7 @@ import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import PageShell from '../components/ui/PageShell';
 import Panel from '../components/ui/Panel';
+import PieceDetail from '../components/ui/PieceDetail';
 
 interface PendingPromotion {
   from: Coord;
@@ -63,6 +65,7 @@ function GameScreen() {
   const [swapperFirstSquare, setSwapperFirstSquare] = useState<Coord | null>(null);
   const [pendingSdoppiamento, setPendingSdoppiamento] = useState<PendingSdoppiamento | null>(null);
   const [revealRealMirage, setRevealRealMirage] = useState(false);
+  const [infoSigla, setInfoSigla] = useState<string | null>(null);
   const { showNames, namesToggled, setNamesToggled, namesKeyHeld } = useShowNames();
 
   const effectiveSelected = gameState?.pendingExtraMove ?? gameState?.pendingRabbitChain?.at ?? selected;
@@ -121,6 +124,18 @@ function GameScreen() {
     }
     return getLegalMovesForTurn(gameState, effectiveSelected, orphanMimicSource ?? undefined).map((m) => m.to);
   }, [gameState, effectiveSelected, actionMode, orphanMimicSource, swapperFirstSquare]);
+
+  /** Distinct piece siglas currently on the board, with their on-board count, per owner — the
+   *  "Pezzi in gioco" sidebar list (per-type, so the info button shows how the piece moves). */
+  const boardPiecesByOwner = useMemo(() => {
+    const byOwner: Record<Owner, Map<string, number>> = { A: new Map(), B: new Map() };
+    if (!gameState) return byOwner;
+    for (const [, piece] of gameState.board) {
+      const counts = byOwner[piece.owner];
+      counts.set(piece.sigla, (counts.get(piece.sigla) ?? 0) + 1);
+    }
+    return byOwner;
+  }, [gameState]);
 
   /** Squares holding the REAL half of a split Miraggio — rendered with a marker only while the
    *  reveal toggle is on, and only for the player whose turn it is (hot-seat compromise: whoever
@@ -651,6 +666,42 @@ function GameScreen() {
         )}
       </Panel>
 
+      <Panel title="♟️ Pezzi in gioco">
+        <p className="mb-2 text-xs text-slate-500">Premi "🔍 Info" per rileggere come si muove un pezzo, come nell'enciclopedia.</p>
+        {(['A', 'B'] as const).map((owner) => {
+          const siglas = sortSiglasByPunti([...boardPiecesByOwner[owner].keys()]);
+          if (siglas.length === 0) return null;
+          return (
+            <div key={owner} className="mb-3 last:mb-0">
+              <h3 className="mb-1 text-sm font-semibold text-slate-800 dark:text-slate-200">{ownerLabel(owner)}</h3>
+              <div className="flex flex-col gap-1">
+                {siglas.map((sigla) => {
+                  const count = boardPiecesByOwner[owner].get(sigla)!;
+                  const def = getPieceDef(sigla);
+                  return (
+                    <div key={sigla} data-piece-row={sigla} className="flex items-center justify-between gap-2 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className="board-sidebar-piece-icon size-5 shrink-0 text-slate-700 dark:text-slate-300">
+                          <PieceIcon sigla={sigla} className="size-full" />
+                        </span>
+                        <span className="font-mono text-xs font-bold text-slate-900 dark:text-slate-50">{sigla}</span>
+                        <span className="truncate text-[0.7rem] text-slate-500" title={`${def.descrizione} — ${def.punti} pt`}>
+                          {def.descrizione}
+                          {count > 1 && ` ×${count}`}
+                        </span>
+                      </div>
+                      <Button variant="auto" className="shrink-0 px-2 py-0.5 text-[0.68rem]" onClick={() => setInfoSigla(sigla)}>
+                        🔍 Info
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </Panel>
+
       <Panel title="📜 Storico mosse">
         <div className="max-h-[200px] overflow-y-auto text-sm">
           {gameState.history.length === 0 ? (
@@ -681,6 +732,8 @@ function GameScreen() {
         <p className="text-sm"><strong>{ownerLabel('A')}:</strong> {sortSiglasByPunti(gameState.captured.A.map((p) => p.sigla)).join(', ') || '—'}</p>
         <p className="mt-1 text-sm"><strong>{ownerLabel('B')}:</strong> {sortSiglasByPunti(gameState.captured.B.map((p) => p.sigla)).join(', ') || '—'}</p>
       </Panel>
+
+      {infoSigla && <PieceDetail piece={getPieceDef(infoSigla)} onClose={() => setInfoSigla(null)} />}
     </PageShell>
   );
 }

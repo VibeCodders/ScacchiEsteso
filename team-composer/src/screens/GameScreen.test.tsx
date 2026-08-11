@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { useEffect } from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import GameScreen from './GameScreen';
 import GameOverScreen from './GameOverScreen';
@@ -472,6 +472,59 @@ describe('GameScreen — Arciere scocca', () => {
 
     expect(document.querySelector('[data-coord="d5"]')).toHaveClass('board-square-highlighted'); // back to normal moves
     expect(document.querySelector('[data-coord="d7"]')).not.toHaveClass('board-square-highlighted');
+  });
+});
+
+describe('GameScreen — Pezzi in gioco sidebar', () => {
+  function boardWithMixedArmies() {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'a1', 'TO', 'A');
+    board = place(board, 'd4', 'PE', 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'f5', 'MA', 'B');
+    board = place(board, 'e5', 'PE', 'B');
+    return board;
+  }
+
+  it('lists the pieces on the board per owner, deduplicated by sigla', () => {
+    renderGame(boardWithMixedArmies());
+
+    expect(screen.getByText(/♟️ Pezzi in gioco/i)).toBeInTheDocument();
+    // A's group: Re, Torre, Pedone; B's group: Re, Manticora, Pedone.
+    expect(screen.getByText('TO')).toBeInTheDocument();
+    expect(screen.getByText('MA')).toBeInTheDocument();
+    expect(screen.getAllByText(KING_SIGLA)).toHaveLength(2); // a King on each side
+    expect(screen.getAllByText('PE')).toHaveLength(2); // one Pedone per side
+    // one row per distinct sigla on the board: A's RE/TO/PE + B's RE/MA/PE = 6
+    expect(screen.getAllByRole('button', { name: /🔍 Info/i })).toHaveLength(6);
+  });
+
+  it('opens the same piece-detail modal as the encyclopedia and closes it again', () => {
+    renderGame(boardWithMixedArmies());
+
+    fireEvent.click(document.querySelector('[data-piece-row="MA"] button')!);
+
+    const dialog = screen.getByRole('dialog', { name: /Dettagli — Manticora/i });
+    expect(dialog).toBeInTheDocument();
+    // the full rules prose is shown, like in the encyclopedia
+    expect(within(dialog).getByText(/si muove di una casella in orizzontale o verticale/i)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Respingere/i)).not.toBeInTheDocument(); // MA has no special action — sanity on the shared descriptions
+
+    fireEvent.click(within(dialog).getByText(/✕ Chiudi/i));
+    expect(screen.queryByRole('dialog', { name: /Dettagli — Manticora/i })).not.toBeInTheDocument();
+  });
+
+  it('shows the special-action descriptions for pieces that have them (Repulsore → Respingere)', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'd4', 'RP', 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-piece-row="RP"] button')!);
+
+    const dialog = screen.getByRole('dialog', { name: /Dettagli — Repulsore/i });
+    expect(within(dialog).getByText(/Respingere/i)).toBeInTheDocument();
+    expect(within(dialog).getByText(/spinge un nemico adiacente/i)).toBeInTheDocument();
   });
 });
 
