@@ -1117,6 +1117,38 @@ describe('GameScreen — PvC complete game: the bot repulses with the Repulsore'
   });
 });
 
+describe('GameScreen — PvC complete game: the bot captures a Bomba and its piece is destroyed by the blast', () => {
+  it('the PC (A) captures the Bomba with its Pedone, the explosion destroys the Pedone, and the game continues', () => {
+    // PC (owner A): King e1 + Pedone d4. Human (owner B): King h8 + Bomba e5 (diagonally NE of the
+    // Pedone). The 1-ply bot prefers the capture: netting the BO's 21 punti (36 → 15 on B's side)
+    // outweighs losing its own 7-pt Pedone to the blast (22 → 15 on A's side).
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'd4', 'PE', 'A');
+    board = place(board, 'h8', KING_SIGLA, 'B');
+    board = place(board, 'e5', 'BO', 'B');
+    renderPvcGame(board, 'B');
+
+    // 1) The PC plays first automatically on mount: the Pedone captures the Bomba in e5... and the
+    // explosion destroys the Pedone too (it is no King, and removing it exposes no King — README §3.2).
+    expect(document.querySelector('[data-coord="e5"]')?.querySelector('svg')).toBeNull(); // BO gone (captured)
+    expect(document.querySelector('[data-coord="d4"]')?.querySelector('svg')).toBeNull(); // PE gone (blast)
+    expect(document.querySelector('[data-coord="e1"]')?.querySelector('svg')?.getAttribute('aria-label')).toBe(KING_SIGLA);
+    expect(screen.getByText(/PC: PE d4 → e5/)).toBeInTheDocument();
+    expect(screen.getByText(/Turno: Giocatore 1/i)).toBeInTheDocument(); // resolved back to the human
+
+    // The sidebar "Pezzi in gioco" records both losses: A's Pedone destroyed by the blast (captured
+    // row under the PC), B's Bomba captured (captured row under the human).
+    expect(document.querySelector('[data-captured-row="PE"]')).not.toBeNull();
+    expect(document.querySelector('[data-captured-row="BO"]')).not.toBeNull();
+
+    // 2) The game continues normally: the human (B) shuffles its King, and the PC replies on its own.
+    fireEvent.click(document.querySelector('[data-coord="h8"]')!);
+    fireEvent.click(document.querySelector('[data-coord="h7"]')!);
+    expect(screen.getByText(/Turno: Giocatore 1/i)).toBeInTheDocument(); // the PC already replied
+    expect(screen.getAllByRole('listitem')).toHaveLength(3); // capture + human reply + PC reply
+  });
+});
+
 describe('GameScreen — Step 13b: turn and check indicators', () => {
   it('shows a "Scacco!" badge right after a checking move, and it disappears once the check is resolved', () => {
     let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
