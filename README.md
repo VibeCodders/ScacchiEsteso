@@ -6,7 +6,7 @@ Regole del gioco e della composizione degli eserciti. L'app (composizione team, 
 
 ## 1. Costi e limitazioni dell'esercito
 
-- **Budget punti disponibili:** 230, come tetto massimo — è consentito spendere meno del budget
+- **Budget punti disponibili:** 247, come tetto massimo — è consentito spendere meno del budget
   disponibile: schierare un esercito più leggero è una scelta legittima, non un errore.
 - **Pezzi per tipo:** massimo 5 pezzi identici.
 - **Limite dinamico per tipo (regola aggiuntiva):** in aggiunta al tetto di 5, ogni tipo ammette
@@ -115,9 +115,9 @@ Specchio del Grifone:
 
 ## 11. Riferimento completo dei pezzi
 
-Roster completo: **38 pezzi**. Per ciascuno: sigla, nome, costo in punti, tetto massimo di copie
+Roster completo: **44 pezzi**. Per ciascuno: sigla, nome, costo in punti, tetto massimo di copie
 per tipo e regole di movimento/abilità. I costi sono quelli validati dall'estimatore interno del
-progetto; i limiti di composizione si applicano come descritto nel §1 (budget 230, tetto di 5 e
+progetto; i limiti di composizione si applicano come descritto nel §1 (budget 247, tetto di 5 e
 formula dinamica `x = round((d/punti)²)` con `d` = punteggio del pezzo più costoso, oggi il
 Paladino con 51). Le sezioni §9 e §10 approfondiscono Miraggio e pezzi a ginocchio.
 
@@ -125,50 +125,50 @@ Paladino con 51). Le sezioni §9 e §10 approfondiscono Miraggio e pezzi a ginoc
 
 | Sigla | Nome | Costo (pt) | Copie max | Movimento / abilità |
 |---|---|---|---|---|
-| PA | Paladino | 51 | 1 | Cavallo o passo Re · Egida |
-| DR | Drago | 45 | 1 | Torre + Cavallo (→ §10.3) |
-| CN | Coniglio | 41 | 2 | Re · catena di salti con cattura finale |
-| BE | Berserker | 39 | 2 | ≤2 caselle · Furia bellica |
-| MI | Mistico | 37 | 2 | 1–2 caselle · Scambio di posizione |
-| RA | Regina | 37 | 2 | illimitato in ogni direzione |
-| CO | Colosso | 36 | 2 | ≤2 caselle · Danno ad area |
-| TI | Tigre | 36 | 2 | Torre + passo Re |
-| IQ | Inquisitore | 35 | 2 | ≤3 ortogonale · Silenzio |
-| AR | Arciere | 34 | 2 | 1–2 caselle · Scoccare |
-| GE | Generale | 34 | 2 | Cavallo + passo Re |
-| GL | Golem | 34 | 2 | 1–2 caselle · Armatura naturale |
-| GR | Grifone | 32 | 3 | a ginocchio (→ §10.1) |
-| CM | Camaleonte | 31 | 3 | Alfiere 4 (chiare) / Torre 3 (scure) / passo Re |
-| RN | Rinoceronte | 30 | 3 | Alfiere + passo Re |
-| RB | Rimbalzatore | 29 | 3 | Alfiere con rimbalzo unico |
-| NE | Necromante | 28 | 3 | ≤3 diagonale · Rianimazione |
-| ST | Stunner | 28 | 3 | passo Re · Congelamento |
-| SW | Swapper | 28 | 3 | passo Re · Scambio di due alleati |
-| MG | Miraggio | 27 | 1 | passo Re · Sdoppiamento/Riunione (→ §9) |
-| TO | Torre | 27 | 4 | illimitato ortogonale |
-| MA | Manticora | 26 | 4 | a ginocchio (→ §10.2) |
-| OR | Orfano | 26 | 4 | Copia poteri |
-| DM | Damone | 25 | 4 | diagonale 1 · cattura a salto (solo via promozione) |
-| VZ | Vortice | 24 | 5 | passo Re · Attira |
-| BR | Brigante | 24 | 5 | passo Re · Sostituzione |
-| TT | Teletrasporto | 22 | 5 | passo Re · Teletrasporto |
-| BO | Bomba | 21 | 6 | passo Re · Esplode se catturata |
-| CV | Cavalletta | 20 | 5 | salto sopra un pezzo (Grasshopper) |
-| AL | Alfiere | 19 | 5 | illimitato diagonale |
-| CA | Cavallo | 15 | 5 | salto a "L" |
-| RE | Re | 15 (gratis) | 1 (obbligatorio) | passo Re |
-| SP | Spettro | 15 | 5 | ≤2 diagonale, ignora le interposizioni |
-| LP | Lampo | 16 | 5 | salto esattamente 2 ortogonale (dabbaba) |
-| CR | Corriere | 14 | 5 | ≤2 ortogonale |
-| BS | Basilisco | 14 | 5 | passo Re · Sguardo pietrificante |
-| RI | Ricognitore | 12 | 5 | ≤2 diagonale |
-| CT | Catapulta | 11 | 5 | 1–2 orizzontale, ignora le interposizioni |
-| DA | Pedone di Dama | 11 | 5 | pedina di Dama · promuove a Damone |
-| RP | Repulsore | 10 | 5 | passo Re · Respingere |
-| PE | Pedone | 7 | 5 | avanti 1 (2 alla prima) · cattura diagonale · promozione (→ §5) |
-| DU | Duca | 6 | 5 | diagonale 1 |
-| PG | Paggio | 5 | 5 | avanti 1 (solo nord), non cattura |
-| FG | Fante | 1 | 5 | avanti 1 (solo nord), cattura in avanti |
+| PA | 51 | 1 | Cavallo o passo Re · Egida |
+| DR | 45 | 1 | Torre + Cavallo (→ §10.3) |
+| CN | 40 | 2 | Re · catena di salti con cattura finale |
+| BE | 39 | 2 | ≤2 caselle · Furia bellica |
+| RA | 38 | 2 | illimitato in ogni direzione |
+| MI | 37 | 2 | 1–2 caselle · Scambio di posizione |
+| TI | 36 | 2 | Torre + passo Re |
+| IQ | 35 | 2 | ≤3 ortogonale · Silenzio |
+| AR | 34 | 2 | 1–2 caselle · Scoccare |
+| CO | 34 | 2 | ≤2 caselle · Danno ad area |
+| GL | 34 | 2 | 1–2 caselle · Armatura naturale |
+| GE | 33 | 2 | Cavallo + passo Re |
+| GR | 32 | 3 | a ginocchio (→ §10.1) |
+| CM | 29 | 3 | Alfiere 4 (chiare) / Torre 3 (scure) / passo Re |
+| RB | 29 | 3 | Alfiere con rimbalzo unico |
+| RN | 29 | 3 | Alfiere + passo Re |
+| SW | 28 | 3 | passo Re · Scambio di due alleati |
+| MG | 27 | 1 | passo Re · Sdoppiamento/Riunione (→ §9) |
+| TO | 27 | 4 | illimitato ortogonale |
+| DM | 26 | 4 | diagonale 1 · cattura a salto (solo via promozione) |
+| MA | 26 | 4 | a ginocchio (→ §10.2) |
+| NE | 25 | 4 | ≤3 diagonale · Rianimazione |
+| OR | 25 | 4 | Copia poteri |
+| ST | 25 | 4 | passo Re · Congelamento |
+| VZ | 24 | 5 | passo Re · Attira |
+| BO | 23 | 5 | passo Re · Esplode se catturata |
+| BR | 23 | 5 | passo Re · Sostituzione |
+| TT | 23 | 5 | passo Re · Teletrasporto |
+| CV | 21 | 5 | salto sopra un pezzo (Grasshopper) |
+| AL | 19 | 5 | illimitato diagonale |
+| LP | 17 | 5 | salto esattamente 2 ortogonale (dabbaba) |
+| RP | 17 | 5 | passo Re · Respingere |
+| BS | 16 | 5 | passo Re · Sguardo pietrificante |
+| CA | 15 | 5 | salto a "L" |
+| CR | 15 | 5 | ≤2 ortogonale |
+| RE | 15 (gratis) | 1 (obbligatorio) | passo Re |
+| SP | 15 | 5 | ≤2 diagonale, ignora le interposizioni |
+| RI | 12 | 5 | ≤2 diagonale |
+| CT | 11 | 5 | 1–2 orizzontale, ignora le interposizioni |
+| DA | 10 | 5 | pedina di Dama · promuove a Damone |
+| PE | 9 | 8 | avanti 1 (2 alla prima) · cattura diagonale · promozione (→ §5) |
+| DU | 6 | 5 | diagonale 1 |
+| PG | 4 | 8 | avanti 1 (solo nord), non cattura |
+| FG | 1 | 8 | avanti 1 (solo nord), cattura in avanti |
 
 ### 11.2 Re e Pedoni
 
@@ -176,12 +176,12 @@ Paladino con 51). Le sezioni §9 e §10 approfondiscono Miraggio e pezzi a ginoc
   direzione, cattura in mischia (§3). Catturabile solo in mischia; immune a Scoccare e danno ad
   area (§3.3). I suoi 15 punti contano nel punteggio materiale dell'anti-stallo (§8).
 - **FG — Fante (1 pt):** avanti di una casella (solo nord); cattura in avanti.
-- **PG — Paggio (5 pt):** avanti di una casella (solo nord); non cattura.
-- **PE — Pedone (7 pt):** avanti di una casella (due alla prima mossa); cattura diagonalmente;
+- **PG — Paggio (4 pt):** avanti di una casella (solo nord); non cattura.
+- **PE — Pedone (9 pt):** avanti di una casella (due alla prima mossa); cattura diagonalmente;
   promozione (§5) ed en passant (§6).
-- **DA — Pedone di Dama (11 pt):** come una pedina di Dama: avanza di una casella e cattura
+- **DA — Pedone di Dama (10 pt):** come una pedina di Dama: avanza di una casella e cattura
   saltando in diagonale (catena di salti); promuove a **Damone** all'ultima traversa.
-- **DM — Damone (25 pt):** ottenibile solo per promozione del Pedone di Dama. Muove di una casella
+- **DM — Damone (26 pt):** ottenibile solo per promozione del Pedone di Dama. Muove di una casella
   in diagonale (senza cattura) e cattura saltando un nemico adiacente in diagonale sulla casella
   libera successiva (catena di salti).
 
@@ -190,14 +190,14 @@ Paladino con 51). Le sezioni §9 e §10 approfondiscono Miraggio e pezzi a ginoc
 - **AL — Alfiere (19 pt):** diagonale illimitata.
 - **CA — Cavallo (15 pt):** salto a "L", ignora le interposizioni.
 - **TO — Torre (27 pt):** orizzontale/verticale illimitata.
-- **RA — Regina (37 pt):** qualsiasi direzione, illimitata.
-- **CR — Corriere (14 pt):** orizzontale/verticale fino a 2 caselle.
+- **RA — Regina (38 pt):** qualsiasi direzione, illimitata.
+- **CR — Corriere (15 pt):** orizzontale/verticale fino a 2 caselle.
 - **RI — Ricognitore (12 pt):** diagonale fino a 2 caselle.
 - **SP — Spettro (15 pt):** diagonale fino a 2 caselle, ignora le interposizioni; cattura
   sulla casella di arrivo.
 - **CT — Catapulta (11 pt):** orizzontale di 1–2 caselle, ignora le interposizioni; cattura
   sulla casella di arrivo.
-- **CV — Cavalletta (20 pt):** come la Regina, ma deve saltare esattamente un pezzo (l'ostacolo,
+- **CV — Cavalletta (21 pt):** come la Regina, ma deve saltare esattamente un pezzo (l'ostacolo,
   amico o nemico, non viene catturato) e atterrare sulla casella immediatamente oltre; cattura
   atterrando su un nemico (Grasshopper).
 - **DU — Duca (6 pt):** una casella in diagonale, cattura in mischia.
@@ -206,7 +206,7 @@ Paladino con 51). Le sezioni §9 e §10 approfondiscono Miraggio e pezzi a ginoc
 
 - **BE — Berserker (39 pt):** fino a 2 caselle in qualsiasi direzione. **Furia bellica:** dopo una
   cattura in mischia ottiene un secondo movimento extra immediato, senza possibilità di cattura (§4.2).
-- **NE — Necromante (28 pt):** fino a 3 caselle in diagonale. **Rianimazione:** in alternativa al
+- **NE — Necromante (25 pt):** fino a 3 caselle in diagonale. **Rianimazione:** in alternativa al
   movimento, rianima un Pedone alleato eliminato su una casella vuota adiacente.
 - **IQ — Inquisitore (35 pt):** fino a 3 caselle in orizzontale/verticale. **Silenzio:** i pezzi
   nemici nelle 8 caselle adiacenti perdono gli attacchi a distanza; prevale sull'Egida del
@@ -222,58 +222,58 @@ Paladino con 51). Le sezioni §9 e §10 approfondiscono Miraggio e pezzi a ginoc
 - **PA — Paladino (51 pt):** Cavallo oppure 1 casella in qualsiasi direzione. **Egida:** gli
   alleati nelle 8 caselle adiacenti sono protetti dagli attacchi a distanza (restano catturabili
   solo in mischia).
-- **CO — Colosso (36 pt):** fino a 2 caselle in qualsiasi direzione. **Danno ad area:** dopo una
+- **CO — Colosso (34 pt):** fino a 2 caselle in qualsiasi direzione. **Danno ad area:** dopo una
   cattura in mischia distrugge tutti i pezzi (alleati e nemici) ortogonalmente adiacenti alla
   propria casella di arrivo (§7.2: l'innesco avviene solo catturando un nemico).
-- **OR — Orfano (26 pt):** **Copia poteri:** ha, per quel turno, i poteri del pezzo che lo tiene in
+- **OR — Orfano (25 pt):** **Copia poteri:** ha, per quel turno, i poteri del pezzo che lo tiene in
   scacco; se nessuno lo tiene in scacco muove di 1 casella in qualsiasi direzione.
 - **SW — Swapper (28 pt):** muove come il Re. **Scambio di due alleati:** in alternativa al
   movimento, scambia le posizioni di due alleati (se stesso incluso) che si trovano nelle 8 caselle
   adiacenti allo Swapper.
-- **ST — Stunner (28 pt):** muove come il Re. **Congelamento:** ogni pezzo nemico adiacente (mai il
+- **ST — Stunner (25 pt):** muove come il Re. **Congelamento:** ogni pezzo nemico adiacente (mai il
   Re avversario) è completamente congelato: nessuna mossa né azione, tranne l'unica mossa che
   catturerebbe lo Stunner.
-- **BS — Basilisco (14 pt):** muove come il Re. **Sguardo pietrificante:** versione direzionale dello
+- **BS — Basilisco (16 pt):** muove come il Re. **Sguardo pietrificante:** versione direzionale dello
   Stunner — congela ogni pezzo nemico (mai il Re) che si trova nelle **3 caselle direttamente di
   fronte** a lui, in direzione dell'avversario; lo sguardo attraversa i pezzi in mezzo. Come per lo
   Stunner, un pezzo congelato non ha mosse né azioni, tranne l'unica mossa che catturerebbe il
   Basilisco. È aggirabile di fianco.
-- **BR — Brigante (24 pt):** muove come il Re. **Sostituzione:** in alternativa al movimento, scambia
+- **BR — Brigante (23 pt):** muove come il Re. **Sostituzione:** in alternativa al movimento, scambia
   di posto con un **nemico adiacente** (mai il Re) senza catturarlo — l'unico pezzo del roster che
   scambia posizione con un nemico (Mistico e Swapper scambiano solo alleati). Rifiutata se
   lascerebbe il proprio Re sotto scacco.
 - **MG — Miraggio (27 pt):** muove come il Re; **Sdoppiamento** e **Riunione** (§9). Massimo 1 per
   composizione.
-- **RP — Repulsore (10 pt):** muove come il Re, cattura in mischia. **Respingere:** in alternativa
+- **RP — Repulsore (17 pt):** muove come il Re, cattura in mischia. **Respingere:** in alternativa
   al movimento, spinge un nemico adiacente (mai il Re) di una casella direttamente lontano da sé,
   purché la casella di arrivo sia vuota, senza catturarlo.
-- **TT — Teletrasporto (22 pt):** muove come il Re, cattura in mischia. **Teletrasporto:** in
+- **TT — Teletrasporto (23 pt):** muove come il Re, cattura in mischia. **Teletrasporto:** in
   alternativa al movimento, si sposta su una casella vuota a esattamente 3 caselle in linea retta,
   saltando sopra qualsiasi pezzo, senza catturare nulla all'arrivo.
 - **VZ — Vortice (24 pt):** muove come il Re, cattura in mischia. **Attira:** in alternativa al
   movimento, trascina un nemico a esattamente 2 caselle in linea retta (mai il Re) sulla casella
   vuota in mezzo, avvicinandolo di 1 casella senza catturarlo.
-- **BO — Bomba (21 pt):** muove come il Re, cattura in mischia. **Esplosione:** quando viene
+- **BO — Bomba (23 pt):** muove come il Re, cattura in mischia. **Esplosione:** quando viene
   catturata (con qualsiasi cattura: mischia, salto, distanza o catena), esplode e distrugge anche
   il pezzo che l'ha catturata — il Re è sempre immune e l'esplosione non scatta mai se lascerebbe
   sotto scacco il Re di chi cattura.
 
 ### 11.5 Pezzi ibridi e movimenti speciali
 
-- **GE — Generale (34 pt):** Cavallo oppure 1 casella in qualsiasi direzione.
+- **GE — Generale (33 pt):** Cavallo oppure 1 casella in qualsiasi direzione.
 - **TI — Tigre (36 pt):** Torre oppure 1 casella in qualsiasi direzione.
-- **RN — Rinoceronte (30 pt):** Alfiere oppure 1 casella in qualsiasi direzione.
-- **CM — Camaleonte (31 pt):** Alfiere fino a 4 caselle sulle caselle chiare e Torre fino a 3
+- **RN — Rinoceronte (29 pt):** Alfiere oppure 1 casella in qualsiasi direzione.
+- **CM — Camaleonte (29 pt):** Alfiere fino a 4 caselle sulle caselle chiare e Torre fino a 3
   caselle sulle caselle scure; può anche muovere di 1 casella in qualsiasi direzione.
 - **GR — Grifone (32 pt):** mossa a ginocchio (§10.1).
 - **MA — Manticora (26 pt):** mossa a ginocchio (§10.2).
 - **DR — Drago (45 pt):** Torre + Cavallo (§10.3).
-- **LP — Lampo (16 pt):** salto **dabbaba** — atterra sempre a **esattamente 2 caselle** in
+- **LP — Lampo (17 pt):** salto **dabbaba** — atterra sempre a **esattamente 2 caselle** in
   orizzontale o verticale (N/S/E/O), ignorando i pezzi in mezzo; cattura in salto il nemico che
   trova sulla casella di arrivo. L'unico pezzo del roster senza mosse da 1 o 3 caselle.
   **Fulmine:** dopo una cattura in salto riuscita può compiere subito un secondo salto
   non-catturante di 2 caselle (come la Furia bellica del Berserker, ma per i salti).
-- **CN — Coniglio (41 pt):** se non ha salti disponibili si muove come il Re (1 casella, cattura in
+- **CN — Coniglio (40 pt):** se non ha salti disponibili si muove come il Re (1 casella, cattura in
   mischia); se ha un nemico adiacente con la casella successiva libera può saltarlo e continuare a
   saltare (catena); quando si ferma cattura solo l'ultimo nemico saltato, gli altri restano in gioco.
 - **RB — Rimbalzatore (29 pt):** si muove in diagonale come un Alfiere ma può rimbalzare una sola
