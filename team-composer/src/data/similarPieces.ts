@@ -23,23 +23,36 @@ interface MobilityTotals {
    *  and diagonal leapers like the Spettro) never reach one, so this tells CA and SP apart even
    *  though both reach 8 squares on average from the center. */
   offAxisMove: number;
+  /** Same shape signature measured over capture squares only — for pieces like the Manticora,
+   *  whose first (pivot) leg is never a landing and whose captures happen only on the second leg,
+   *  this keeps the capture geometry independently measurable even when it mirrors the moves. */
+  offAxisCapture: number;
+}
+
+/** True when `coord` shares no rank, file or diagonal with the square at (fromFile, fromRank). */
+function isOffAxis(coord: string, fromFile: number, fromRank: number): boolean {
+  const { file, rank } = coordToFileRank(coord);
+  const df = Math.abs(file - fromFile);
+  const dr = Math.abs(rank - fromRank);
+  return df !== 0 && dr !== 0 && df !== dr;
 }
 
 function mobilityOf(piece: Piece): MobilityTotals {
-  const totals: MobilityTotals = { stepSlideMove: 0, stepSlideCapture: 0, leapMove: 0, leapCapture: 0, offAxisMove: 0 };
+  const totals: MobilityTotals = { stepSlideMove: 0, stepSlideCapture: 0, leapMove: 0, leapCapture: 0, offAxisMove: 0, offAxisCapture: 0 };
   for (const entry of piece.moves) {
     const isolated: Piece = { ...piece, moves: [entry] };
     const samples = ALL_SQUARES.map((sq) => ({ from: sq, range: computePieceRangeSquares(isolated, 'A', sq) }));
     const moveCount = samples.reduce((sum, s) => sum + s.range.moveSquares.length, 0) / samples.length;
     const captureCount = samples.reduce((sum, s) => sum + s.range.captureSquares.length, 0) / samples.length;
-    let offAxisCount = 0;
+    let offAxisMoveCount = 0;
+    let offAxisCaptureCount = 0;
     for (const { from, range } of samples) {
       const { file: fromFile, rank: fromRank } = coordToFileRank(from);
       for (const coord of range.moveSquares) {
-        const { file, rank } = coordToFileRank(coord);
-        const df = Math.abs(file - fromFile);
-        const dr = Math.abs(rank - fromRank);
-        if (df !== 0 && dr !== 0 && df !== dr) offAxisCount++;
+        if (isOffAxis(coord, fromFile, fromRank)) offAxisMoveCount++;
+      }
+      for (const coord of range.captureSquares) {
+        if (isOffAxis(coord, fromFile, fromRank)) offAxisCaptureCount++;
       }
     }
     if (entryIgnoresBlocking(entry)) {
@@ -49,7 +62,8 @@ function mobilityOf(piece: Piece): MobilityTotals {
       totals.stepSlideMove += moveCount;
       totals.stepSlideCapture += captureCount;
     }
-    totals.offAxisMove += offAxisCount / samples.length;
+    totals.offAxisMove += offAxisMoveCount / samples.length;
+    totals.offAxisCapture += offAxisCaptureCount / samples.length;
   }
   return totals;
 }
@@ -60,6 +74,7 @@ export const SIMILARITY_FEATURE_NAMES = [
   'Mobilità mossa (salto)',
   'Mobilità cattura (salto)',
   'Mobilità fuori asse',
+  'Mobilità cattura fuori asse',
   'Categoria pedone',
   'Voci di mossa extra',
   'Resistenza',
@@ -76,6 +91,7 @@ function featureVectorOf(piece: Piece): number[] {
     m.leapMove,
     m.leapCapture,
     m.offAxisMove,
+    m.offAxisCapture,
     piece.categoria === 'pedone' ? 1 : 0,
     Math.max(0, piece.moves.length - 1),
     piece.resistance,

@@ -44,8 +44,11 @@ describe('similar-pieces detector — special mechanics separate mobility twins'
     // mechanic and no mobility-count difference separates them...
     expect(pair.differingMechanicTypes).toEqual([]);
     // ...but the Cavallo's targets share no rank/file/diagonal with the origin, while the
-    // Spettro's stay on diagonals: the off-axis feature is what tells them apart.
-    expect(pair.featureDiffs.map((d) => d.name)).toContain('Mobilità fuori asse');
+    // Spettro's stay on diagonals: the off-axis features (moves and captures alike — the
+    // illustrative model marks every landing as both) are what tell them apart.
+    const diffNames = pair.featureDiffs.map((d) => d.name);
+    expect(diffNames).toContain('Mobilità fuori asse');
+    expect(diffNames).toContain('Mobilità cattura fuori asse');
     expect(pair.distance).toBeGreaterThan(DEFAULT_SIMILARITY_THRESHOLD);
   });
 
