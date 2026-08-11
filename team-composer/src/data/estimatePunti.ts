@@ -287,12 +287,12 @@ const RIDGE_LAMBDA_CANDIDATES = [0, 0.5, 1, 2, 4, 8];
  *  actually deployed) on every (n-1)-piece subset and score the held-out piece, which is what
  *  actually predicts how the model behaves on a piece it wasn't tuned against — unlike in-sample
  *  error, which the ridge penalty could otherwise be picked to minimize trivially by overfitting. */
-function looMeanAbsoluteError(X: number[][], y: number[], lambda: number): number {
+function looMeanAbsoluteError(X: number[][], y: number[], lambda: number, nonNegativeIndices: ReadonlySet<number> = new Set()): number {
   let totalAbsError = 0;
   for (let holdout = 0; holdout < X.length; holdout++) {
     const trainX = X.filter((_, i) => i !== holdout);
     const trainY = y.filter((_, i) => i !== holdout);
-    const beta = solveRobustLeastSquares(trainX, trainY, lambda, STAGE1_NON_NEGATIVE_FEATURES);
+    const beta = solveRobustLeastSquares(trainX, trainY, lambda, nonNegativeIndices);
     const predicted = dotProduct(beta, X[holdout]);
     totalAbsError += Math.abs(predicted - y[holdout]);
   }
@@ -322,7 +322,7 @@ function fitStage1(): Stage1Fit {
   let bestLambda = RIDGE_LAMBDA_CANDIDATES[0];
   let bestLoo = Infinity;
   for (const lambda of RIDGE_LAMBDA_CANDIDATES) {
-    const loo = looMeanAbsoluteError(X, y, lambda);
+    const loo = looMeanAbsoluteError(X, y, lambda, STAGE1_NON_NEGATIVE_FEATURES);
     if (loo < bestLoo) {
       bestLoo = loo;
       bestLambda = lambda;
@@ -400,8 +400,16 @@ interface MechanicFeatures {
   intensityValue: number;
   targetsAllies: number;
   isPassive: number;
+  isDefensive: number;
   isOnCapture: number;
 }
+
+/** Mechanic types that protect the owner rather than threatening the opponent — `armatura`
+ *  (Golem: immune to cheap capturers) and `esplosione` (Bomba: destroys its own capturer). Stage 2
+ *  models these with a dedicated `isDefensive` feature (coefficient constrained ≥ 0, see
+ *  `STAGE2_NON_NEGATIVE_FEATURES`) so a defensive mechanic is never priced as a penalty and the
+ *  model transparency panel can show why a Bomba costs more than a bare King-step piece. */
+const DEFENSIVE_MECHANIC_TYPES: ReadonlySet<string> = new Set(['armatura', 'esplosione']);
 
 const MECHANIC_FEATURE_NAMES = [
   'Intercetta',
@@ -410,8 +418,15 @@ const MECHANIC_FEATURE_NAMES = [
   'Intensità numerica',
   'Coinvolge alleati',
   'Passiva',
+  'Difensiva',
   'Su cattura',
 ] as const;
+
+/** Index of the 'Difensiva' feature in `MECHANIC_FEATURE_NAMES` / `mechanicFeatureVector`. Its
+ *  coefficient is constrained to be non-negative (see `solveLeastSquares`): a defensive mechanic
+ *  protects its owner or punishes its captor, so it must never lower a piece's price. */
+const DEFENSIVE_FEATURE_INDEX = MECHANIC_FEATURE_NAMES.indexOf('Difensiva');
+const STAGE2_NON_NEGATIVE_FEATURES: ReadonlySet<number> = new Set([DEFENSIVE_FEATURE_INDEX]);
 
 /** Scales a matched "intensity" parameter (e.g. `armaturaMaxCosto`) down to roughly the same order
  *  of magnitude as the other stage-2 features — a raw threshold like "costo ≤ 14" would otherwise
@@ -459,12 +474,13 @@ function mechanicFeaturesOf(action: MechanicActionInput): MechanicFeatures {
     intensityValue: (firstNumericParamMatching(params, /costo|max|valore/i) ?? 0) / MECHANIC_INTENSITY_SCALE,
     targetsAllies: params.includeAlleati === true || (typeof target === 'string' && target.includes('alleat')) ? 1 : 0,
     isPassive: modalita === 'passiva' ? 1 : 0,
+    isDefensive: DEFENSIVE_MECHANIC_TYPES.has(action.type) ? 1 : 0,
     isOnCapture: modalita === 'sul_cattura' ? 1 : 0,
   };
 }
 
 function mechanicFeatureVector(f: MechanicFeatures): number[] {
-  return [1, f.radius, f.directionCount, f.intensityValue, f.targetsAllies, f.isPassive, f.isOnCapture];
+  return [1, f.radius, f.directionCount, f.intensityValue, f.targetsAllies, f.isPassive, f.isDefensive, f.isOnCapture];
 }
 
 interface MechanicTrainingRow {
@@ -534,7 +550,7 @@ function chooseShrinkageK(rows: MechanicTrainingRow[], lambda: number): { k: num
     for (let holdout = 0; holdout < rows.length; holdout++) {
       const trainX = X.filter((_, i) => i !== holdout);
       const trainY = y.filter((_, i) => i !== holdout);
-      const beta = solveRobustLeastSquares(trainX, trainY, lambda);
+      const beta = solveRobustLeastSquares(trainX, trainY, lambda, STAGE2_NON_NEGATIVE_FEATURES);
       const predictedValue = dotProduct(beta, X[holdout]);
       const othersOfSameType = rows.filter((r, i) => i !== holdout && r.action.type === rows[holdout].action.type);
       const sampleCount = othersOfSameType.length;
@@ -569,14 +585,14 @@ function fitStage2(): Stage2Fit {
   let bestLambda = RIDGE_LAMBDA_CANDIDATES[0];
   let bestLoo = Infinity;
   for (const lambda of RIDGE_LAMBDA_CANDIDATES) {
-    const loo = looMeanAbsoluteError(X, y, lambda);
+    const loo = looMeanAbsoluteError(X, y, lambda, STAGE2_NON_NEGATIVE_FEATURES);
     if (loo < bestLoo) {
       bestLoo = loo;
       bestLambda = lambda;
     }
   }
 
-  const coefficients = solveRobustLeastSquares(X, y, bestLambda);
+  const coefficients = solveRobustLeastSquares(X, y, bestLambda, STAGE2_NON_NEGATIVE_FEATURES);
   const { k, looMeanAbsoluteError: shrinkageKLoo } = chooseShrinkageK(rows, bestLambda);
 
   return {

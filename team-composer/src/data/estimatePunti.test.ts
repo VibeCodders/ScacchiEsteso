@@ -174,8 +174,8 @@ describe('mechanicBonusSummary — empirical-Bayes shrinkage on single-example m
 describe('stage2ModelSummary — parametric mechanic-bonus model', () => {
   it('exposes one coefficient per stage-2 feature', () => {
     const summary = stage2ModelSummary();
-    // Intercept + radius + directionCount + intensity + targetsAllies + isPassive + isOnCapture.
-    expect(summary.features).toHaveLength(7);
+    // Intercept + radius + directionCount + intensity + targetsAllies + isPassive + isDefensive + isOnCapture.
+    expect(summary.features).toHaveLength(8);
     expect(summary.features.every((f) => Number.isFinite(f.coefficient))).toBe(true);
     expect(Number.isFinite(summary.lambda)).toBe(true);
     expect(Number.isFinite(summary.shrinkageK)).toBe(true);
@@ -232,6 +232,24 @@ describe('estimatePunti — every special effect on a piece is considered (no si
     const plainSlider = { ...grifone, gryphon: false };
     expect(estimatePunti(grifone).suggestedPunti).toBeGreaterThan(
       estimatePunti(plainSlider).suggestedPunti,
+    );
+  });
+
+  it('the stage-2 model exposes a defensive feature (armatura/esplosione) whose coefficient never goes negative', () => {
+    const summary = stage2ModelSummary();
+    const names = summary.features.map((f) => f.name);
+    expect(names).toContain('Difensiva');
+    const defensive = summary.features.find((f) => f.name === 'Difensiva')!;
+    // A defensive mechanic protects its owner or punishes its captor — pricing it as a penalty
+    // would be nonsense, so the solver pins the coefficient at 0 whenever the data would go below.
+    expect(defensive.coefficient).toBeGreaterThanOrEqual(0);
+  });
+
+  it('the Bomba is never priced below the identical non-explosive piece (explosion is defensive, never a discount)', () => {
+    const bomba = getPieceDef('BO');
+    const withoutExplosion = { ...bomba, esplodeSeCatturato: false, alternativeActions: [] };
+    expect(estimatePunti(bomba).suggestedPunti).toBeGreaterThanOrEqual(
+      estimatePunti(withoutExplosion).suggestedPunti,
     );
   });
 });
