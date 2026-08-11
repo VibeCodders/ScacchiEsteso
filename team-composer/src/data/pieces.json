@@ -634,5 +634,23 @@
       { "type": "respingi", "modalita": "alternativa", "params": { "raggio": 1, "target": "nemico_adiacente", "esclusi": ["re"], "senzaCattura": true } }
     ],
     "respingeNemici": true
+  },
+  {
+    "sigla": "TT",
+    "descrizione": "Teletrasporto",
+    "punti": 22,
+    "categoria": "base",
+    "classico": false,
+    "regole": "Si muove di una casella in qualsiasi direzione. Cattura in mischia. In alternativa al movimento, può teletrasportarsi su una casella vuota a esattamente 3 caselle in linea retta (orizzontale, verticale o diagonale), saltando sopra qualsiasi pezzo; non cattura nulla all'arrivo.",
+    "moves": [
+      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step" }
+    ],
+    "movimentoTipo": "step",
+    "resistance": 0,
+    "immunityTypes": [],
+    "alternativeActions": [
+      { "type": "teletrasporto", "modalita": "alternativa", "params": { "distanza": 3, "target": "casella_vuota_a_distanza_3", "direzioni": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "ignoraInterposizioni": true, "senzaCattura": true } }
+    ],
+    "teletrasporto": true
   }
 ]

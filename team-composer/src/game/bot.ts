@@ -4,6 +4,7 @@ import { findKingCoord } from './check';
 import { getPromotionOptions, isPromotionMove } from './promotion';
 import { canUseScocca, getScoccaTargets } from './scocca';
 import { canRepulse, getRepulseTargets } from './repulse';
+import { canTeleport, getTeleportTargets } from './teleport';
 import { canSwap, getSwapTargets } from './swap';
 import { canSwapperSwap, getSwapperCandidatePairs } from './swapper';
 import { canRevive, getRevivalSquares, getRevivableSiglas } from './necromancy';
@@ -14,6 +15,7 @@ import {
   applyTurn,
   applyScocca,
   applyRepulse,
+  applyTeleport,
   applySwap,
   applySwapperSwap,
   applyRevive,
@@ -71,6 +73,7 @@ export type BotAction =
   | { kind: 'move'; from: Coord; to: Coord; promotionChoice?: string; orphanMimicSource?: Coord }
   | { kind: 'scocca'; from: Coord; target: Coord }
   | { kind: 'repulse'; from: Coord; target: Coord }
+  | { kind: 'teleport'; from: Coord; to: Coord }
   | { kind: 'swap'; from: Coord; target: Coord }
   | { kind: 'swapperSwap'; from: Coord; squareA: Coord; squareB: Coord }
   | { kind: 'revive'; from: Coord; target: Coord; sigla: string }
@@ -87,6 +90,8 @@ export function applyBotAction(state: GameState, action: BotAction): ApplyTurnRe
       return applyScocca(state, action.from, action.target);
     case 'repulse':
       return applyRepulse(state, action.from, action.target);
+    case 'teleport':
+      return applyTeleport(state, action.from, action.to);
     case 'swap':
       return applySwap(state, action.from, action.target);
     case 'swapperSwap':
@@ -162,6 +167,12 @@ export function generateBotActions(state: GameState, owner: Owner): BotAction[] 
     if (canRepulse(pieceDef)) {
       for (const target of getRepulseTargets(state.board, from, owner, state.dimensions)) {
         actions.push({ kind: 'repulse', from, target });
+      }
+    }
+
+    if (canTeleport(pieceDef)) {
+      for (const to of getTeleportTargets(state.board, from, owner, state.dimensions)) {
+        actions.push({ kind: 'teleport', from, to });
       }
     }
 
@@ -285,6 +296,7 @@ export function actionKey(action: BotAction): string {
       return `move:${action.from}:${action.to}:${action.promotionChoice ?? ''}:${action.orphanMimicSource ?? ''}`;
     case 'scocca': return `scocca:${action.from}:${action.target}`;
     case 'repulse': return `repulse:${action.from}:${action.target}`;
+    case 'teleport': return `teleport:${action.from}:${action.to}`;
     case 'swap': return `swap:${action.from}:${action.target}`;
     case 'swapperSwap': return `swapperSwap:${action.squareA}:${action.squareB}`;
     case 'revive': return `revive:${action.from}:${action.target}:${action.sigla}`;

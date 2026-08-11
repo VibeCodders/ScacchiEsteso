@@ -103,6 +103,21 @@ export interface Piece {
    *  (never the King) one square directly away from itself, onto an empty on-board square — an
    *  alternative action that captures nothing. Drives getRepulseTargets / applyRepulse. */
   respingeNemici?: boolean;
+  /** True only for Teletrasporto (TT): in addition to a King-style move, may teleport — instead of
+   *  moving, it relocates to any EMPTY square at exactly 3 squares in one of the 8 directions,
+   *  jumping over everything in between (interpositions ignored), capturing nothing on landing.
+   *  Drives getTeleportTargets / applyTeleport. */
+  teletrasporto?: boolean;
+  /** True only for Vortice (VZ): in addition to a King-style move, may "attira" — instead of
+   *  moving, it pulls an enemy at exactly 2 squares (straight line, never the King) onto the
+   *  empty square in between, dragging it 1 square closer without capturing it.
+   *  Drives getAttractTargets / applyAttract. */
+  attiraNemici?: boolean;
+  /** True only for Bomba (BO): when this piece is captured (by any capture — melee, leap, ranged
+   *  or chain), it explodes and destroys the capturer too — unless the capturer is a King, which
+   *  is always immune to the blast. Collateral area-damage victims never trigger it.
+   *  Enforced by the capture resolution in turnManager. */
+  esplodeSeCatturato?: boolean;
 }
 
 export interface MirageMarker {

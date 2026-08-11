@@ -7,12 +7,13 @@ import { getPieceDef } from '../game/moveEngine';
 import { getPromotionOptions, isPromotionMove } from '../game/promotion';
 import { canUseScocca, getScoccaTargets } from '../game/scocca';
 import { canRepulse, getRepulseTargets } from '../game/repulse';
+import { canTeleport, getTeleportTargets } from '../game/teleport';
 import { canSwap, getSwapTargets } from '../game/swap';
 import { canSwapperSwap, getSwapperCandidateSquares } from '../game/swapper';
 import { canRevive, getRevivalSquares, getRevivableSiglas } from '../game/necromancy';
 import { canMimic, getOrphanThreats } from '../game/orphan';
 import { canSdoppiare, canRiunire, getSdoppiamentoSquares, getRiunioneSquares, isRealMirage } from '../game/mirage';
-import { createInitialGameState, applyTurn, applyScocca, applyRepulse, applySwap, applySwapperSwap, applyRevive, applySdoppiamento, applyRiunione, getLegalMovesForTurn, skipExtraMove, stopRabbitChain, type GameState } from '../game/turnManager';
+import { createInitialGameState, applyTurn, applyScocca, applyRepulse, applyTeleport, applySwap, applySwapperSwap, applyRevive, applySdoppiamento, applyRiunione, getLegalMovesForTurn, skipExtraMove, stopRabbitChain, type GameState } from '../game/turnManager';
 import { chooseBotAction, applyBotAction, formatMovesAhead, BOT_DIFFICULTY_MAX } from '../game/bot';
 import { sortSiglasByPunti } from '../data/pieces';
 import type { Coord, Owner } from '../game/board';
@@ -61,7 +62,7 @@ function GameScreen() {
   const [pendingRevival, setPendingRevival] = useState<PendingRevival | null>(null);
   const [pendingMimicChoice, setPendingMimicChoice] = useState<PendingMimicChoice | null>(null);
   const [orphanMimicSource, setOrphanMimicSource] = useState<Coord | null>(null);
-  const [actionMode, setActionMode] = useState<'scocca' | 'repulse' | 'swap' | 'revive' | 'swapperSwap' | 'sdoppiamento' | 'riunione' | null>(null);
+  const [actionMode, setActionMode] = useState<'scocca' | 'repulse' | 'teleport' | 'swap' | 'revive' | 'swapperSwap' | 'sdoppiamento' | 'riunione' | null>(null);
   const [swapperFirstSquare, setSwapperFirstSquare] = useState<Coord | null>(null);
   const [pendingSdoppiamento, setPendingSdoppiamento] = useState<PendingSdoppiamento | null>(null);
   const [revealRealMirage, setRevealRealMirage] = useState(false);
@@ -100,6 +101,9 @@ function GameScreen() {
     }
     if (actionMode === 'repulse') {
       return mover ? getRepulseTargets(gameState.board, effectiveSelected, mover.owner) : [];
+    }
+    if (actionMode === 'teleport') {
+      return mover ? getTeleportTargets(gameState.board, effectiveSelected, mover.owner) : [];
     }
     if (actionMode === 'swap') {
       return mover ? getSwapTargets(gameState.board, effectiveSelected, mover.owner) : [];
@@ -265,6 +269,20 @@ function GameScreen() {
     }
   };
 
+  const commitTeleport = (from: Coord, to: Coord) => {
+    const result = applyTeleport(gameState, from, to);
+    if (result.ok) {
+      setGameState(result.state);
+      setOrientation(result.state.turn);
+      setSelected(null);
+      setActionMode(null);
+      setSwapperFirstSquare(null);
+      setError(null);
+    } else {
+      setError(result.reason);
+    }
+  };
+
   const commitSwap = (from: Coord, target: Coord) => {
     const result = applySwap(gameState, from, target);
     if (result.ok) {
@@ -381,6 +399,7 @@ function GameScreen() {
       if (legalDestinations.includes(coord)) {
         if (actionMode === 'scocca') commitScocca(selected, coord);
         else if (actionMode === 'repulse') commitRepulse(selected, coord);
+        else if (actionMode === 'teleport') commitTeleport(selected, coord);
         else if (actionMode === 'swap') commitSwap(selected, coord);
         else if (actionMode === 'sdoppiamento') setPendingSdoppiamento({ from: selected, cloneSquare: coord });
         else if (actionMode === 'riunione') commitRiunione(selected, coord);
@@ -526,6 +545,12 @@ function GameScreen() {
               {actionMode === 'repulse' ? '↩️ Annulla Respingi' : '💨 Respingi'}
             </Button>
           )}
+          {selected && selectedPiece && !gameState.pendingExtraMove && !gameState.pendingRabbitChain && canTeleport(getPieceDef(selectedPiece.sigla))
+            && getTeleportTargets(gameState.board, selected, selectedPiece.owner).length > 0 && (
+            <Button variant="auto" onClick={() => setActionMode((m) => (m === 'teleport' ? null : 'teleport'))}>
+              {actionMode === 'teleport' ? '↩️ Annulla Teletrasporto' : '🌀 Teletrasporto'}
+            </Button>
+          )}
           {selected && selectedPiece && !gameState.pendingExtraMove && !gameState.pendingRabbitChain && canSwap(getPieceDef(selectedPiece.sigla))
             && getSwapTargets(gameState.board, selected, selectedPiece.owner).length > 0 && (
             <Button variant="auto" onClick={() => setActionMode((m) => (m === 'swap' ? null : 'swap'))}>
@@ -561,6 +586,7 @@ function GameScreen() {
         {showNames && <p className="text-sm text-slate-600 dark:text-slate-400">🏷 Nomi visibili {namesKeyHeld ? '(H premuto)' : '(toggle attivo)'}.</p>}
         {actionMode === 'scocca' && <p className="text-sm text-slate-600 dark:text-slate-400">🏹 Modalità Scoccare: seleziona un bersaglio nemico a 3-4 caselle.</p>}
         {actionMode === 'repulse' && <p className="text-sm text-slate-600 dark:text-slate-400">💨 Modalità Respingi: seleziona un nemico adiacente da spingere via di una casella (la casella dietro deve essere libera).</p>}
+        {actionMode === 'teleport' && <p className="text-sm text-slate-600 dark:text-slate-400">🌀 Modalità Teletrasporto: scegli una casella vuota a esattamente 3 caselle in linea retta (salta sopra i pezzi).</p>}
         {actionMode === 'swap' && <p className="text-sm text-slate-600 dark:text-slate-400">🔀 Modalità Scambio: seleziona un alleato in linea di vista libera (riga, colonna o diagonale).</p>}
         {actionMode === 'revive' && <p className="text-sm text-slate-600 dark:text-slate-400">🧟 Modalità Rianimazione: seleziona una casella vuota adiacente.</p>}
         {actionMode === 'swapperSwap' && !swapperFirstSquare && <p className="text-sm text-slate-600 dark:text-slate-400">🔁 Scambio: seleziona la prima casella (un alleato adiacente, o lo Swapper stesso).</p>}

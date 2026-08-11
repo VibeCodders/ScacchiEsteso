@@ -27,6 +27,8 @@ const ACTION_DESCRIPTIONS: Record<string, string> = {
   copia_poteri: 'assume i poteri del pezzo che lo tiene in scacco',
   congelamento: 'congela i nemici adiacenti (mai il Re): nessuna mossa o azione, tranne catturare lo Stunner',
   respingi: 'spinge un nemico adiacente (mai il Re) di una casella lontano da sé, su una casella vuota',
+  teletrasporto: 'si teletrasporta su una casella vuota a esattamente 3 caselle in linea retta, saltando sopra i pezzi',
+  attira: 'trascina un nemico a 2 caselle di distanza (mai il Re) sulla casella vuota in mezzo, avvicinandolo di 1',
   scambio_due_alleati: 'scambia le posizioni di due alleati adiacenti allo Swapper',
   sdoppiamento: 'crea un clone illusorio su una casella vuota adiacente e sceglie quale dei due è quello vero',
   riunione: 'ricostituisce vero e clone in un unico pezzo, scegliendo la casella in cui ricompare',
@@ -34,7 +36,7 @@ const ACTION_DESCRIPTIONS: Record<string, string> = {
 
 /** Special abilities a piece carries, in display order: every `alternativeActions` entry, plus
  *  `armatura` (a separate boolean field on Piece, normalized into the same shape). */
-export function specialAbilitiesOf(piece: Piece): Array<{ label: string; modalita: ActionModalita; description: string }> {
+function specialAbilitiesOf(piece: Piece): Array<{ label: string; modalita: ActionModalita; description: string }> {
   const abilities = piece.alternativeActions.map((action) => ({
     label: ACTION_LABELS[action.type] ?? action.type,
     modalita: action.modalita,

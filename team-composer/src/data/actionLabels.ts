@@ -13,6 +13,8 @@ export const ACTION_LABELS: Record<string, string> = {
   copia_poteri: 'Copia poteri',
   congelamento: 'Congelamento',
   respingi: 'Respingere',
+  teletrasporto: 'Teletrasporto',
+  attira: 'Attira',
   scambio_due_alleati: 'Scambio di due alleati',
   sdoppiamento: 'Sdoppiamento',
   riunione: 'Riunione',

@@ -271,6 +271,15 @@
         },
         "respingeNemici": {
           "type": "boolean"
+        },
+        "teletrasporto": {
+          "type": "boolean"
+        },
+        "attiraNemici": {
+          "type": "boolean"
+        },
+        "esplodeSeCatturato": {
+          "type": "boolean"
         }
       },
       "additionalProperties": false

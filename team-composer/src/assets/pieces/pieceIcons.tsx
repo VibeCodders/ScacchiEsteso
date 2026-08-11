@@ -282,6 +282,14 @@ const PIECE_SHAPES: Record<string, ReactElement> = {
       ))}
     </g>
   ),
+  TT: (
+    <g>
+      <rect x="30" y="66" width="40" height="12" rx="3" />
+      <path d="M36 66 Q36 22 50 22 Q64 22 64 66 Z" />
+      <circle cx="50" cy="44" r="11" />
+      <path d="M50 33 Q58 40 50 47 Q42 54 50 61" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+    </g>
+  ),
 };
 
 export interface PieceIconProps extends SVGProps<SVGSVGElement> {

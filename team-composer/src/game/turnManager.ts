@@ -19,6 +19,7 @@ import { getLegalMoves, isCheckmate, isKingInCheck, isStalemate } from './check'
 import { getPromotionOptions, isPromotionMove } from './promotion';
 import { canUseScocca, getScoccaTargets } from './scocca';
 import { canRepulse, getRepulseTargets } from './repulse';
+import { canTeleport, getTeleportTargets } from './teleport';
 import { canSwap, getSwapTargets } from './swap';
 import { canSwapperSwap, getSwapperCandidateSquares } from './swapper';
 import { canRevive, getRevivalSquares, getRevivableSiglas } from './necromancy';
@@ -62,6 +63,18 @@ export interface HistoryEntry {
    *  `repulsedTo` is where it lands. The Repulsore itself never moves. */
   isRepulse?: boolean;
   repulsedTo?: Coord;
+  /** True for a Teletrasporto's "teletrasporto": it relocates to an empty square at exactly 3
+   *  squares in a straight direction, jumping over everything — `to` is the landing square. */
+  isTeleport?: boolean;
+  /** True for a Vortice's "attira": it pulls an enemy at exactly 2 squares onto the empty square
+   *  in between — `to` is the pulled piece's ORIGINAL square, and `attractedTo` is where it lands.
+   *  The Vortice itself never moves. */
+  isAttract?: boolean;
+  attractedTo?: Coord;
+  /** True when a Bomba (BO) was the captured piece and exploded, destroying the capturer too
+   *  (unless the capturer was a King). `explodedAt` is the capturer's square. */
+  isExplosion?: boolean;
+  explodedAt?: Coord;
   /** True for a Necromante's "rianimazione" of a fallen ally onto an adjacent empty square. */
   isRevival?: boolean;
   /** Sigla of the piece revived from the graveyard, when `isRevival` is true. */
@@ -156,6 +169,8 @@ function isProgressEntry(entry: HistoryEntry): boolean {
   if (entry.isCapture) return true;
   if (entry.isSwap) return true;
   if (entry.isRepulse) return true; // a board-changing special action, like swap/revival
+  if (entry.isTeleport) return true;
+  if (entry.isAttract) return true;
   if (entry.isRevival) return true;
   if (entry.isSwapperSwap) return true;
   if (entry.isSdoppiamento) return true; // board-changing special actions, like swap/revival
@@ -943,6 +958,80 @@ export function applyRepulse(state: GameState, from: Coord, target: Coord): Appl
     isCapture: false,
     isRepulse: true,
     repulsedTo: landing,
+  };
+
+  return {
+    ok: true,
+    state: {
+      board: nextBoard,
+      dimensions: state.dimensions,
+      turn: nextTurn,
+      turnNumber: state.turnNumber + 1,
+      history: [...state.history, historyEntry],
+      captured: state.captured,
+      status,
+      winner: resolveWinner(status, nextBoard, piece.owner, state.dimensions),
+      enPassantTarget: null,
+      pendingExtraMove: null,
+      pendingRabbitChain: null,
+      turnsSinceProgress,
+    },
+  };
+}
+
+/**
+ * Plays a Teletrasporto's "teletrasporto" as the turn's action: instead of moving, the piece
+ * relocates to any EMPTY square at exactly 3 squares in one of the 8 straight directions, jumping
+ * over everything in between (interpositions ignored — it's a teleport, not a slide). Nothing is
+ * captured on landing. Like any action, it's rejected if it would leave the acting player's own
+ * King in check (README §3.2 — leaving `from` can expose the King).
+ */
+export function applyTeleport(state: GameState, from: Coord, to: Coord): ApplyTurnResult {
+  if (GAME_OVER_STATUSES.has(state.status)) {
+    return { ok: false, reason: 'La partita è terminata.' };
+  }
+  if (state.pendingExtraMove) {
+    return { ok: false, reason: 'Devi prima completare (o saltare) il movimento extra del Berserker.' };
+  }
+  if (state.pendingRabbitChain) {
+    return { ok: false, reason: 'Devi prima continuare (o fermare) la catena di salti del Coniglio.' };
+  }
+
+  const piece = getPieceAt(state.board, from);
+  if (!piece) {
+    return { ok: false, reason: `Nessun pezzo in ${from}.` };
+  }
+  if (piece.owner !== state.turn) {
+    return { ok: false, reason: 'Non è il turno di questo giocatore.' };
+  }
+
+  const pieceDef = getPieceDef(piece.sigla);
+  if (!canTeleport(pieceDef)) {
+    return { ok: false, reason: 'Questo pezzo non può teletrasportarsi.' };
+  }
+
+  const targets = getTeleportTargets(state.board, from, piece.owner, state.dimensions);
+  if (!targets.includes(to)) {
+    return { ok: false, reason: `Destinazione non valida per il teletrasporto: ${to}.` };
+  }
+
+  const nextBoard = movePiece(state.board, from, to);
+  if (isKingInCheck(nextBoard, piece.owner, state.dimensions)) {
+    return { ok: false, reason: 'Questa azione lascerebbe il tuo Re sotto scacco.' };
+  }
+
+  const nextTurn: Owner = piece.owner === 'A' ? 'B' : 'A';
+  const turnsSinceProgress = 0; // a board-changing special action — always progress
+  const status = computeStatus(nextBoard, nextTurn, turnsSinceProgress, state.dimensions);
+
+  const historyEntry: HistoryEntry = {
+    turnNumber: state.turnNumber,
+    owner: piece.owner,
+    from,
+    to,
+    sigla: piece.sigla,
+    isCapture: false,
+    isTeleport: true,
   };
 
   return {
