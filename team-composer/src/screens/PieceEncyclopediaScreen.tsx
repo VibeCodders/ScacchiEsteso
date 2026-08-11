@@ -73,10 +73,10 @@ function PieceDetail({ piece, onClose }: { piece: Piece; onClose: () => void }) 
   }
 
   return (
-    <div className="fixed inset-0 z-10 flex items-center justify-center overflow-y-auto bg-black/85 p-4" role="dialog" aria-label={`Dettagli — ${piece.descrizione}`}>
-      <div className="panel flex w-full max-w-[640px] flex-col items-center gap-4 rounded-xl border border-slate-700 bg-slate-800 p-5">
+    <div className="fixed inset-0 z-10 flex items-center justify-center overflow-y-auto bg-black/50 dark:bg-black/85 p-4" role="dialog" aria-label={`Dettagli — ${piece.descrizione}`}>
+      <div className="panel flex w-full max-w-[640px] flex-col items-center gap-4 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 p-5">
         <div className="flex w-full items-center justify-between gap-4">
-          <h2 className="text-lg font-semibold text-slate-100">{piece.sigla} — {piece.descrizione}</h2>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{piece.sigla} — {piece.descrizione}</h2>
           <Button variant="secondary" onClick={onClose}>✕ Chiudi</Button>
         </div>
         <p className="text-[0.72rem] leading-snug text-slate-500">{piece.regole}</p>
@@ -89,26 +89,26 @@ function PieceDetail({ piece, onClose }: { piece: Piece; onClose: () => void }) 
             selectedSquare={from}
           />
         </div>
-        <div className="flex flex-wrap gap-4 text-sm text-slate-400">
+        <div className="flex flex-wrap gap-4 text-sm text-slate-600 dark:text-slate-400">
           <span><span className="mr-1 inline-block size-3.5 rounded-sm bg-blue-500/75 align-middle" /> Movimento</span>
           <span><span className="mr-1 inline-block size-3.5 rounded-sm bg-red-500/75 align-middle" /> Cattura</span>
           <span><span className="mr-1 inline-block size-3.5 rounded-sm bg-[linear-gradient(135deg,rgba(59,130,246,0.75),rgba(239,68,68,0.75))] align-middle" /> Entrambi</span>
         </div>
         {exampleCapture ? (
-          <p className="m-0 text-center text-slate-300">
+          <p className="m-0 text-center text-slate-700 dark:text-slate-300">
             Esempio: un pezzo nemico su <strong>{exampleCapture.enemyAt}</strong> verrebbe catturato.
           </p>
         ) : (
-          <p className="m-0 text-center text-slate-300">Questo pezzo non ha mosse di cattura di base.</p>
+          <p className="m-0 text-center text-slate-700 dark:text-slate-300">Questo pezzo non ha mosse di cattura di base.</p>
         )}
         {abilities.length > 0 && (
           <div className="piece-detail-actions w-full text-left">
-            <h3 className="mb-1 text-[0.95rem] text-slate-50">🎭 Azioni speciali</h3>
-            <ul className="m-0 flex list-disc flex-col gap-1 pl-5 text-sm text-slate-300">
+            <h3 className="mb-1 text-[0.95rem] text-slate-900 dark:text-slate-50">🎭 Azioni speciali</h3>
+            <ul className="m-0 flex list-disc flex-col gap-1 pl-5 text-sm text-slate-700 dark:text-slate-300">
               {abilities.map((ability, idx) => (
                 <li key={`${ability.label}-${idx}`}>
-                  <strong className="text-sky-300">{ability.label}</strong>
-                  <span className="ml-1 text-xs text-slate-400">({MODALITA_LABELS[ability.modalita]})</span>
+                  <strong className="text-sky-700 dark:text-sky-300">{ability.label}</strong>
+                  <span className="ml-1 text-xs text-slate-600 dark:text-slate-400">({MODALITA_LABELS[ability.modalita]})</span>
                   {ability.description && <span> — {ability.description}</span>}
                 </li>
               ))}

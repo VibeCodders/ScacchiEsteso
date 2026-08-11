@@ -3,7 +3,7 @@ import { cn } from '../../lib/cn';
 
 /** Shared class for text/number/select inputs across all forms. */
 export const inputClass =
-  'rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-100 focus:border-blue-500 focus:outline-none disabled:opacity-40';
+  'rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5 text-sm text-slate-900 dark:text-slate-100 focus:border-blue-500 focus:outline-none disabled:opacity-40';
 
 interface FieldProps extends LabelHTMLAttributes<HTMLLabelElement> {
   label: ReactNode;
@@ -12,7 +12,7 @@ interface FieldProps extends LabelHTMLAttributes<HTMLLabelElement> {
 /** Vertical labeled field — the form pattern used by the settings and piece-designer screens. */
 function Field({ label, className, children, ...rest }: FieldProps) {
   return (
-    <label className={cn('flex flex-col gap-1 text-xs text-slate-400', className)} {...rest}>
+    <label className={cn('flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-400', className)} {...rest}>
       {label}
       {children}
     </label>

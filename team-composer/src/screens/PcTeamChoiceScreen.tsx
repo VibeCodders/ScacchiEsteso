@@ -52,7 +52,7 @@ function PcTeamChoiceScreen() {
     <PageShell title="🤖 Team del PC" subtitle="Come vuoi comporre l'esercito avversario?" layout="center">
       <Panel title="🧠 Difficoltà" className="w-full max-w-[640px]">
         <div className="flex flex-col gap-2">
-          <label htmlFor="bot-difficulty" className="text-sm text-slate-400">
+          <label htmlFor="bot-difficulty" className="text-sm text-slate-600 dark:text-slate-400">
             Livello di difficoltà: {botDifficulty} / {BOT_DIFFICULTY_MAX}
           </label>
           <input
@@ -66,7 +66,7 @@ function PcTeamChoiceScreen() {
             aria-label="Difficoltà del bot"
             className="w-full accent-blue-500"
           />
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-slate-600 dark:text-slate-400">
             Il PC vede {formatMovesAhead(botDifficulty)} avanti
             (profondità di ricerca {difficultyToDepth(botDifficulty)} mezze mosse).
           </p>

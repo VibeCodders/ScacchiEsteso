@@ -6,10 +6,10 @@
 function InfoTooltip({ text }: { text: string }) {
   return (
     <span className="group relative inline-flex outline-none" tabIndex={0}>
-      <span className="cursor-help text-xs text-blue-400" aria-hidden="true">ⓘ</span>
+      <span className="cursor-help text-xs text-blue-600 dark:text-blue-400" aria-hidden="true">ⓘ</span>
       <span
         role="tooltip"
-        className="pointer-events-none invisible absolute bottom-full left-1/2 z-10 w-56 -translate-x-1/2 rounded-md border border-slate-700 bg-slate-800 px-2.5 py-2 text-xs font-normal leading-relaxed text-slate-300 opacity-0 transition-opacity group-hover:visible group-hover:opacity-100 group-focus:visible group-focus:opacity-100 group-focus-within:visible group-focus-within:opacity-100"
+        className="pointer-events-none invisible absolute bottom-full left-1/2 z-10 w-56 -translate-x-1/2 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-2 text-xs font-normal leading-relaxed text-slate-700 dark:text-slate-300 opacity-0 transition-opacity group-hover:visible group-hover:opacity-100 group-focus:visible group-focus:opacity-100 group-focus-within:visible group-focus-within:opacity-100"
       >
         {text}
       </span>

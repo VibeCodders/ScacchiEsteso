@@ -5,6 +5,7 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import GameScreen from './GameScreen';
 import GameOverScreen from './GameOverScreen';
 import { GameSetupProvider } from '../context/GameSetupContext';
+import { ThemeProvider } from '../context/ThemeContext';
 import { useGameSetup } from '../context/gameSetup';
 import { createEmptyBoard, createPieceInstance, setPieceAt, type BoardState } from '../game/board';
 import { KING_SIGLA } from '../data/pieces';
@@ -29,7 +30,9 @@ function renderGame(board: BoardState, dimensions?: { width: number; height: num
   return render(
     <MemoryRouter>
       <GameSetupProvider>
-        <Bootstrap board={board} dimensions={dimensions} />
+        <ThemeProvider>
+          <Bootstrap board={board} dimensions={dimensions} />
+        </ThemeProvider>
       </GameSetupProvider>
     </MemoryRouter>,
   );
@@ -214,10 +217,12 @@ describe('GameScreen — game over banner', () => {
     render(
       <MemoryRouter initialEntries={['/game']}>
         <GameSetupProvider>
-          <Routes>
-            <Route path="/game" element={<Bootstrap board={board} />} />
-            <Route path="/game-over" element={<GameOverScreen />} />
-          </Routes>
+          <ThemeProvider>
+            <Routes>
+              <Route path="/game" element={<Bootstrap board={board} />} />
+              <Route path="/game-over" element={<GameOverScreen />} />
+            </Routes>
+          </ThemeProvider>
         </GameSetupProvider>
       </MemoryRouter>,
     );
@@ -761,10 +766,12 @@ describe('GameScreen — anti-stalemate (20 turns without progress)', () => {
     render(
       <MemoryRouter initialEntries={['/game']}>
         <GameSetupProvider>
-          <Routes>
-            <Route path="/game" element={<Bootstrap board={board} />} />
-            <Route path="/game-over" element={<GameOverScreen />} />
-          </Routes>
+          <ThemeProvider>
+            <Routes>
+              <Route path="/game" element={<Bootstrap board={board} />} />
+              <Route path="/game-over" element={<GameOverScreen />} />
+            </Routes>
+          </ThemeProvider>
         </GameSetupProvider>
       </MemoryRouter>,
     );
@@ -805,7 +812,9 @@ function renderPvcGame(board: BoardState, humanOwner: 'A' | 'B') {
   return render(
     <MemoryRouter>
       <GameSetupProvider>
-        <BootstrapPvc board={board} humanOwner={humanOwner} />
+        <ThemeProvider>
+          <BootstrapPvc board={board} humanOwner={humanOwner} />
+        </ThemeProvider>
       </GameSetupProvider>
     </MemoryRouter>,
   );

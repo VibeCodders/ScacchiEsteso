@@ -59,7 +59,7 @@ function BreakdownBarChart({ estimate }: { estimate: PuntiEstimate }) {
         aria-label={`Scomposizione della stima: mobilità ${breakdown.mobilityContribution.toFixed(1)}, composto ${breakdown.compoundContribution.toFixed(1)}, meccanica ${breakdown.specialMechanicBonus.toFixed(1)}`}
         className="h-auto w-full"
       >
-        <line x1={zeroX} y1={0} x2={zeroX} y2={height} className="stroke-slate-700 stroke-1" />
+        <line x1={zeroX} y1={0} x2={zeroX} y2={height} className="stroke-slate-300 dark:stroke-slate-700 stroke-1" />
         {bars.map((bar, i) => {
           const barLen = (Math.abs(bar.value) / maxAbs) * halfWidth;
           const y = i * rowHeight + 3;
@@ -68,7 +68,7 @@ function BreakdownBarChart({ estimate }: { estimate: PuntiEstimate }) {
           const valueX = bar.value >= 0 ? zeroX + barLen + 6 : zeroX - barLen - 6;
           return (
             <g key={bar.key}>
-              <text x={labelWidth - 8} y={y + barHeight / 2 + 4} textAnchor="end" className="fill-slate-400 text-[10px]">
+              <text x={labelWidth - 8} y={y + barHeight / 2 + 4} textAnchor="end" className="fill-slate-600 dark:fill-slate-400 text-[10px]">
                 {bar.label}
               </text>
               <rect
@@ -84,7 +84,7 @@ function BreakdownBarChart({ estimate }: { estimate: PuntiEstimate }) {
                 x={valueX}
                 y={y + barHeight / 2 + 4}
                 textAnchor={bar.value >= 0 ? 'start' : 'end'}
-                className="fill-slate-300 text-[10px] font-semibold"
+                className="fill-slate-700 dark:fill-slate-300 text-[10px] font-semibold"
               >
                 {bar.value > 0 ? '+' : ''}
                 {bar.value.toFixed(1)}
@@ -94,9 +94,9 @@ function BreakdownBarChart({ estimate }: { estimate: PuntiEstimate }) {
           );
         })}
       </svg>
-      <p className="mt-2 text-[0.78rem] text-slate-400">
-        Totale stimato: <strong className="text-slate-100">{estimate.suggestedPunti}</strong> pt · intervallo plausibile{' '}
-        <strong className="text-slate-100">{estimate.confidenceInterval.low}–{estimate.confidenceInterval.high}</strong>
+      <p className="mt-2 text-[0.78rem] text-slate-600 dark:text-slate-400">
+        Totale stimato: <strong className="text-slate-900 dark:text-slate-100">{estimate.suggestedPunti}</strong> pt · intervallo plausibile{' '}
+        <strong className="text-slate-900 dark:text-slate-100">{estimate.confidenceInterval.low}–{estimate.confidenceInterval.high}</strong>
       </p>
     </div>
   );

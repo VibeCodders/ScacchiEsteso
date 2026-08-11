@@ -4,6 +4,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import GameSettingsScreen from './GameSettingsScreen';
 import { GameSetupProvider } from '../context/GameSetupContext';
+import { ThemeProvider } from '../context/ThemeContext';
 import { useGameSetup, type GameMode } from '../context/gameSetup';
 import type { Owner } from '../game/board';
 
@@ -21,6 +22,7 @@ function renderSettings(mode: GameMode = 'pvp', humanOwner?: Owner, destinationL
   return render(
     <MemoryRouter initialEntries={['/game-settings']}>
       <GameSetupProvider>
+        <ThemeProvider>
         <Bootstrap mode={mode} humanOwner={humanOwner}>
           <Routes>
             <Route path="/game-settings" element={<GameSettingsScreen />} />
@@ -28,6 +30,7 @@ function renderSettings(mode: GameMode = 'pvp', humanOwner?: Owner, destinationL
             <Route path="/team/pc-choice" element={<div>{destinationLabel}: team/pc-choice</div>} />
           </Routes>
         </Bootstrap>
+        </ThemeProvider>
       </GameSetupProvider>
     </MemoryRouter>,
   );

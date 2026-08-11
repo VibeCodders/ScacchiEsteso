@@ -39,9 +39,9 @@ const FILTERS: Array<{ id: Filter; label: string }> = [
 ];
 
 const VALIDATION_LEVEL_CLASSES: Record<string, string> = {
-  error: 'bg-red-950 text-red-300',
-  warning: 'bg-amber-950 text-amber-200',
-  success: 'bg-green-950 text-green-300',
+  error: 'bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300',
+  warning: 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-200',
+  success: 'bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300',
 };
 
 function TeamSelectScreen({
@@ -223,10 +223,10 @@ function TeamSelectScreen({
                 footer={
                   <>
                     {currentCount > 0 && (
-                      <span className="text-[0.75rem] text-blue-400">Nel team: {currentCount}/{maxForPiece}</span>
+                      <span className="text-[0.75rem] text-blue-600 dark:text-blue-400">Nel team: {currentCount}/{maxForPiece}</span>
                     )}
-                    {isMaxed && <span className="text-[0.75rem] text-red-400">Limite raggiunto</span>}
-                    {isKing && <span className="text-[0.75rem] text-amber-400">Gratuito — obbligatorio</span>}
+                    {isMaxed && <span className="text-[0.75rem] text-red-600 dark:text-red-400">Limite raggiunto</span>}
+                    {isKing && <span className="text-[0.75rem] text-amber-600 dark:text-amber-400">Gratuito — obbligatorio</span>}
                   </>
                 }
               />
@@ -249,19 +249,19 @@ function TeamSelectScreen({
                   <div
                     key={piece.sigla}
                     className={cn(
-                      'team-member flex items-center justify-between rounded-md border border-slate-700 bg-slate-900 px-3 py-2',
-                      isKing && 'border-amber-400 bg-[#1a1f0a]',
+                      'team-member flex items-center justify-between rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2',
+                      isKing && 'border-amber-400 bg-amber-50 dark:bg-[#1a1f0a]',
                     )}
                   >
                     <div className="flex items-center gap-2.5">
                       <span className="member-sigla w-10 text-sm font-bold">{piece.sigla}</span>
-                      <span className="text-sm text-slate-300">{piece.descrizione}</span>
-                      <span className="text-[0.8rem] text-slate-400">{piece.punti}pt × {count} = {piece.punti * count}</span>
+                      <span className="text-sm text-slate-700 dark:text-slate-300">{piece.descrizione}</span>
+                      <span className="text-[0.8rem] text-slate-600 dark:text-slate-400">{piece.punti}pt × {count} = {piece.punti * count}</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       {!isKing && (
                         <button
-                          className="flex size-6 cursor-pointer items-center justify-center rounded border border-slate-600 bg-slate-800 text-sm text-slate-200 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
+                          className="flex size-6 cursor-pointer items-center justify-center rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
                           onClick={() => removePiece(piece.sigla)}
                           aria-label={`Rimuovi un ${piece.descrizione}`}
                         >−</button>
@@ -269,7 +269,7 @@ function TeamSelectScreen({
                       <span className="min-w-4 text-center text-sm font-semibold">{count}</span>
                       {!isKing && (
                         <button
-                          className="flex size-6 cursor-pointer items-center justify-center rounded border border-slate-600 bg-slate-800 text-sm text-slate-200 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
+                          className="flex size-6 cursor-pointer items-center justify-center rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
                           onClick={() => addPiece(piece)}
                           aria-label={`Aggiungi un ${piece.descrizione}`}
                           disabled={count >= getMaxIdentical(piece.sigla)}
@@ -277,7 +277,7 @@ function TeamSelectScreen({
                       )}
                       {!isKing && (
                         <button
-                          className="cursor-pointer rounded p-0.5 text-base text-red-400 hover:bg-red-950/60"
+                          className="cursor-pointer rounded p-0.5 text-base text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/60"
                           onClick={() => removeAll(piece.sigla)}
                           aria-label={`Rimuovi tutti i ${piece.descrizione}`}
                         >✕</button>
@@ -288,16 +288,16 @@ function TeamSelectScreen({
               })}
             </div>
 
-            <div className="flex flex-col gap-2 rounded-lg border border-slate-700 bg-slate-900 p-3">
+            <div className="flex flex-col gap-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-3">
               {summaryRows.map((row) => (
                 <div key={row.label} className="flex justify-between text-sm">
-                  <span className="text-slate-400">{row.label}</span>
+                  <span className="text-slate-600 dark:text-slate-400">{row.label}</span>
                   <span
                     className={cn(
                       'font-semibold',
-                      row.tone === 'ok' && 'text-emerald-400',
-                      row.tone === 'warn' && 'text-amber-400',
-                      row.tone === 'err' && 'text-red-400',
+                      row.tone === 'ok' && 'text-emerald-600 dark:text-emerald-400',
+                      row.tone === 'warn' && 'text-amber-600 dark:text-amber-400',
+                      row.tone === 'err' && 'text-red-600 dark:text-red-400',
                     )}
                   >
                     {row.value}

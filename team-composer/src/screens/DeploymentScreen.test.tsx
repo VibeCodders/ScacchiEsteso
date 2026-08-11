@@ -4,6 +4,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import DeploymentScreen from './DeploymentScreen';
 import { GameSetupProvider } from '../context/GameSetupContext';
+import { ThemeProvider } from '../context/ThemeContext';
 import { useGameSetup } from '../context/gameSetup';
 import { KING_SIGLA } from '../data/pieces';
 
@@ -26,7 +27,9 @@ function renderDeployment(teamA: Map<string, number>, teamB: Map<string, number>
   return render(
     <MemoryRouter>
       <GameSetupProvider>
-        <Bootstrap teamA={teamA} teamB={teamB} dimensions={dimensions} />
+        <ThemeProvider>
+          <Bootstrap teamA={teamA} teamB={teamB} dimensions={dimensions} />
+        </ThemeProvider>
       </GameSetupProvider>
     </MemoryRouter>,
   );

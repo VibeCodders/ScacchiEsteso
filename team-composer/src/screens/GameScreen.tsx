@@ -18,6 +18,7 @@ import { pieceDescription } from '../lib/pieceFormat';
 import { cn } from '../lib/cn';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
+import Modal from '../components/ui/Modal';
 import PageShell from '../components/ui/PageShell';
 import Panel from '../components/ui/Panel';
 
@@ -42,9 +43,6 @@ interface PendingSdoppiamento {
   from: Coord;
   cloneSquare: Coord;
 }
-
-/** Shared look for the full-board choice overlays (promotion, revival, mimic, mirage, game over). */
-const OVERLAY_CLASSES = 'absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 rounded-xl bg-black/85';
 
 function GameScreen() {
   const navigate = useNavigate();
@@ -132,7 +130,7 @@ function GameScreen() {
     return (
       <PageShell title="♟️ Partita" layout="center">
         <Panel className="w-full max-w-[480px] text-center">
-          <p className="text-sm text-slate-400">Nessuno schieramento trovato. Torna alla Home per iniziare una nuova partita.</p>
+          <p className="text-sm text-slate-600 dark:text-slate-400">Nessuno schieramento trovato. Torna alla Home per iniziare una nuova partita.</p>
           <Button variant="primary" className="mt-4" onClick={() => navigate('/')}>Torna alla Home</Button>
         </Panel>
       </PageShell>
@@ -422,16 +420,16 @@ function GameScreen() {
               🤖 PC: difficoltà {botDifficulty}/{BOT_DIFFICULTY_MAX} — vede {formatMovesAhead(botDifficulty)} avanti
             </Badge>
           )}
-          <Badge className={cn('turn-badge-human', isBotTurn && 'turn-badge-bot border-amber-800 bg-amber-950/60 text-amber-400')}>
+          <Badge className={cn('turn-badge-human', isBotTurn && 'turn-badge-bot border-amber-300 dark:border-amber-800 bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400')}>
             Turno: {ownerLabel(gameState.turn)}
           </Badge>
           {gameState.status === 'check' && (
-            <span className="animate-pulse rounded-lg border border-red-800 bg-red-950/60 px-4 py-2 text-sm font-bold text-red-400">
+            <span className="animate-pulse rounded-lg border border-red-300 dark:border-red-800 bg-red-100 dark:bg-red-950/60 px-4 py-2 text-sm font-bold text-red-600 dark:text-red-400">
               ⚠️ Scacco!
             </span>
           )}
           {isBotTurn && (
-            <span className="rounded-lg border border-amber-800 bg-amber-950/60 px-4 py-2 text-sm font-bold text-amber-400">
+            <span className="rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-100 dark:bg-amber-950/60 px-4 py-2 text-sm font-bold text-amber-600 dark:text-amber-400">
               🤖 Il PC sta pensando...
             </span>
           )}
@@ -497,29 +495,29 @@ function GameScreen() {
             </Button>
           )}
         </div>
-        {actionMode === 'scocca' && <p className="text-sm text-slate-400">🏹 Modalità Scoccare: seleziona un bersaglio nemico a 3-4 caselle.</p>}
-        {actionMode === 'swap' && <p className="text-sm text-slate-400">🔀 Modalità Scambio: seleziona un alleato in linea di vista libera (riga, colonna o diagonale).</p>}
-        {actionMode === 'revive' && <p className="text-sm text-slate-400">🧟 Modalità Rianimazione: seleziona una casella vuota adiacente.</p>}
-        {actionMode === 'swapperSwap' && !swapperFirstSquare && <p className="text-sm text-slate-400">🔁 Scambio: seleziona la prima casella (un alleato adiacente, o lo Swapper stesso).</p>}
-        {actionMode === 'swapperSwap' && swapperFirstSquare && <p className="text-sm text-slate-400">🔁 Scambio: seleziona la seconda casella da scambiare con {swapperFirstSquare}.</p>}
-        {actionMode === 'sdoppiamento' && <p className="text-sm text-slate-400">🌫️ Modalità Sdoppiamento: scegli una casella vuota adiacente dove materializzare il clone.</p>}
-        {actionMode === 'riunione' && <p className="text-sm text-slate-400">🔗 Modalità Riunione: scegli la casella (quella del vero o quella del clone) dove ricompare il Miraggio unico.</p>}
-        {revealRealMirage && <p className="text-sm text-slate-400">👁 I Miraggi veri del giocatore di turno sono contrassegnati da un punto giallo.</p>}
+        {actionMode === 'scocca' && <p className="text-sm text-slate-600 dark:text-slate-400">🏹 Modalità Scoccare: seleziona un bersaglio nemico a 3-4 caselle.</p>}
+        {actionMode === 'swap' && <p className="text-sm text-slate-600 dark:text-slate-400">🔀 Modalità Scambio: seleziona un alleato in linea di vista libera (riga, colonna o diagonale).</p>}
+        {actionMode === 'revive' && <p className="text-sm text-slate-600 dark:text-slate-400">🧟 Modalità Rianimazione: seleziona una casella vuota adiacente.</p>}
+        {actionMode === 'swapperSwap' && !swapperFirstSquare && <p className="text-sm text-slate-600 dark:text-slate-400">🔁 Scambio: seleziona la prima casella (un alleato adiacente, o lo Swapper stesso).</p>}
+        {actionMode === 'swapperSwap' && swapperFirstSquare && <p className="text-sm text-slate-600 dark:text-slate-400">🔁 Scambio: seleziona la seconda casella da scambiare con {swapperFirstSquare}.</p>}
+        {actionMode === 'sdoppiamento' && <p className="text-sm text-slate-600 dark:text-slate-400">🌫️ Modalità Sdoppiamento: scegli una casella vuota adiacente dove materializzare il clone.</p>}
+        {actionMode === 'riunione' && <p className="text-sm text-slate-600 dark:text-slate-400">🔗 Modalità Riunione: scegli la casella (quella del vero o quella del clone) dove ricompare il Miraggio unico.</p>}
+        {revealRealMirage && <p className="text-sm text-slate-600 dark:text-slate-400">👁 I Miraggi veri del giocatore di turno sono contrassegnati da un punto giallo.</p>}
         {orphanMimicSource && (
-          <p className="text-sm text-slate-400">🎭 L'Orfano è sotto scacco: imita {gameState.board.get(orphanMimicSource)?.sigla} da {orphanMimicSource}.</p>
+          <p className="text-sm text-slate-600 dark:text-slate-400">🎭 L'Orfano è sotto scacco: imita {gameState.board.get(orphanMimicSource)?.sigla} da {orphanMimicSource}.</p>
         )}
-        {error && <p className="text-sm text-red-400">{error}</p>}
+        {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
         {gameState.pendingExtraMove && !pendingPromotion && !isBotTurn && (
           <Panel className="w-full text-center">
-            <p className="text-sm text-slate-300">⚔️ Movimento extra Berserker disponibile (senza cattura).</p>
+            <p className="text-sm text-slate-700 dark:text-slate-300">⚔️ Movimento extra Berserker disponibile (senza cattura).</p>
             <Button variant="secondary" className="mt-3" onClick={handleSkipExtraMove}>Salta movimento extra</Button>
           </Panel>
         )}
 
         {gameState.pendingRabbitChain && !isBotTurn && (
           <Panel className="w-full text-center">
-            <p className="text-sm text-slate-300">
+            <p className="text-sm text-slate-700 dark:text-slate-300">
               🐇 Catena di salti del Coniglio: continua saltando un altro nemico, oppure fermati per catturare{' '}
               {gameState.board.get(gameState.pendingRabbitChain.lastHurdle)?.sigla} in {gameState.pendingRabbitChain.lastHurdle}.
             </p>
@@ -528,105 +526,95 @@ function GameScreen() {
         )}
 
         {pendingPromotion && (
-          <div className={OVERLAY_CLASSES}>
-            <h2 className="text-xl font-semibold text-slate-50">🎖️ Scegli la promozione</h2>
-            <div className="flex w-full max-w-xs flex-col gap-2">
-              {pendingPromotion.options.map((sigla) => (
-                <Button
-                  key={sigla}
-                  variant="primary"
-                  onClick={() => commitPlainMove(pendingPromotion.from, pendingPromotion.to, sigla)}
-                >
-                  {sigla} — {pieceDescription(sigla)}
-                </Button>
-              ))}
-            </div>
-          </div>
+          <Modal title="🎖️ Scegli la promozione" onClose={() => setPendingPromotion(null)}>
+            {pendingPromotion.options.map((sigla) => (
+              <Button
+                key={sigla}
+                variant="primary"
+                onClick={() => commitPlainMove(pendingPromotion.from, pendingPromotion.to, sigla)}
+              >
+                {sigla} — {pieceDescription(sigla)}
+              </Button>
+            ))}
+          </Modal>
         )}
 
         {pendingRevival && (
-          <div className={OVERLAY_CLASSES}>
-            <h2 className="text-xl font-semibold text-slate-50">🧟 Chi rianimare?</h2>
-            <div className="flex w-full max-w-xs flex-col gap-2">
-              {pendingRevival.options.map((sigla) => (
-                <Button
-                  key={sigla}
-                  variant="primary"
-                  onClick={() => commitRevive(pendingRevival.from, pendingRevival.target, sigla)}
-                >
-                  {sigla} — {pieceDescription(sigla)}
-                </Button>
-              ))}
-            </div>
-          </div>
+          <Modal title="🧟 Chi rianimare?" onClose={() => setPendingRevival(null)}>
+            {pendingRevival.options.map((sigla) => (
+              <Button
+                key={sigla}
+                variant="primary"
+                onClick={() => commitRevive(pendingRevival.from, pendingRevival.target, sigla)}
+              >
+                {sigla} — {pieceDescription(sigla)}
+              </Button>
+            ))}
+          </Modal>
         )}
 
         {pendingMimicChoice && (
-          <div className={OVERLAY_CLASSES}>
-            <h2 className="text-xl font-semibold text-slate-50">🎭 Chi imitare?</h2>
-            <div className="flex w-full max-w-xs flex-col gap-2">
-              {[...pendingMimicChoice.threats]
-                .sort((a, b) => {
-                  const siglaA = gameState.board.get(a)!.sigla;
-                  const siglaB = gameState.board.get(b)!.sigla;
-                  return getPieceDef(siglaA).punti - getPieceDef(siglaB).punti || siglaA.localeCompare(siglaB);
-                })
-                .map((threatCoord) => {
-                  const threatSigla = gameState.board.get(threatCoord)?.sigla ?? '?';
-                  return (
-                    <Button
-                      key={threatCoord}
-                      variant="primary"
-                      onClick={() => {
-                        setOrphanMimicSource(threatCoord);
-                        setPendingMimicChoice(null);
-                      }}
-                    >
-                      {threatSigla} — {pieceDescription(threatSigla)} ({threatCoord})
-                    </Button>
-                  );
-                })}
-            </div>
-          </div>
+          <Modal title="🎭 Chi imitare?" onClose={() => setPendingMimicChoice(null)}>
+            {[...pendingMimicChoice.threats]
+              .sort((a, b) => {
+                const siglaA = gameState.board.get(a)!.sigla;
+                const siglaB = gameState.board.get(b)!.sigla;
+                return getPieceDef(siglaA).punti - getPieceDef(siglaB).punti || siglaA.localeCompare(siglaB);
+              })
+              .map((threatCoord) => {
+                const threatSigla = gameState.board.get(threatCoord)?.sigla ?? '?';
+                return (
+                  <Button
+                    key={threatCoord}
+                    variant="primary"
+                    onClick={() => {
+                      setOrphanMimicSource(threatCoord);
+                      setPendingMimicChoice(null);
+                    }}
+                  >
+                    {threatSigla} — {pieceDescription(threatSigla)} ({threatCoord})
+                  </Button>
+                );
+              })}
+          </Modal>
         )}
 
         {pendingSdoppiamento && (
-          <div className={OVERLAY_CLASSES}>
-            <h2 className="text-xl font-semibold text-slate-50">🌫️ Dove sta il Miraggio vero?</h2>
-            <p className="max-w-[420px] text-center text-sm text-slate-400">
+          <Modal title="🌫️ Dove sta il Miraggio vero?" onClose={() => setPendingSdoppiamento(null)}>
+            <p className="text-center text-sm text-slate-600 dark:text-slate-400">
               I due pezzi sono indistinguibili. L'avversario deve catturare quello vero: se cattura il clone,
               l'illusione si dissolve e il Miraggio vero sopravvive.
             </p>
-            <div className="flex w-full max-w-xs flex-col gap-2">
-              <Button
-                variant="primary"
-                onClick={() => commitSdoppiamento(pendingSdoppiamento.from, pendingSdoppiamento.cloneSquare, pendingSdoppiamento.from)}
-              >
-                Il vero resta in {pendingSdoppiamento.from} (clone in {pendingSdoppiamento.cloneSquare})
-              </Button>
-              <Button
-                variant="primary"
-                onClick={() => commitSdoppiamento(pendingSdoppiamento.from, pendingSdoppiamento.cloneSquare, pendingSdoppiamento.cloneSquare)}
-              >
-                Il vero è in {pendingSdoppiamento.cloneSquare} (clone in {pendingSdoppiamento.from})
-              </Button>
-            </div>
-          </div>
+            <Button
+              variant="primary"
+              onClick={() => commitSdoppiamento(pendingSdoppiamento.from, pendingSdoppiamento.cloneSquare, pendingSdoppiamento.from)}
+            >
+              Il vero resta in {pendingSdoppiamento.from} (clone in {pendingSdoppiamento.cloneSquare})
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => commitSdoppiamento(pendingSdoppiamento.from, pendingSdoppiamento.cloneSquare, pendingSdoppiamento.cloneSquare)}
+            >
+              Il vero è in {pendingSdoppiamento.cloneSquare} (clone in {pendingSdoppiamento.from})
+            </Button>
+          </Modal>
         )}
 
+        {/* The end-of-match dialog is deliberately non-dismissible: the only action is seeing the result. */}
         {gameOver && (
-          <div className={OVERLAY_CLASSES}>
-            <h2 className="text-xl font-semibold text-slate-50">
-              {gameState.status === 'checkmate' && `🏆 Scacco matto! Vince ${ownerLabel(gameState.winner!)}`}
-              {gameState.status === 'stalemate' && '🤝 Stallo — Patta'}
-              {gameState.status === 'anti_stalemate' && (
-                gameState.winner
-                  ? `⏱️ Limite di 20 turni senza progressi — vince ${ownerLabel(gameState.winner)} per punteggio`
-                  : '⏱️ Limite di 20 turni senza progressi — Patta per punteggio pari'
-              )}
-            </h2>
+          <Modal
+            title={
+              gameState.status === 'checkmate'
+                ? `🏆 Scacco matto! Vince ${ownerLabel(gameState.winner!)}`
+                : gameState.status === 'stalemate'
+                  ? '🤝 Stallo — Patta'
+                  : gameState.winner
+                    ? `⏱️ Limite di 20 turni senza progressi — vince ${ownerLabel(gameState.winner)} per punteggio`
+                    : '⏱️ Limite di 20 turni senza progressi — Patta per punteggio pari'
+            }
+          >
             <Button variant="primary" onClick={handleContinueToResult}>Vedi risultato →</Button>
-          </div>
+          </Modal>
         )}
       </Panel>
 
@@ -656,7 +644,7 @@ function GameScreen() {
           )}
         </div>
 
-        <h2 className="mb-2 mt-5 border-b border-slate-700 pb-2 text-lg font-semibold text-slate-100">💀 Pezzi catturati</h2>
+        <h2 className="mb-2 mt-5 border-b border-slate-300 dark:border-slate-700 pb-2 text-lg font-semibold text-slate-900 dark:text-slate-100">💀 Pezzi catturati</h2>
         <p className="text-sm"><strong>{ownerLabel('A')}:</strong> {sortSiglasByPunti(gameState.captured.A.map((p) => p.sigla)).join(', ') || '—'}</p>
         <p className="mt-1 text-sm"><strong>{ownerLabel('B')}:</strong> {sortSiglasByPunti(gameState.captured.B.map((p) => p.sigla)).join(', ') || '—'}</p>
       </Panel>

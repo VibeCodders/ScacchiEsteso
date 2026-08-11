@@ -4,6 +4,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import PcTeamChoiceScreen from './PcTeamChoiceScreen';
 import { GameSetupProvider } from '../context/GameSetupContext';
+import { ThemeProvider } from '../context/ThemeContext';
 import { useGameSetup } from '../context/gameSetup';
 import { KING_SIGLA } from '../data/pieces';
 import { computeDistinctSpecialTypes } from '../data/validators';
@@ -27,10 +28,12 @@ function renderScreen(maxDistinctSpecialTypes?: number | null, dimensions?: { wi
   return render(
     <MemoryRouter initialEntries={['/team/pc']}>
       <GameSetupProvider>
+        <ThemeProvider>
         <Routes>
           <Route path="/team/pc" element={<Bootstrap maxDistinctSpecialTypes={maxDistinctSpecialTypes} dimensions={dimensions} />} />
           <Route path="/deployment" element={<div>Schermata Schieramento</div>} />
         </Routes>
+        </ThemeProvider>
       </GameSetupProvider>
     </MemoryRouter>,
   );

@@ -136,30 +136,30 @@ function PieceDesignerPanel() {
   };
 
   return (
-    <details className="mb-5 rounded-md border border-slate-700 bg-slate-900 p-3">
-      <summary className="cursor-pointer select-none text-sm font-semibold text-slate-100">🛠️ Piece designer — simula un pezzo ipotetico</summary>
+    <details className="mb-5 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-3">
+      <summary className="cursor-pointer select-none text-sm font-semibold text-slate-900 dark:text-slate-100">🛠️ Piece designer — simula un pezzo ipotetico</summary>
 
       <div className="mt-3.5 flex flex-col gap-4">
-        <p className="m-0 rounded-md border border-amber-800 bg-amber-950 p-2.5 text-[0.72rem] text-amber-400">
+        <p className="m-0 rounded-md border border-amber-300 dark:border-amber-800 bg-amber-100 dark:bg-amber-950 p-2.5 text-[0.72rem] text-amber-600 dark:text-amber-400">
           Simulazione — nessun dato viene scritto su pieces.json. Costruisci un pezzo ipotetico qui sotto per vedere
           in tempo reale quanti punti l'algoritmo gli assegnerebbe.
         </p>
 
-        <div className="rounded-md border border-slate-700 bg-slate-800 p-3.5">
-          <div className="text-3xl font-bold text-slate-50">{estimate.suggestedPunti} pt</div>
-          <div className="mb-2 text-xs text-slate-400">
+        <div className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 p-3.5">
+          <div className="text-3xl font-bold text-slate-900 dark:text-slate-50">{estimate.suggestedPunti} pt</div>
+          <div className="mb-2 text-xs text-slate-600 dark:text-slate-400">
             intervallo plausibile {estimate.confidenceInterval.low}–{estimate.confidenceInterval.high}
           </div>
           <BreakdownBarChart estimate={estimate} />
         </div>
 
-        <div className="border-t border-slate-800 pt-3">
-          <h4 className="mb-2 text-[0.8rem] text-slate-100">Mosse</h4>
+        <div className="border-t border-slate-300 dark:border-slate-800 pt-3">
+          <h4 className="mb-2 text-[0.8rem] text-slate-900 dark:text-slate-100">Mosse</h4>
           {moves.map((move) => (
-            <div key={move.id} className="mb-2.5 rounded-md border border-slate-700 bg-slate-800 p-2.5">
+            <div key={move.id} className="mb-2.5 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5">
               <div className="mb-2.5 flex flex-wrap gap-2">
                 {ALL_DIRECTIONS.map((d) => (
-                  <label key={d} className="flex cursor-pointer flex-row items-center gap-1 text-[0.7rem] text-slate-300">
+                  <label key={d} className="flex cursor-pointer flex-row items-center gap-1 text-[0.7rem] text-slate-700 dark:text-slate-300">
                     <input
                       type="checkbox"
                       checked={move.directions.includes(d)}
@@ -238,8 +238,8 @@ function PieceDesignerPanel() {
           </Button>
         </div>
 
-        <div className="border-t border-slate-800 pt-3">
-          <h4 className="mb-2 text-[0.8rem] text-slate-100">Resistenza e immunità</h4>
+        <div className="border-t border-slate-300 dark:border-slate-800 pt-3">
+          <h4 className="mb-2 text-[0.8rem] text-slate-900 dark:text-slate-100">Resistenza e immunità</h4>
           <div className="flex flex-wrap items-end gap-3">
             <Field label="Resistenza" className="min-w-[90px]">
               <input type="number" min={0} value={resistance} onChange={(e) => setResistance(Number(e.target.value))} className={inputClass} />
@@ -256,9 +256,9 @@ function PieceDesignerPanel() {
           </div>
         </div>
 
-        <div className="border-t border-slate-800 pt-3">
-          <h4 className="mb-2 text-[0.8rem] text-slate-100">Armatura naturale</h4>
-          <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-400">
+        <div className="border-t border-slate-300 dark:border-slate-800 pt-3">
+          <h4 className="mb-2 text-[0.8rem] text-slate-900 dark:text-slate-100">Armatura naturale</h4>
+          <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
             <input type="checkbox" checked={hasArmatura} onChange={(e) => setHasArmatura(e.target.checked)} className="size-4 accent-blue-500" />
             Ha armatura naturale
           </label>
@@ -275,10 +275,10 @@ function PieceDesignerPanel() {
           )}
         </div>
 
-        <div className="border-t border-slate-800 pt-3">
-          <h4 className="mb-2 text-[0.8rem] text-slate-100">Meccaniche speciali</h4>
+        <div className="border-t border-slate-300 dark:border-slate-800 pt-3">
+          <h4 className="mb-2 text-[0.8rem] text-slate-900 dark:text-slate-100">Meccaniche speciali</h4>
           {mechanics.map((mechanic) => (
-            <div key={mechanic.id} className="mb-2.5 rounded-md border border-slate-700 bg-slate-800 p-2.5">
+            <div key={mechanic.id} className="mb-2.5 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5">
               <div className="flex flex-wrap items-end gap-3">
                 <Field label="Tipo (anche mai visto nel roster, per testare l'estrapolazione)" className="min-w-[220px] flex-1">
                   <input

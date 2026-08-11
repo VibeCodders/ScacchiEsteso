@@ -3,12 +3,15 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import App from './App';
 import { GameSetupProvider } from './context/GameSetupContext';
+import { ThemeProvider } from './context/ThemeContext';
 
 function renderApp(initialPath = '/') {
   return render(
     <MemoryRouter initialEntries={[initialPath]}>
       <GameSetupProvider>
-        <App />
+        <ThemeProvider>
+          <App />
+        </ThemeProvider>
       </GameSetupProvider>
     </MemoryRouter>,
   );

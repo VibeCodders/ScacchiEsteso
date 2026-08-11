@@ -3,11 +3,14 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import PieceEncyclopediaScreen from './PieceEncyclopediaScreen';
 import { pieces, sortByPunti } from '../data/pieces';
+import { ThemeProvider } from '../context/ThemeContext';
 
 function renderScreen() {
   return render(
     <MemoryRouter>
-      <PieceEncyclopediaScreen />
+      <ThemeProvider>
+        <PieceEncyclopediaScreen />
+      </ThemeProvider>
     </MemoryRouter>,
   );
 }

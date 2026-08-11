@@ -82,7 +82,7 @@ function DeploymentScreen() {
     return (
       <PageShell title="🏳️ Schieramento" subtitle={`Modalità: ${mode === 'pvc' ? 'PvC' : 'PvP locale'}`} layout="center">
         <Panel title="🪙 Tiro a sorte" className="w-full max-w-[480px] text-center">
-          <p className="text-sm text-slate-300">Chi vince tira a sorte decide chi schiera per primo.</p>
+          <p className="text-sm text-slate-700 dark:text-slate-300">Chi vince tira a sorte decide chi schiera per primo.</p>
           <div className="mt-4">
             <Button variant="primary" onClick={handleCoinToss}>Tira la moneta</Button>
           </div>
@@ -123,14 +123,14 @@ function DeploymentScreen() {
       <Panel>
         {complete ? (
           <>
-            <h2 className="mb-2 text-lg font-semibold text-slate-100">✅ Schieramento completo</h2>
-            <p className="text-sm text-slate-400">Entrambi gli eserciti sono stati posizionati.</p>
+            <h2 className="mb-2 text-lg font-semibold text-slate-900 dark:text-slate-100">✅ Schieramento completo</h2>
+            <p className="text-sm text-slate-600 dark:text-slate-400">Entrambi gli eserciti sono stati posizionati.</p>
             <Button variant="primary" className="mt-4" onClick={handleContinue}>Vai alla partita →</Button>
           </>
         ) : (
           <>
-            <h2 className="mb-2 text-lg font-semibold text-slate-100">Turno: {currentPlacerLabel}</h2>
-            <p className="text-sm text-slate-400">Seleziona (o trascina) un pezzo, poi indica una casella libera nelle tue 2 traverse.</p>
+            <h2 className="mb-2 text-lg font-semibold text-slate-900 dark:text-slate-100">Turno: {currentPlacerLabel}</h2>
+            <p className="text-sm text-slate-600 dark:text-slate-400">Seleziona (o trascina) un pezzo, poi indica una casella libera nelle tue 2 traverse.</p>
             <div className="mb-4 mt-3 flex flex-col gap-2">
               <Button variant="auto" onClick={handleAutoPlaceMine}>
                 🤖 Piazza automaticamente i miei pezzi
@@ -163,7 +163,7 @@ function DeploymentScreen() {
                 );
               })}
             </div>
-            {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
+            {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
           </>
         )}
       </Panel>

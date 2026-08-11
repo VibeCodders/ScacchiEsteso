@@ -32,9 +32,9 @@ function diffStatus(actual: number, suggested: number): DiffStatus {
 }
 
 const DIFF_BADGE_CLASSES: Record<DiffStatus, string> = {
-  close: 'bg-emerald-950 text-emerald-400',
-  over: 'bg-red-950 text-red-400',
-  under: 'bg-amber-950 text-amber-400',
+  close: 'bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400',
+  over: 'bg-red-100 dark:bg-red-950 text-red-600 dark:text-red-400',
+  under: 'bg-amber-100 dark:bg-amber-950 text-amber-600 dark:text-amber-400',
 };
 
 function diffBadgeClass(actual: number, suggested: number): string {
@@ -89,29 +89,29 @@ function ModelTransparencyPanel() {
   const mechanicTable = useMemo(() => mechanicBonusSummary(), []);
 
   return (
-    <details className="mb-5 rounded-md border border-slate-700 bg-slate-900 p-3">
-      <summary className="cursor-pointer select-none text-sm font-semibold text-slate-100">Come funziona il modello (coefficienti e bonus)</summary>
+    <details className="mb-5 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-3">
+      <summary className="cursor-pointer select-none text-sm font-semibold text-slate-900 dark:text-slate-100">Come funziona il modello (coefficienti e bonus)</summary>
 
       <div className="mt-3.5 grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-5">
         <div>
-          <h3 className="mb-1.5 text-[0.8rem] text-slate-100">Stage 1 — mobilità e durabilità</h3>
+          <h3 className="mb-1.5 text-[0.8rem] text-slate-900 dark:text-slate-100">Stage 1 — mobilità e durabilità</h3>
           <p className="mb-2 text-[0.72rem] leading-snug text-slate-500">
             Regressione ridge robusta agli outlier (penalità λ = {summary.lambda}, scelta minimizzando l'errore
             leave-one-out) contro i pezzi di puro movimento del roster, con mobilità calcolata su tutte le caselle
-            della scacchiera. Errore leave-one-out attuale: <strong className="text-slate-100">{summary.looMeanAbsoluteError.toFixed(1)} pt</strong>.
+            della scacchiera. Errore leave-one-out attuale: <strong className="text-slate-900 dark:text-slate-100">{summary.looMeanAbsoluteError.toFixed(1)} pt</strong>.
           </p>
           <table className="w-full border-collapse text-[0.78rem]">
             <thead>
               <tr>
-                <th className="border-b border-slate-700 px-2 py-1 text-left font-semibold text-slate-400">Feature</th>
-                <th className="border-b border-slate-700 px-2 py-1 text-left font-semibold text-slate-400">Coefficiente</th>
+                <th className="border-b border-slate-300 dark:border-slate-700 px-2 py-1 text-left font-semibold text-slate-600 dark:text-slate-400">Feature</th>
+                <th className="border-b border-slate-300 dark:border-slate-700 px-2 py-1 text-left font-semibold text-slate-600 dark:text-slate-400">Coefficiente</th>
               </tr>
             </thead>
             <tbody>
               {summary.features.map((f) => (
                 <tr key={f.name}>
-                  <td className="border-b border-slate-800 px-2 py-1 text-slate-300">{f.name} <InfoTooltip text={STAGE1_FEATURE_EXPLANATIONS[f.name] ?? ''} /></td>
-                  <td className="border-b border-slate-800 px-2 py-1 text-slate-300">{f.coefficient.toFixed(2)}</td>
+                  <td className="border-b border-slate-300 dark:border-slate-800 px-2 py-1 text-slate-700 dark:text-slate-300">{f.name} <InfoTooltip text={STAGE1_FEATURE_EXPLANATIONS[f.name] ?? ''} /></td>
+                  <td className="border-b border-slate-300 dark:border-slate-800 px-2 py-1 text-slate-700 dark:text-slate-300">{f.coefficient.toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>
@@ -119,12 +119,12 @@ function ModelTransparencyPanel() {
         </div>
 
         <div>
-          <h3 className="mb-1.5 text-[0.8rem] text-slate-100">Stage 2 — modello parametrico dei bonus meccanica</h3>
+          <h3 className="mb-1.5 text-[0.8rem] text-slate-900 dark:text-slate-100">Stage 2 — modello parametrico dei bonus meccanica</h3>
           <p className="mb-2 text-[0.72rem] leading-snug text-slate-500">
             Il bonus di ogni meccanica speciale non è più una costante fissa per tipo: è <em>predetto</em> dai suoi
             parametri effettivi (raggio, direzioni, intensità, ecc.) tramite un piccolo modello lineare condiviso da
             tutte le meccaniche (λ = {mechanicModel.lambda}, errore leave-one-out{' '}
-            <strong className="text-slate-100">{mechanicModel.looMeanAbsoluteError.toFixed(1)} pt</strong>), poi tirato verso il valore osservato
+            <strong className="text-slate-900 dark:text-slate-100">{mechanicModel.looMeanAbsoluteError.toFixed(1)} pt</strong>), poi tirato verso il valore osservato
             per quel tipo specifico (shrinkage con K = {mechanicModel.shrinkageK.toFixed(1)}) quando disponibile —
             questo è ciò che permette di stimare anche una meccanica mai vista nel roster (vedi il piece designer qui
             sotto).
@@ -132,41 +132,41 @@ function ModelTransparencyPanel() {
           <table className="w-full border-collapse text-[0.78rem]">
             <thead>
               <tr>
-                <th className="border-b border-slate-700 px-2 py-1 text-left font-semibold text-slate-400">Feature</th>
-                <th className="border-b border-slate-700 px-2 py-1 text-left font-semibold text-slate-400">Coefficiente</th>
+                <th className="border-b border-slate-300 dark:border-slate-700 px-2 py-1 text-left font-semibold text-slate-600 dark:text-slate-400">Feature</th>
+                <th className="border-b border-slate-300 dark:border-slate-700 px-2 py-1 text-left font-semibold text-slate-600 dark:text-slate-400">Coefficiente</th>
               </tr>
             </thead>
             <tbody>
               {mechanicModel.features.map((f) => (
                 <tr key={f.name}>
-                  <td className="border-b border-slate-800 px-2 py-1 text-slate-300">{f.name} <InfoTooltip text={MECHANIC_FEATURE_EXPLANATIONS[f.name] ?? ''} /></td>
-                  <td className="border-b border-slate-800 px-2 py-1 text-slate-300">{f.coefficient.toFixed(2)}</td>
+                  <td className="border-b border-slate-300 dark:border-slate-800 px-2 py-1 text-slate-700 dark:text-slate-300">{f.name} <InfoTooltip text={MECHANIC_FEATURE_EXPLANATIONS[f.name] ?? ''} /></td>
+                  <td className="border-b border-slate-300 dark:border-slate-800 px-2 py-1 text-slate-700 dark:text-slate-300">{f.coefficient.toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
 
-          <h4 className="mb-1.5 mt-3.5 text-[0.76rem] text-slate-300">Bonus applicato per meccanica osservata nel roster</h4>
+          <h4 className="mb-1.5 mt-3.5 text-[0.76rem] text-slate-700 dark:text-slate-300">Bonus applicato per meccanica osservata nel roster</h4>
           <table className="w-full border-collapse text-[0.78rem]">
             <thead>
               <tr>
-                <th className="border-b border-slate-700 px-2 py-1 text-left font-semibold text-slate-400">Meccanica</th>
-                <th className="border-b border-slate-700 px-2 py-1 text-left font-semibold text-slate-400">Bonus grezzo</th>
-                <th className="border-b border-slate-700 px-2 py-1 text-left font-semibold text-slate-400">Predetto dal modello</th>
-                <th className="border-b border-slate-700 px-2 py-1 text-left font-semibold text-slate-400">Bonus applicato</th>
-                <th className="border-b border-slate-700 px-2 py-1 text-left font-semibold text-slate-400">Esempi</th>
-                <th className="border-b border-slate-700 px-2 py-1 text-left font-semibold text-slate-400">Confidenza</th>
+                <th className="border-b border-slate-300 dark:border-slate-700 px-2 py-1 text-left font-semibold text-slate-600 dark:text-slate-400">Meccanica</th>
+                <th className="border-b border-slate-300 dark:border-slate-700 px-2 py-1 text-left font-semibold text-slate-600 dark:text-slate-400">Bonus grezzo</th>
+                <th className="border-b border-slate-300 dark:border-slate-700 px-2 py-1 text-left font-semibold text-slate-600 dark:text-slate-400">Predetto dal modello</th>
+                <th className="border-b border-slate-300 dark:border-slate-700 px-2 py-1 text-left font-semibold text-slate-600 dark:text-slate-400">Bonus applicato</th>
+                <th className="border-b border-slate-300 dark:border-slate-700 px-2 py-1 text-left font-semibold text-slate-600 dark:text-slate-400">Esempi</th>
+                <th className="border-b border-slate-300 dark:border-slate-700 px-2 py-1 text-left font-semibold text-slate-600 dark:text-slate-400">Confidenza</th>
               </tr>
             </thead>
             <tbody>
               {Object.entries(mechanicTable).map(([type, entry]) => (
                 <tr key={type}>
-                  <td className="border-b border-slate-800 px-2 py-1 text-slate-300">{type}</td>
-                  <td className="border-b border-slate-800 px-2 py-1 text-slate-300">{entry.rawValue > 0 ? '+' : ''}{entry.rawValue.toFixed(1)}</td>
-                  <td className="border-b border-slate-800 px-2 py-1 text-slate-300">{entry.predictedValue > 0 ? '+' : ''}{entry.predictedValue.toFixed(1)}</td>
-                  <td className="border-b border-slate-800 px-2 py-1 text-slate-300">{entry.value > 0 ? '+' : ''}{entry.value.toFixed(1)}</td>
-                  <td className="border-b border-slate-800 px-2 py-1 text-slate-300">{entry.sampleCount}</td>
-                  <td className="border-b border-slate-800 px-2 py-1 text-slate-300">{CONFIDENCE_LABEL[confidenceForSampleCount(entry.sampleCount)]}</td>
+                  <td className="border-b border-slate-300 dark:border-slate-800 px-2 py-1 text-slate-700 dark:text-slate-300">{type}</td>
+                  <td className="border-b border-slate-300 dark:border-slate-800 px-2 py-1 text-slate-700 dark:text-slate-300">{entry.rawValue > 0 ? '+' : ''}{entry.rawValue.toFixed(1)}</td>
+                  <td className="border-b border-slate-300 dark:border-slate-800 px-2 py-1 text-slate-700 dark:text-slate-300">{entry.predictedValue > 0 ? '+' : ''}{entry.predictedValue.toFixed(1)}</td>
+                  <td className="border-b border-slate-300 dark:border-slate-800 px-2 py-1 text-slate-700 dark:text-slate-300">{entry.value > 0 ? '+' : ''}{entry.value.toFixed(1)}</td>
+                  <td className="border-b border-slate-300 dark:border-slate-800 px-2 py-1 text-slate-700 dark:text-slate-300">{entry.sampleCount}</td>
+                  <td className="border-b border-slate-300 dark:border-slate-800 px-2 py-1 text-slate-700 dark:text-slate-300">{CONFIDENCE_LABEL[confidenceForSampleCount(entry.sampleCount)]}</td>
                 </tr>
               ))}
             </tbody>
@@ -216,9 +216,9 @@ function SortableHeader({
 }) {
   const isActive = sortKey === activeKey;
   return (
-    <th className="cursor-pointer select-none whitespace-nowrap border-b border-slate-700 px-2.5 py-2 text-left font-semibold text-slate-400 hover:text-slate-100" onClick={() => onSort(sortKey)}>
+    <th className="cursor-pointer select-none whitespace-nowrap border-b border-slate-300 dark:border-slate-700 px-2.5 py-2 text-left font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100" onClick={() => onSort(sortKey)}>
       {label}
-      {isActive && <span className="text-blue-400">{dir === 'asc' ? ' ▲' : ' ▼'}</span>}
+      {isActive && <span className="text-blue-600 dark:text-blue-400">{dir === 'asc' ? ' ▲' : ' ▼'}</span>}
     </th>
   );
 }
@@ -254,7 +254,7 @@ function PuntiScatterChart({ rows }: { rows: Row[] }) {
   };
 
   return (
-    <div className="mb-5 rounded-md border border-slate-700 bg-slate-900 p-3">
+    <div className="mb-5 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-3">
       <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Punti reali vs punti stimati per ogni pezzo" className="h-auto max-h-[360px] w-full">
         {/* gridlines + axis ticks */}
         {tickValues.map((t) => (
@@ -267,8 +267,8 @@ function PuntiScatterChart({ rows }: { rows: Row[] }) {
         ))}
 
         {/* axis labels */}
-        <text x={margin.left + plotWidth / 2} y={height - 4} className="fill-slate-400 text-[10px]" textAnchor="middle">Punti reali</text>
-        <text x={12} y={margin.top + plotHeight / 2} className="fill-slate-400 text-[10px]" textAnchor="middle" transform={`rotate(-90 12 ${margin.top + plotHeight / 2})`}>Punti stimati</text>
+        <text x={margin.left + plotWidth / 2} y={height - 4} className="fill-slate-600 dark:fill-slate-400 text-[10px]" textAnchor="middle">Punti reali</text>
+        <text x={12} y={margin.top + plotHeight / 2} className="fill-slate-600 dark:fill-slate-400 text-[10px]" textAnchor="middle" transform={`rotate(-90 12 ${margin.top + plotHeight / 2})`}>Punti stimati</text>
 
         {/* y = x reference line (perfect estimate) */}
         <line x1={x(0)} y1={y(0)} x2={x(maxValue)} y2={y(maxValue)} className="stroke-slate-600 stroke-[1.5] [stroke-dasharray:4_4]" />
@@ -329,13 +329,13 @@ function PuntiScatterChart({ rows }: { rows: Row[] }) {
           );
         })}
       </svg>
-      <div className="mt-2.5 flex flex-wrap gap-3.5 text-[0.72rem] text-slate-400">
+      <div className="mt-2.5 flex flex-wrap gap-3.5 text-[0.72rem] text-slate-600 dark:text-slate-400">
         <span className="flex items-center gap-1.5"><span className="inline-block size-2.5 rounded-sm" style={{ background: statusColor.close }} /> vicino (±{CLOSE_ENOUGH_ABS_DIFF})</span>
         <span className="flex items-center gap-1.5"><span className="inline-block size-2.5 rounded-sm" style={{ background: statusColor.over }} /> sovrastimato</span>
         <span className="flex items-center gap-1.5"><span className="inline-block size-2.5 rounded-sm" style={{ background: statusColor.under }} /> sottostimato</span>
         <span className="flex items-center gap-1.5"><span className="inline-block size-2.5 rotate-45 bg-slate-400" /> bassa confidenza (1 esempio)</span>
         <span className="flex items-center gap-1.5"><span className="inline-block size-2.5 rounded-full bg-slate-400" /> confidenza normale</span>
-        <span className="flex items-center gap-1.5"><span className="inline-block h-0.5 w-3.5 rounded-sm bg-slate-600 opacity-70" /> intervallo plausibile (± errore di validazione incrociata)</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block h-0.5 w-3.5 rounded-sm bg-slate-300 dark:bg-slate-600 opacity-70" /> intervallo plausibile (± errore di validazione incrociata)</span>
       </div>
     </div>
   );
@@ -382,11 +382,11 @@ function PuntiEstimatorScreen() {
       actions={<Button variant="secondary" onClick={() => navigate('/')}>← Torna alla Home</Button>}
     >
       <Panel>
-        <div className="mb-4 flex flex-wrap gap-5 text-sm text-slate-400">
-          <span>Errore medio assoluto: <strong className="text-slate-100">{quality.meanAbsoluteError.toFixed(1)} pt</strong></span>
-          <span>Errore percentuale medio: <strong className="text-slate-100">{(quality.meanAbsolutePercentError * 100).toFixed(0)}%</strong></span>
+        <div className="mb-4 flex flex-wrap gap-5 text-sm text-slate-600 dark:text-slate-400">
+          <span>Errore medio assoluto: <strong className="text-slate-900 dark:text-slate-100">{quality.meanAbsoluteError.toFixed(1)} pt</strong></span>
+          <span>Errore percentuale medio: <strong className="text-slate-900 dark:text-slate-100">{(quality.meanAbsolutePercentError * 100).toFixed(0)}%</strong></span>
           <span>
-            Peggiori stime: <strong className="text-slate-100">{quality.worstFits.map((f) => `${f.sigla} (${f.actual}→${f.suggested})`).join(', ')}</strong>
+            Peggiori stime: <strong className="text-slate-900 dark:text-slate-100">{quality.worstFits.map((f) => `${f.sigla} (${f.actual}→${f.suggested})`).join(', ')}</strong>
           </span>
         </div>
         <p className="mb-4 text-[0.8rem] text-slate-500">
@@ -412,7 +412,7 @@ function PuntiEstimatorScreen() {
             value={filterText}
             onChange={(e) => setFilterText(e.target.value)}
           />
-          <label className="flex cursor-pointer items-center gap-1.5 text-[0.82rem] text-slate-400">
+          <label className="flex cursor-pointer items-center gap-1.5 text-[0.82rem] text-slate-600 dark:text-slate-400">
             <input
               type="checkbox"
               checked={lowConfidenceOnly}
@@ -427,11 +427,11 @@ function PuntiEstimatorScreen() {
             <thead>
               <tr>
                 <SortableHeader label="Sigla" sortKey="sigla" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
-                <th className="whitespace-nowrap border-b border-slate-700 px-2.5 py-2 text-left font-semibold text-slate-400">Nome</th>
+                <th className="whitespace-nowrap border-b border-slate-300 dark:border-slate-700 px-2.5 py-2 text-left font-semibold text-slate-600 dark:text-slate-400">Nome</th>
                 <SortableHeader label="Punti reali" sortKey="actual" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
-                <th className="whitespace-nowrap border-b border-slate-700 px-2.5 py-2 text-left font-semibold text-slate-400">Punti stimati</th>
+                <th className="whitespace-nowrap border-b border-slate-300 dark:border-slate-700 px-2.5 py-2 text-left font-semibold text-slate-600 dark:text-slate-400">Punti stimati</th>
                 <SortableHeader label="Differenza" sortKey="diff" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
-                <th className="whitespace-nowrap border-b border-slate-700 px-2.5 py-2 text-left font-semibold text-slate-400">Dettaglio stima</th>
+                <th className="whitespace-nowrap border-b border-slate-300 dark:border-slate-700 px-2.5 py-2 text-left font-semibold text-slate-600 dark:text-slate-400">Dettaglio stima</th>
               </tr>
             </thead>
             <tbody>
@@ -439,27 +439,27 @@ function PuntiEstimatorScreen() {
                 const isExpanded = expandedSigla === piece.sigla;
                 return (
                   <Fragment key={piece.sigla}>
-                    <tr className="hover:bg-slate-900">
-                      <td className="border-b border-slate-800 px-2.5 py-2 align-top font-bold text-slate-50">{piece.sigla}</td>
-                      <td className="border-b border-slate-800 px-2.5 py-2 align-top">{piece.descrizione}</td>
-                      <td className="border-b border-slate-800 px-2.5 py-2 align-top">{piece.punti}</td>
-                      <td className="border-b border-slate-800 px-2.5 py-2 align-top">{estimate.suggestedPunti}</td>
-                      <td className="border-b border-slate-800 px-2.5 py-2 align-top">
+                    <tr className="hover:bg-slate-100 dark:hover:bg-slate-900">
+                      <td className="border-b border-slate-300 dark:border-slate-800 px-2.5 py-2 align-top font-bold text-slate-900 dark:text-slate-50">{piece.sigla}</td>
+                      <td className="border-b border-slate-300 dark:border-slate-800 px-2.5 py-2 align-top">{piece.descrizione}</td>
+                      <td className="border-b border-slate-300 dark:border-slate-800 px-2.5 py-2 align-top">{piece.punti}</td>
+                      <td className="border-b border-slate-300 dark:border-slate-800 px-2.5 py-2 align-top">{estimate.suggestedPunti}</td>
+                      <td className="border-b border-slate-300 dark:border-slate-800 px-2.5 py-2 align-top">
                         <span className={cn('whitespace-nowrap rounded px-2 py-0.5 text-[0.8rem] font-semibold', diffBadgeClass(piece.punti, estimate.suggestedPunti))}>
                           {formatDiff(piece.punti, estimate.suggestedPunti)}
                         </span>
                       </td>
-                      <td className="border-b border-slate-800 px-2.5 py-2 align-top text-[0.72rem] leading-snug text-slate-500">
+                      <td className="border-b border-slate-300 dark:border-slate-800 px-2.5 py-2 align-top text-[0.72rem] leading-snug text-slate-500">
                         <button
                           type="button"
-                          className="cursor-pointer rounded bg-slate-800 px-2 py-0.5 text-[0.72rem] text-sky-300 hover:bg-slate-700"
+                          className="cursor-pointer rounded bg-slate-200 px-2 py-0.5 text-[0.72rem] text-sky-700 hover:bg-slate-300 dark:bg-slate-800 dark:text-sky-300 dark:hover:bg-slate-700"
                           onClick={() => setExpandedSigla((current) => (current === piece.sigla ? null : piece.sigla))}
                         >
                           {isExpanded ? '▲ nascondi' : '▼ dettagli'}
                         </button>
                         {estimate.breakdown.mechanicConfidence === 'low' && (
                           <span
-                            className="ml-1.5 inline-block cursor-help whitespace-nowrap rounded-sm bg-amber-950 px-1.5 py-0.5 text-[0.68rem] font-semibold text-amber-400"
+                            className="ml-1.5 inline-block cursor-help whitespace-nowrap rounded-sm bg-amber-100 dark:bg-amber-950 px-1.5 py-0.5 text-[0.68rem] font-semibold text-amber-600 dark:text-amber-400"
                             title={`Bonus basato su un solo esempio nel roster: ${estimate.breakdown.lowConfidenceMechanics.join(', ')}`}
                           >
                             ⚠ 1 esempio
@@ -468,7 +468,7 @@ function PuntiEstimatorScreen() {
                       </td>
                     </tr>
                     {isExpanded && (
-                      <tr className="bg-slate-900">
+                      <tr className="bg-white dark:bg-slate-900">
                         <td colSpan={6} className="px-2.5 py-3">
                           <BreakdownBarChart estimate={estimate} />
                         </td>

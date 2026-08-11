@@ -22,11 +22,11 @@ function MoveBadges({ piece }: { piece: Piece }) {
   return (
     <div className="mt-0.5 flex flex-wrap gap-1">
       {piece.moves.map((move, idx) => (
-        <span key={idx} className="flex items-center gap-1 rounded-sm bg-slate-800 px-1 py-0.5">
-          <span className="font-mono text-[0.68rem] text-slate-300">{move.directions.join(',')}</span>
-          <span className="text-[0.68rem] font-semibold text-amber-400">{move.maxSteps === 99 ? '∞' : move.maxSteps}</span>
-          {move.capture && <span className="text-[0.65rem] text-red-400">✦</span>}
-          {move.jump && <span className="text-[0.65rem] text-blue-400">⭮</span>}
+        <span key={idx} className="flex items-center gap-1 rounded-sm bg-slate-200 px-1 py-0.5 dark:bg-slate-800">
+          <span className="font-mono text-[0.68rem] text-slate-700 dark:text-slate-300">{move.directions.join(',')}</span>
+          <span className="text-[0.68rem] font-semibold text-amber-600 dark:text-amber-400">{move.maxSteps === 99 ? '∞' : move.maxSteps}</span>
+          {move.capture && <span className="text-[0.65rem] text-red-600 dark:text-red-400">✦</span>}
+          {move.jump && <span className="text-[0.65rem] text-blue-600 dark:text-blue-400">⭮</span>}
         </span>
       ))}
     </div>
@@ -55,8 +55,8 @@ function PieceCard({
   return (
     <div
       className={cn(
-        'piece-card flex cursor-pointer flex-col gap-1.5 rounded-lg border border-slate-700 bg-slate-900 p-3 transition-all hover:border-blue-400 hover:bg-[#162032]',
-        selected && 'border-amber-400 bg-[#1a1f0a] hover:border-amber-400 hover:bg-[#1a1f0a]',
+        'piece-card flex cursor-pointer flex-col gap-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 transition-all hover:border-blue-400 hover:bg-slate-100 dark:hover:bg-[#162032]',
+        selected && 'border-amber-400 bg-amber-50 dark:bg-[#1a1f0a] hover:border-amber-400 hover:bg-amber-100 dark:hover:bg-[#1a1f0a]',
         className,
       )}
       onClick={onClick}
@@ -64,23 +64,23 @@ function PieceCard({
       {...rest}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="sigla text-[0.95rem] font-bold text-slate-50">{piece.sigla}</span>
+        <span className="sigla text-[0.95rem] font-bold text-slate-900 dark:text-slate-50">{piece.sigla}</span>
         <span className={cn('rounded px-2 py-0.5 text-[0.8rem] font-semibold', costTierClass(piece.punti))}>{costLabel}</span>
       </div>
-      <span className="text-[0.8rem] text-slate-400">{piece.descrizione}</span>
+      <span className="text-[0.8rem] text-slate-600 dark:text-slate-400">{piece.descrizione}</span>
       {showRules && <span className="text-[0.72rem] leading-snug text-slate-500">{piece.regole}</span>}
       {showMoves && <MoveBadges piece={piece} />}
       {showFlags && badges.length > 0 && (
         <div className="mt-0.5 flex flex-wrap gap-1">
           {badges.map((badge) => (
-            <span key={badge} className="rounded-sm bg-emerald-950 px-1.5 py-0.5 text-[0.65rem] text-emerald-400">
+            <span key={badge} className="rounded-sm bg-emerald-100 dark:bg-emerald-950 px-1.5 py-0.5 text-[0.65rem] text-emerald-600 dark:text-emerald-400">
               {badge}
             </span>
           ))}
         </div>
       )}
       {piece.noteCondizionali && (
-        <div className="mt-0.5 text-[0.68rem] italic leading-snug text-sky-300">{piece.noteCondizionali}</div>
+        <div className="mt-0.5 text-[0.68rem] italic leading-snug text-sky-700 dark:text-sky-300">{piece.noteCondizionali}</div>
       )}
       {footer}
     </div>

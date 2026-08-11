@@ -1,7 +1,27 @@
 @import 'tailwindcss';
 
+/* Class-based dark mode: the `dark:` variant is driven by the `.dark` class on <html>
+   (toggled by the theme switcher) instead of the `prefers-color-scheme` media query. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
+  color-scheme: light;
+}
+
+.dark {
   color-scheme: dark;
+}
+
+/* Page-level colors: light by default, dark under the `.dark` class (the app shell already
+   paints its own background, this covers overscroll and pre-React paint). */
+body {
+  background-color: var(--color-slate-100);
+  color: var(--color-slate-800);
+}
+
+.dark body {
+  background-color: var(--color-slate-900);
+  color: var(--color-slate-200);
 }
 
 /* Board piece-flash animation (Board.tsx) — kept here because Tailwind v4 cannot express

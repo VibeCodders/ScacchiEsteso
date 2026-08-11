@@ -9,9 +9,9 @@ interface PanelProps extends Omit<HTMLAttributes<HTMLElement>, 'title'> {
 /** Standard card used across every screen — replaces the `.panel` stylesheet class. */
 function Panel({ title, className, children, ...rest }: PanelProps) {
   return (
-    <section className={cn('panel rounded-xl border border-slate-700 bg-slate-800 p-5', className)} {...rest}>
+    <section className={cn('panel rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 p-5', className)} {...rest}>
       {title !== undefined && (
-        <h2 className="mb-4 border-b border-slate-700 pb-2 text-lg font-semibold text-slate-100">{title}</h2>
+        <h2 className="mb-4 border-b border-slate-300 dark:border-slate-700 pb-2 text-lg font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
       )}
       {children}
     </section>

@@ -10,10 +10,10 @@ import type { Piece } from '../types';
 
 /** Tailwind badge classes for a piece's punti cost, mirroring the old cost-free/low/med/high tiers. */
 export function costTierClass(cost: number): string {
-  if (cost === 0) return 'bg-emerald-950 text-emerald-400';
-  if (cost <= 10) return 'bg-slate-800 text-slate-400';
-  if (cost <= 25) return 'bg-amber-950 text-amber-400';
-  return 'bg-red-950 text-red-400';
+  if (cost === 0) return 'bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400';
+  if (cost <= 10) return 'bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400';
+  if (cost <= 25) return 'bg-amber-100 dark:bg-amber-950 text-amber-600 dark:text-amber-400';
+  return 'bg-red-100 dark:bg-red-950 text-red-600 dark:text-red-400';
 }
 
 /** Movement/capture quirks and the Golem's armatura — special ACTIONS come from `alternativeActions` below. */
