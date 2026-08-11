@@ -1,7 +1,7 @@
 import type { ActionModalita, Move, Piece } from '../types';
 import { computePieceRangeSquares } from '../game/pieceInfo';
 import { pieces as ROSTER } from './pieces';
-import { allCoords, type Coord } from '../game/board';
+import { allCoords, coordToFileRank, type Coord } from '../game/board';
 
 /**
  * Every square of the standard board, used to compute a piece's *exact* average mobility rather
@@ -22,6 +22,21 @@ function entryIgnoresBlocking(entry: Move): boolean {
 interface EntryMobility {
   moveCount: number;
   captureCount: number;
+  /** Average number of reachable squares sharing no rank, file or diagonal with the origin — the
+   *  off-axis signature of the Cavallo's L-leap and the bent slides (Grifone/Manticora), which
+   *  `moveCount` alone cannot see (the Manticora's bent slide reaches the same average square
+   *  count as a Torre on 8×8). Mirrors the similar-pieces detector's "Mobilità fuori asse" so
+   *  "similar" and "estimated price" stay aligned. */
+  offAxisMoveCount: number;
+  offAxisCaptureCount: number;
+}
+
+/** True when `coord` shares no rank, file or diagonal with the square at (fromFile, fromRank). */
+function isOffAxis(coord: string, fromFile: number, fromRank: number): boolean {
+  const { file, rank } = coordToFileRank(coord);
+  const df = Math.abs(file - fromFile);
+  const dr = Math.abs(rank - fromRank);
+  return df !== 0 && dr !== 0 && df !== dr;
 }
 
 /** Move vs. capture mobility contributed by a single Move entry, averaged across the sample
@@ -29,13 +44,30 @@ interface EntryMobility {
  *  interfere with each other's `visit` calls. Kept as two separate counts (rather than the union
  *  size) because "can move there" and "can capture there" are worth different amounts in play —
  *  a piece that can only ever capture in melee is not as flexible as one with the same square
- *  count reachable purely as non-capturing moves. */
+ *  count reachable purely as non-capturing moves. Off-axis move/capture counts are measured the
+ *  same way (see `EntryMobility`). */
 function entryMobility(piece: Piece, entry: Move): EntryMobility {
   const isolated: Piece = { ...piece, moves: [entry] };
-  const samples = ALL_SQUARES.map((sq) => computePieceRangeSquares(isolated, 'A', sq));
-  const moveCount = samples.reduce((sum, s) => sum + s.moveSquares.length, 0) / samples.length;
-  const captureCount = samples.reduce((sum, s) => sum + s.captureSquares.length, 0) / samples.length;
-  return { moveCount, captureCount };
+  const samples = ALL_SQUARES.map((sq) => ({ from: sq, range: computePieceRangeSquares(isolated, 'A', sq) }));
+  const moveCount = samples.reduce((sum, s) => sum + s.range.moveSquares.length, 0) / samples.length;
+  const captureCount = samples.reduce((sum, s) => sum + s.range.captureSquares.length, 0) / samples.length;
+  let offAxisMoveCount = 0;
+  let offAxisCaptureCount = 0;
+  for (const { from, range } of samples) {
+    const { file: fromFile, rank: fromRank } = coordToFileRank(from);
+    for (const coord of range.moveSquares) {
+      if (isOffAxis(coord, fromFile, fromRank)) offAxisMoveCount++;
+    }
+    for (const coord of range.captureSquares) {
+      if (isOffAxis(coord, fromFile, fromRank)) offAxisCaptureCount++;
+    }
+  }
+  return {
+    moveCount,
+    captureCount,
+    offAxisMoveCount: offAxisMoveCount / samples.length,
+    offAxisCaptureCount: offAxisCaptureCount / samples.length,
+  };
 }
 
 interface Stage1Features {
@@ -43,6 +75,8 @@ interface Stage1Features {
   stepSlideCaptureMobility: number;
   leapMoveMobility: number;
   leapCaptureMobility: number;
+  offAxisMoveMobility: number;
+  offAxisCaptureMobility: number;
   isPawnCategory: number;
   extraEntries: number;
   resistance: number;
@@ -90,8 +124,10 @@ function stage1FeaturesOf(piece: Piece): Stage1Features {
   let stepSlideCaptureMobility = 0;
   let leapMoveMobility = 0;
   let leapCaptureMobility = 0;
+  let offAxisMoveMobility = 0;
+  let offAxisCaptureMobility = 0;
   for (const entry of piece.moves) {
-    const { moveCount, captureCount } = entryMobility(piece, entry);
+    const { moveCount, captureCount, offAxisMoveCount, offAxisCaptureCount } = entryMobility(piece, entry);
     if (entryIgnoresBlocking(entry)) {
       leapMoveMobility += moveCount;
       leapCaptureMobility += captureCount;
@@ -99,12 +135,16 @@ function stage1FeaturesOf(piece: Piece): Stage1Features {
       stepSlideMoveMobility += moveCount;
       stepSlideCaptureMobility += captureCount;
     }
+    offAxisMoveMobility += offAxisMoveCount;
+    offAxisCaptureMobility += offAxisCaptureCount;
   }
   return {
     stepSlideMoveMobility,
     stepSlideCaptureMobility,
     leapMoveMobility,
     leapCaptureMobility,
+    offAxisMoveMobility,
+    offAxisCaptureMobility,
     isPawnCategory: piece.categoria === 'pedone' ? 1 : 0,
     extraEntries: Math.max(0, piece.moves.length - 1),
     resistance: piece.resistance,
@@ -126,6 +166,8 @@ function stage1FeatureVector(f: Stage1Features): number[] {
     Math.sqrt(f.stepSlideCaptureMobility),
     Math.sqrt(f.leapMoveMobility),
     Math.sqrt(f.leapCaptureMobility),
+    Math.sqrt(f.offAxisMoveMobility),
+    Math.sqrt(f.offAxisCaptureMobility),
     f.isPawnCategory,
     f.extraEntries,
     f.resistance,
@@ -144,6 +186,8 @@ const STAGE1_FEATURE_NAMES = [
   'Mobilità di cattura (scorrimento)',
   'Mobilità di movimento (salto)',
   'Mobilità di cattura (salto)',
+  'Mobilità di movimento fuori asse',
+  'Mobilità di cattura fuori asse',
   'Categoria pedone',
   'Voci di mossa extra (pezzi composti)',
   'Resistenza',
@@ -760,7 +804,10 @@ export interface PuntiEstimate {
  */
 export function estimatePunti(piece: Piece): PuntiEstimate {
   const f = stage1FeaturesOf(piece);
-  const [, coeffStepSlideMove, coeffStepSlideCapture, coeffLeapMove, coeffLeapCapture, , coeffExtraEntries] = stage1Fit().coefficients;
+  const [
+    , coeffStepSlideMove, coeffStepSlideCapture, coeffLeapMove, coeffLeapCapture,
+    coeffOffAxisMove, coeffOffAxisCapture, , coeffExtraEntries,
+  ] = stage1Fit().coefficients;
   const mechanicBonus = specialMechanicBonus(piece);
   const table = mechanicBonusTable();
   const mechanicTypes = piecesMechanicTypes(piece);
@@ -780,7 +827,9 @@ export function estimatePunti(piece: Piece): PuntiEstimate {
     coeffStepSlideMove * Math.sqrt(f.stepSlideMoveMobility) +
     coeffStepSlideCapture * Math.sqrt(f.stepSlideCaptureMobility) +
     coeffLeapMove * Math.sqrt(f.leapMoveMobility) +
-    coeffLeapCapture * Math.sqrt(f.leapCaptureMobility);
+    coeffLeapCapture * Math.sqrt(f.leapCaptureMobility) +
+    coeffOffAxisMove * Math.sqrt(f.offAxisMoveMobility) +
+    coeffOffAxisCapture * Math.sqrt(f.offAxisCaptureMobility);
 
   // A piece costing 0 punti would be free to field — every real piece costs at least 1 (in
   // practice the cheapest, Paggio, costs 2), so the floor is 1, not 0.

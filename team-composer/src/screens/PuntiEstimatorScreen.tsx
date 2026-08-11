@@ -57,6 +57,8 @@ const STAGE1_FEATURE_EXPLANATIONS: Record<string, string> = {
   'Mobilità di cattura (scorrimento)': 'Quante caselle con un nemico il pezzo può catturare muovendosi in linea, non a salto.',
   'Mobilità di movimento (salto)': 'Quante caselle vuote il pezzo può raggiungere saltando (ignorando le interposizioni).',
   'Mobilità di cattura (salto)': 'Quante caselle con un nemico il pezzo può catturare saltando (ignorando le interposizioni).',
+  'Mobilità di movimento fuori asse': "Quante caselle raggiungibili dal pezzo muovendosi non condividono né riga, né colonna, né diagonale con l'origine — la firma del salto a L del Cavallo (e delle tratte a ginocchio della Manticora).",
+  'Mobilità di cattura fuori asse': "Quante caselle di cattura del pezzo non condividono né riga, né colonna, né diagonale con l'origine — la stessa firma geometrica misurata sulle catture.",
   'Categoria pedone': 'Vale 1 se il pezzo è nella categoria "pedone", altrimenti 0 — i pedoni hanno una dinamica di valore diversa dagli altri pezzi.',
   'Voci di mossa extra (pezzi composti)': 'Quante voci di mossa aggiuntive ha il pezzo oltre alla prima (es. Cavallo+Re) — un pezzo composto vale più della somma delle sue parti isolate.',
   'Resistenza': 'Quanti colpi in più il pezzo può assorbire prima di essere eliminato.',
