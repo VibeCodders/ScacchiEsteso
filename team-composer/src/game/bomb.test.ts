@@ -1,13 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { isExplosive } from './bomb';
-import {
-  createInitialGameState,
-  applyTurn,
-  applyScocca,
-  stopRabbitChain,
-  getLegalMovesForTurn,
-  type GameState,
-} from './turnManager';
+import { createInitialGameState, applyTurn, applyScocca, stopRabbitChain, getLegalMovesForTurn } from './turnManager';
 import { createEmptyBoard, createPieceInstance, getPieceAt, setPieceAt, type BoardState } from './board';
 import { getPieceDef } from './moveEngine';
 
@@ -41,7 +34,8 @@ describe('melee capture of a Bomba', () => {
 
     const result = applyTurn(state, 'e4', 'd4');
     expect(result.ok).toBe(true);
-    const next = result.state!;
+    if (!result.ok) return;
+    const next = result.state;
 
     expect(getPieceAt(next.board, 'd4')).toBeUndefined(); // BO gone (captured)
     expect(getPieceAt(next.board, 'e4')).toBeUndefined(); // TO gone too (blast)
@@ -65,7 +59,8 @@ describe('melee capture of a Bomba', () => {
 
     const result = applyTurn(state, 'e5', 'd4');
     expect(result.ok).toBe(true);
-    const next = result.state!;
+    if (!result.ok) return;
+    const next = result.state;
 
     expect(getPieceAt(next.board, 'd4')?.sigla).toBe('RE'); // the King now stands on the BO's square
     expect(getPieceAt(next.board, 'e5')).toBeUndefined(); // it left e5
@@ -88,7 +83,8 @@ describe('melee capture of a Bomba', () => {
 
     const result = applyTurn(state, 'd5', 'e5');
     expect(result.ok).toBe(true);
-    const next = result.state!;
+    if (!result.ok) return;
+    const next = result.state;
 
     expect(getPieceAt(next.board, 'e5')?.sigla).toBe('TO'); // capturer survived (blast suppressed)
     expect(getPieceAt(next.board, 'd5')).toBeUndefined(); // the TO now stands on e5
@@ -108,7 +104,8 @@ describe('ranged capture (scocca) of a Bomba', () => {
 
     const result = applyScocca(state, 'd4', 'g4');
     expect(result.ok).toBe(true);
-    const next = result.state!;
+    if (!result.ok) return;
+    const next = result.state;
 
     expect(getPieceAt(next.board, 'g4')).toBeUndefined(); // BO gone
     expect(getPieceAt(next.board, 'd4')).toBeUndefined(); // AR gone too (blast)
@@ -138,20 +135,23 @@ describe('chain capture (Coniglio) of a Bomba', () => {
     // Hop 1: d4 → f4 over e4
     const hop1 = applyTurn(state, 'd4', 'f4');
     expect(hop1.ok).toBe(true);
-    const mid = hop1.state!;
+    if (!hop1.ok) return;
+    const mid = hop1.state;
     expect(mid.pendingRabbitChain).not.toBeNull();
     expect(getPieceAt(mid.board, 'e4')?.sigla).toBe('PE'); // first hurdle untouched
 
     // Hop 2: f4 → h4 over g4 (the BO) — still no capture yet
     const hop2 = applyTurn(mid, 'f4', 'h4');
     expect(hop2.ok).toBe(true);
-    const after = hop2.state!;
+    if (!hop2.ok) return;
+    const after = hop2.state;
     expect(getPieceAt(after.board, 'g4')?.sigla).toBe('BO'); // not captured mid-chain
 
     // Stop the chain: captures the BO → explosion destroys the CN too
     const stop = stopRabbitChain(after);
     expect(stop.ok).toBe(true);
-    const next = stop.state!;
+    if (!stop.ok) return;
+    const next = stop.state;
     expect(getPieceAt(next.board, 'g4')).toBeUndefined();
     expect(getPieceAt(next.board, 'h4')).toBeUndefined(); // CN destroyed by the blast
     expect(next.captured.B.map((p) => p.sigla)).toEqual(['BO']);
@@ -181,7 +181,8 @@ describe('mirage interactions', () => {
 
     const result = applyTurn(state0, 'c5', 'e5');
     expect(result.ok).toBe(true);
-    const next = result.state!;
+    if (!result.ok) return;
+    const next = result.state;
     expect(getPieceAt(next.board, 'e5')?.sigla).toBe('TO'); // TO now stands on the clone's square
     expect(getPieceAt(next.board, 'c5')).toBeUndefined(); // it left c5
     expect(next.captured.A).toEqual([]); // clone capture awards no punti
