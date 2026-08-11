@@ -11,6 +11,7 @@ import {
   type PuntiEstimate,
 } from '../data/estimatePunti';
 import type { Piece } from '../types';
+import PieceIcon from '../assets/pieces/pieceIcons';
 import BreakdownBarChart from './BreakdownBarChart';
 import PieceDesignerPanel from './PieceDesignerPanel';
 import Button from '../components/ui/Button';
@@ -440,7 +441,14 @@ function PuntiEstimatorScreen() {
                 return (
                   <Fragment key={piece.sigla}>
                     <tr className="hover:bg-slate-100 dark:hover:bg-slate-900">
-                      <td className="border-b border-slate-300 dark:border-slate-800 px-2.5 py-2 align-top font-bold text-slate-900 dark:text-slate-50">{piece.sigla}</td>
+                      <td className="border-b border-slate-300 dark:border-slate-800 px-2.5 py-2 align-top">
+                        <span className="flex items-center gap-2">
+                          <span className="size-6 shrink-0 text-slate-700 dark:text-slate-300">
+                            <PieceIcon sigla={piece.sigla} className="size-full" />
+                          </span>
+                          <span className="font-bold text-slate-900 dark:text-slate-50">{piece.sigla}</span>
+                        </span>
+                      </td>
                       <td className="border-b border-slate-300 dark:border-slate-800 px-2.5 py-2 align-top">{piece.descrizione}</td>
                       <td className="border-b border-slate-300 dark:border-slate-800 px-2.5 py-2 align-top">{piece.punti}</td>
                       <td className="border-b border-slate-300 dark:border-slate-800 px-2.5 py-2 align-top">{estimate.suggestedPunti}</td>

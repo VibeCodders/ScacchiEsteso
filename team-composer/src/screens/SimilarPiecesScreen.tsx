@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { findSimilarPiecePairs, DEFAULT_SIMILARITY_THRESHOLD } from '../data/similarPieces';
+import PieceIcon from '../assets/pieces/pieceIcons';
 import Button from '../components/ui/Button';
 import PageShell from '../components/ui/PageShell';
 import Panel from '../components/ui/Panel';
@@ -60,8 +61,18 @@ function SimilarPiecesScreen() {
           {visiblePairs.map(({ a, b, distance, featureDiffs, differingMechanicTypes }) => (
             <div key={`${a.sigla}-${b.sigla}`} className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5">
               <div className="flex flex-wrap items-center justify-between gap-2.5">
-                <span className="text-sm text-slate-800 dark:text-slate-200">
-                  <strong>{a.sigla}</strong> {a.descrizione} ({a.punti}pt) &nbsp;~&nbsp; <strong>{b.sigla}</strong> {b.descrizione} ({b.punti}pt)
+                <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-slate-800 dark:text-slate-200">
+                  <span className="inline-flex items-center gap-1.5">
+                    <PieceIcon sigla={a.sigla} className="size-5 text-slate-700 dark:text-slate-300" />
+                    <strong>{a.sigla}</strong>
+                  </span>
+                  {a.descrizione} ({a.punti}pt)
+                  <span className="text-slate-400">~</span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <PieceIcon sigla={b.sigla} className="size-5 text-slate-700 dark:text-slate-300" />
+                    <strong>{b.sigla}</strong>
+                  </span>
+                  {b.descrizione} ({b.punti}pt)
                 </span>
                 <span className={cn('whitespace-nowrap rounded bg-amber-100 dark:bg-amber-950 px-2 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400', distance < 0.05 && 'bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400')}>
                   distanza {distance.toFixed(2)}

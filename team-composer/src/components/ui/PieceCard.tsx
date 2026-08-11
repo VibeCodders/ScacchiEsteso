@@ -1,6 +1,7 @@
 import type { HTMLAttributes, KeyboardEvent, ReactNode } from 'react';
 import { cn } from '../../lib/cn';
 import { costTierClass, pieceBadges } from '../../lib/pieceFormat';
+import PieceIcon from '../../assets/pieces/pieceIcons';
 import type { Piece } from '../../types';
 
 interface PieceCardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'onClick'> {
@@ -65,7 +66,12 @@ function PieceCard({
       {...rest}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="sigla text-[0.95rem] font-bold text-slate-900 dark:text-slate-50">{piece.sigla}</span>
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="size-7 shrink-0 text-slate-700 dark:text-slate-300">
+            <PieceIcon sigla={piece.sigla} className="size-full" />
+          </span>
+          <span className="sigla text-[0.95rem] font-bold text-slate-900 dark:text-slate-50">{piece.sigla}</span>
+        </span>
         <span className={cn('rounded px-2 py-0.5 text-[0.8rem] font-semibold', costTierClass(piece.punti))}>{costLabel}</span>
       </div>
       <span className="text-[0.8rem] text-slate-600 dark:text-slate-400">{piece.descrizione}</span>
