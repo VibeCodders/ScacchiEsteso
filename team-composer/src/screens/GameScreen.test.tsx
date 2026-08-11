@@ -1028,6 +1028,43 @@ describe('GameScreen — PvC bot auto-play', () => {
   });
 });
 
+describe('GameScreen — PvC complete game: the bot repulses with the Repulsore', () => {
+  it('plays a full PvC game in which the PC uses the Repulsore to repulse, and the human wins by checkmate', () => {
+    // PC (owner A): King e1 + Repulsore e4. Human (owner B): King h8 + Regine e8 (pins the RP along
+    // the e-file) and d4 (an adjacent enemy on a center square). The RP's melee capture of d4 would
+    // expose its own King, so the PC's best 1-ply move is the repulse d4 → c4.
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e4', 'RP', 'A');
+    board = place(board, 'h8', KING_SIGLA, 'B');
+    board = place(board, 'e8', 'RA', 'B');
+    board = place(board, 'd4', 'RA', 'B');
+    renderPvcGame(board, 'B');
+
+    // 1) The PC (owner A) plays first, automatically on mount: the Repulsore pushes the adjacent
+    // enemy Regina off d4 onto c4. The RP itself never leaves e4. No click required.
+    expect(document.querySelector('[data-coord="c4"]')?.querySelector('svg')?.getAttribute('aria-label')).toBe('RA');
+    expect(document.querySelector('[data-coord="d4"]')?.querySelector('svg')).toBeNull();
+    expect(document.querySelector('[data-coord="e4"]')?.querySelector('svg')?.getAttribute('aria-label')).toBe('RP');
+    expect(screen.getByText(/PC: RP e4 → d4/)).toBeInTheDocument();
+    expect(screen.getByText(/Turno: Giocatore 1/i)).toBeInTheDocument(); // resolved back to the human
+
+    // 2) Human captures the Repulsore with the e8 Regina, giving check. The PC replies automatically
+    // (King e1 → d1) before the assertion — the check is already resolved.
+    fireEvent.click(document.querySelector('[data-coord="e8"]')!);
+    fireEvent.click(document.querySelector('[data-coord="e4"]')!);
+    expect(document.querySelector('[data-coord="e4"]')?.querySelector('svg')?.getAttribute('aria-label')).toBe('RA');
+    expect(screen.getByText(/PC: RE e1 → d1/)).toBeInTheDocument();
+    expect(screen.getByText(/Turno: Giocatore 1/i)).toBeInTheDocument();
+
+    // 3) Human mates: c4 → c2# — the c2 Queen boxes the King on the back rank (protected by the e4
+    // Queen, and every escape square covered). The match ends with the human's win.
+    fireEvent.click(document.querySelector('[data-coord="c4"]')!);
+    fireEvent.click(document.querySelector('[data-coord="c2"]')!);
+
+    expect(screen.getByText(/Scacco matto! Vince Giocatore 1/i)).toBeInTheDocument();
+  });
+});
+
 describe('GameScreen — Step 13b: turn and check indicators', () => {
   it('shows a "Scacco!" badge right after a checking move, and it disappears once the check is resolved', () => {
     let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
