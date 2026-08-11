@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chooseBotAction, generateBotActions, applyBotAction, difficultyToDepth, difficultyTimeBudgetMs, actionKey, recordCutoff, hashPosition, type SearchContext } from './bot';
+import { chooseBotAction, generateBotActions, applyBotAction, difficultyToDepth, difficultyTimeBudgetMs, formatMovesAhead, actionKey, recordCutoff, hashPosition, type SearchContext } from './bot';
 import { createInitialGameState } from './turnManager';
 import { createEmptyBoard, createPieceInstance, setPieceAt, type BoardState } from './board';
 import { buildClassicStartingBoard } from './samplePositions';
@@ -403,9 +403,11 @@ describe('difficultyToDepth — numeric difficulty maps to lookahead in plies', 
     expect(difficultyToDepth(1)).toBe(0);
   });
 
-  it('never goes negative even below the documented minimum', () => {
+  it('negative difficulties search anti-plies: −5 → 1, −10 → 2, and 0/−1 → 0', () => {
+    expect(difficultyToDepth(-5)).toBe(1);
+    expect(difficultyToDepth(-10)).toBe(2);
+    expect(difficultyToDepth(-1)).toBe(0);
     expect(difficultyToDepth(0)).toBe(0);
-    expect(difficultyToDepth(-3)).toBe(0);
   });
 
   it('difficulty 1 (0 plies) still picks a legal action by static evaluation alone', () => {
@@ -419,5 +421,49 @@ describe('difficultyToDepth — numeric difficulty maps to lookahead in plies', 
     if (!action) return;
     const result = applyBotAction(state, action);
     expect(result.ok).toBe(true);
+  });
+});
+
+describe('negative difficulty — the PC plays stupid on purpose', () => {
+  it('formatMovesAhead describes the sabotage instead of a lookahead', () => {
+    expect(formatMovesAhead(-10)).toBe('1 mossa a favore del nemico');
+    expect(formatMovesAhead(-5)).toBe('0.5 mosse a favore del nemico');
+  });
+
+  it('at 0 anti-plies (−1) the bot avoids the free capture a greedy bot would take', () => {
+    // A's Torre on d4 can capture B's Regina on d5 for free — the obvious best move.
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'TO', 'A');
+    board = place(board, 'd5', 'RA', 'B');
+    const state = createInitialGameState(board, 'A');
+
+    // Sanity: the greedy bot at difficulty 1 does take the Queen.
+    const greedy = chooseBotAction(state, 'A', 1);
+    expect(greedy?.kind === 'move' && greedy.to === 'd5').toBe(true);
+
+    // The anti-bot instead maximizes B's evaluation — it must NOT take the free Queen.
+    const anti = chooseBotAction(state, 'A', -1);
+    expect(anti).not.toBeNull();
+    if (!anti) return;
+    expect(anti.kind === 'move' && anti.to === 'd5').toBe(false);
+    const result = applyBotAction(state, anti);
+    expect(result.ok).toBe(true);
+  });
+
+  it('at 1 anti-ply (−5) the bot still returns a legal, applicable action', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'TO', 'A');
+    board = place(board, 'd5', 'RA', 'B');
+    const state = createInitialGameState(board, 'A');
+
+    const anti = chooseBotAction(state, 'A', -5);
+    expect(anti).not.toBeNull();
+    if (!anti) return;
+    const result = applyBotAction(state, anti);
+    expect(result.ok).toBe(true);
+    // And it is still stupid: it refuses the free capture of the Queen.
+    expect(anti.kind === 'move' && anti.to === 'd5').toBe(false);
   });
 });

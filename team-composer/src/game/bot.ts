@@ -30,33 +30,38 @@ import {
   type GameState,
 } from './turnManager';
 
-/** Bot difficulty is a plain number on the 1–50 scale: difficulty ÷ 10 = moves the bot looks
+/** Bot difficulty is a plain number on the −10…50 scale: difficulty ÷ 10 = moves the bot looks
  *  ahead (10 → 1 mossa, 20 → 2 mosse, 50 → 5 mosse; 5 → 0.5 mosse, 1 → 0 mosse).
- *  A "mossa" is a full turn, so the search depth in plies is difficulty ÷ 5. */
+ *  A "mossa" is a full turn, so the search depth in plies is difficulty ÷ 5.
+ *  NEGATIVE difficulties make the bot stupid on purpose: it searches the same number of plies but
+ *  picks the line that maximizes the OPPONENT's evaluation (auto-sabotage) — the more negative,
+ *  the deeper it looks for its own worst move (−5 → 1 ply anti, −10 → 2 plies anti). */
 export type BotDifficulty = number;
 
-export const BOT_DIFFICULTY_MIN = 1;
+export const BOT_DIFFICULTY_MIN = -10;
 export const BOT_DIFFICULTY_MAX = 50;
 /** 10 → the bot sees 1 mossa ahead — a reasonable default between pure greed and deep search. */
 export const DEFAULT_BOT_DIFFICULTY: BotDifficulty = 10;
 
 /**
- * Search depth in plies for a numeric difficulty. Each "ply" is one resolved action (not strictly
- * one full turn — see bot.ts's notes on the Berserker bonus phase). Difficulty ÷ 5 plies, quantized
- * to whole plies so the anchors land exactly: 1 → 0 plies (0 mosse), 5 → 1 ply (0.5 mosse),
- * 10 → 2 plies (1 mossa), 20 → 4 plies (2 mosse), 50 → 10 plies (5 mosse).
+ * Search depth in plies for a numeric difficulty (positive: normal lookahead; negative: the
+ * anti-lookahead the bot uses to pick its own worst line). Each "ply" is one resolved action
+ * (not strictly one full turn — see bot.ts's notes on the Berserker bonus phase). |difficulty| ÷ 5
+ * plies, quantized to whole plies so the anchors land exactly: 1 → 0 plies (0 mosse),
+ * 5 → 1 ply (0.5 mosse), 10 → 2 plies (1 mossa), 20 → 4 plies (2 mosse), 50 → 10 plies
+ * (5 mosse); −5 → 1 anti-ply, −10 → 2 anti-plies.
  */
 export function difficultyToDepth(difficulty: number): number {
-  return Math.max(0, Math.round(difficulty / 5));
+  return Math.round(Math.abs(difficulty) / 5);
 }
 
 /**
  * Wall-clock safety cap (ms) for a numeric difficulty — more lookahead buys more time. Full-ability
  * action generation makes the branching factor position-dependent (a busy board with many
  * Arcieri/Necromanti in range costs far more than a sparse endgame), so a fixed depth alone can't
- * bound response time — this keeps the bot from ever freezing the UI for long, at the cost of a
- * shallower-than-requested search in the rare positions that would otherwise blow the budget.
- * 500ms at difficulty 1, ~1.1s at 10, ~2.5s at 25, 4s at 50.
+ * bound response time — this keeps the bot from ever freezing the UI for long, at the cost of a *  shallower-than-requested search in the rare positions that would otherwise blow the budget.
+ *  ~500ms at the −10 floor (anti searches are shallow), ~640ms at 1, ~1.1s at 10, ~2.5s at 25,
+ *  4s at 50.
  */
 export function difficultyTimeBudgetMs(difficulty: number): number {
   const t = Math.min(BOT_DIFFICULTY_MAX, Math.max(BOT_DIFFICULTY_MIN, difficulty));
@@ -64,8 +69,14 @@ export function difficultyTimeBudgetMs(difficulty: number): number {
 }
 
 /** Human-readable lookahead for a difficulty: difficulty ÷ 10 mosse (10 → "1 mossa", 5 → "0.5
- *  mosse", 1 → "0 mosse"), shared by the difficulty slider and the in-game PC badge. */
+ *  mosse", 1 → "0 mosse"), shared by the difficulty slider and the in-game PC badge. Negative
+ *  difficulties describe the bot's deliberate sabotage instead of a lookahead: −10 → "1 mossa a
+ *  favore del nemico" (the line it picks helps the opponent most). */
 export function formatMovesAhead(difficulty: number): string {
+  if (difficulty < 0) {
+    const moves = Math.abs(difficulty) / 10;
+    return moves === 1 ? '1 mossa a favore del nemico' : `${moves} mosse a favore del nemico`;
+  }
   const moves = difficulty / 10;
   if (moves === 1) return '1 mossa';
   return `${moves} mosse`;
@@ -476,6 +487,18 @@ function evaluate(state: GameState, botOwner: Owner): number {
   return positionalScore(state, botOwner) - positionalScore(state, opponent);
 }
 
+function opponentOf(owner: Owner): Owner {
+  return owner === 'A' ? 'B' : 'A';
+}
+
+/**
+ * Standard alpha-beta minimax over every legal action. `anti` (negative difficulty) inverts the
+ * bot's objective: instead of maximizing its own evaluation at its own nodes, it maximizes the
+ * OPPONENT's evaluation at EVERY node (both sides "help" the opponent) — the bot deliberately
+ * walks toward the line that is worst for itself. The transposition table is skipped in anti
+ * mode: its entries are stored in side-to-move perspective, which an all-maximizing search
+ * violates (anti searches are shallow anyway, so nothing is lost).
+ */
 function minimax(
   state: GameState,
   depth: number,
@@ -483,6 +506,7 @@ function minimax(
   beta: number,
   botOwner: Owner,
   ctx: SearchContext,
+  anti = false,
 ): number {
   if (
     depth <= 0 ||
@@ -491,17 +515,17 @@ function minimax(
     state.status === 'stalemate' ||
     state.status === 'anti_stalemate'
   ) {
-    return evaluate(state, botOwner);
+    return evaluate(state, anti ? opponentOf(botOwner) : botOwner);
   }
 
   const toMove = state.turn;
-  const maximizing = toMove === botOwner;
+  const maximizing = anti ? true : toMove === botOwner;
 
   // Transposition lookup: the stored score is in side-to-move perspective, so flip it when this
   // node's side to move is the opponent. Reuse the entry when it can decide the node outright
-  // (exact value, or a bound that cuts the window).
+  // (exact value, or a bound that cuts the window). Skipped entirely in anti mode.
   const key = hashPosition(state);
-  const entry = ctx.transpositions.get(key);
+  const entry = anti ? undefined : ctx.transpositions.get(key);
   if (entry && entry.depth >= depth) {
     const score = maximizing ? entry.score : -entry.score;
     if (entry.bound === 'exact') return score;
@@ -512,7 +536,7 @@ function minimax(
   const originalBeta = beta;
 
   const actions = orderMoves(state, toMove, generateBotActions(state, toMove), depth, ctx);
-  if (actions.length === 0) return evaluate(state, botOwner);
+  if (actions.length === 0) return evaluate(state, anti ? opponentOf(botOwner) : botOwner);
 
   let best = maximizing ? -Infinity : Infinity;
   let interrupted = false;
@@ -542,7 +566,7 @@ function minimax(
   // Store the result in side-to-move perspective unless the deadline cut this node short — a
   // partial best is not a trustworthy bound. Bound classification against the ORIGINAL window:
   // fail-high (score at/above the window's high edge) → 'lower', fail-low → 'upper', else 'exact'.
-  if (!interrupted) {
+  if (!anti && !interrupted) {
     const storedScore = maximizing ? best : -best;
     const lo = maximizing ? originalAlpha : -originalBeta;
     const hi = maximizing ? originalBeta : -originalAlpha;
@@ -554,19 +578,22 @@ function minimax(
 }
 
 /**
- * Picks the best action for `owner` to play from `state` via alpha-beta minimax over every legal
+ * Picks the action for `owner` to play from `state` via alpha-beta minimax over every legal
  * action (movement and all special abilities), searched iteratively: depth 1, 2, … up to the
  * difficulty's target depth. Each iteration reorders the actions by how they scored in the
  * previous one (best first) so alpha-beta prunes more, and the answer of the deepest *completed*
  * iteration is returned — if the wall-clock budget runs out mid-iteration, the previous
- * iteration's (already sound) answer is kept instead of a half-searched deeper one. Returns null
- * if there is nothing legal to do (the caller shouldn't normally reach this — the game would
- * already have ended).
+ * iteration's (already sound) answer is kept instead of a half-searched deeper one. NEGATIVE
+ * difficulties flip the objective: the bot searches the same number of plies but picks the line
+ * that maximizes the opponent's evaluation (anti mode — it deliberately plays its own worst
+ * moves, see `minimax`). Returns null if there is nothing legal to do (the caller shouldn't
+ * normally reach this — the game would already have ended).
  */
 export function chooseBotAction(state: GameState, owner: Owner, difficulty: BotDifficulty): BotAction | null {
   const actions = orderActions(state, owner, generateBotActions(state, owner));
   if (actions.length === 0) return null;
 
+  const anti = difficulty < 0;
   const maxDepth = difficultyToDepth(difficulty);
   const ctx: SearchContext = {
     deadline: Date.now() + difficultyTimeBudgetMs(difficulty),
@@ -575,8 +602,8 @@ export function chooseBotAction(state: GameState, owner: Owner, difficulty: BotD
     transpositions: new Map(),
   };
 
-  // Difficulty 1 = 0 plies: no lookahead at all — pick the action whose resulting position scores
-  // best under the static evaluation (the equivalent of a depth-0 minimax over the root actions).
+  // 0 plies: no lookahead at all — pick the action whose resulting position scores best (or, in
+  // anti mode, WORST for the bot) under the static evaluation (a depth-0 minimax over the root).
   if (maxDepth === 0) {
     let bestAction = actions[0];
     let bestValue = -Infinity;
@@ -584,7 +611,7 @@ export function chooseBotAction(state: GameState, owner: Owner, difficulty: BotD
       if (Date.now() >= ctx.deadline) break;
       const result = applyBotAction(state, action);
       if (!result.ok) continue;
-      const value = evaluate(result.state, owner);
+      const value = evaluate(result.state, anti ? opponentOf(owner) : owner);
       if (value > bestValue) {
         bestValue = value;
         bestAction = action;
@@ -614,7 +641,7 @@ export function chooseBotAction(state: GameState, owner: Owner, difficulty: BotD
       }
       const result = applyBotAction(state, action);
       if (!result.ok) continue;
-      const value = minimax(result.state, depth - 1, alpha, beta, owner, ctx);
+      const value = minimax(result.state, depth - 1, alpha, beta, owner, ctx, anti);
       previousScores.set(action, value);
       if (value > iterationBestValue) {
         iterationBestValue = value;

@@ -53,7 +53,7 @@ function PcTeamChoiceScreen() {
       <Panel title="🧠 Difficoltà" className="w-full max-w-[640px]">
         <div className="flex flex-col gap-2">
           <label htmlFor="bot-difficulty" className="text-sm text-slate-600 dark:text-slate-400">
-            Livello di difficoltà: {botDifficulty} / {BOT_DIFFICULTY_MAX}
+            Livello di difficoltà: {botDifficulty} (da {BOT_DIFFICULTY_MIN} a {BOT_DIFFICULTY_MAX})
           </label>
           <input
             id="bot-difficulty"
@@ -67,8 +67,9 @@ function PcTeamChoiceScreen() {
             className="w-full accent-blue-500"
           />
           <p className="text-sm text-slate-600 dark:text-slate-400">
-            Il PC vede {formatMovesAhead(botDifficulty)} avanti
-            (profondità di ricerca {difficultyToDepth(botDifficulty)} mezze mosse).
+            {botDifficulty < 0
+              ? `🫠 Il PC è stupido di proposito: gioca le mosse peggiori per sé (${formatMovesAhead(botDifficulty)}, ricerca ${difficultyToDepth(botDifficulty)} mezze mosse anti).`
+              : `Il PC vede ${formatMovesAhead(botDifficulty)} avanti (profondità di ricerca ${difficultyToDepth(botDifficulty)} mezze mosse).`}
           </p>
         </div>
       </Panel>

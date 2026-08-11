@@ -508,7 +508,9 @@ function GameScreen() {
         <>
           {mode === 'pvc' && (
             <Badge tone="info" title="Livello di difficoltà del PC (1–50)">
-              🤖 PC: difficoltà {botDifficulty}/{BOT_DIFFICULTY_MAX} — vede {formatMovesAhead(botDifficulty)} avanti
+              🤖 PC: difficoltà {botDifficulty}/{BOT_DIFFICULTY_MAX} — {botDifficulty < 0
+                ? `🫠 gioca male di proposito (${formatMovesAhead(botDifficulty)})`
+                : `vede ${formatMovesAhead(botDifficulty)} avanti`}
             </Badge>
           )}
           <Badge className={cn('turn-badge-human', isBotTurn && 'turn-badge-bot border-amber-300 dark:border-amber-800 bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400')}>
