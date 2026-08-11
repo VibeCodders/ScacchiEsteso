@@ -67,9 +67,28 @@ function featureVectorOf(piece: Piece): number[] {
   ];
 }
 
+/**
+ * Piece-level flags that mark a distinct special mechanic or movement archetype: bent slides
+ * (gryphon/manticora), chain jumps, bounce, clones, revival, swaps, ranged/area attacks, auras,
+ * alternative actions, jumping-over-interpositions. Each is a genuine in-play differentiator the
+ * mobility counts cannot see — the Manticora's bent slide reaches exactly the same average number
+ * of squares as a Torre on an 8×8 board, so only this set can tell them apart. `promotable` is
+ * deliberately excluded: it's a progression trait (the pawn and its promoted form are meant to
+ * read as the same family), not a mechanic that differentiates play the way these do.
+ */
+const SPECIAL_MECHANIC_FLAGS = [
+  'sdoppiamento', 'riunione', 'secondoMovimentoPostCattura', 'dannoAdArea', 'rianimaPedoni',
+  'silenzioAttacchiADistanza', 'armatura', 'scambiaPosizioneConAlleato', 'scocca', 'egida',
+  'catenaSaltiConCatturaFinale', 'rimbalzoUnico', 'gryphon', 'manticora', 'scambioTraDueAlleati',
+  'stunAura', 'respingeNemici', 'teletrasporto', 'attiraNemici', 'esplodeSeCatturato',
+  'saltaInterposizioni',
+] as const;
+
 function mechanicTypesOf(piece: Piece): Set<string> {
   const types = new Set(piece.alternativeActions.map((a) => a.type));
-  if (piece.armatura) types.add('armatura');
+  for (const flag of SPECIAL_MECHANIC_FLAGS) {
+    if (piece[flag]) types.add(flag);
+  }
   return types;
 }
 
