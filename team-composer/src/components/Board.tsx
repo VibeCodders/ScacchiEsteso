@@ -8,7 +8,22 @@ import {
   type BoardState,
   type Owner,
 } from '../game/board';
+import { pieces } from '../data/pieces';
 import { cn } from '../lib/cn';
+
+/** Piece data (name, punti) used by the board's hover tooltip and the show-names labels. */
+const PIECE_INFO_BY_SIGLA = new Map(pieces.map((p) => [p.sigla, p]));
+
+/** Small two-line label rendered under each piece icon in show-names mode: name + point cost. */
+function PieceNameLabel({ sigla }: { sigla: string }) {
+  const info = PIECE_INFO_BY_SIGLA.get(sigla);
+  return (
+    <span className="board-piece-name pointer-events-none absolute inset-x-0.5 bottom-0.5 z-[2] flex flex-col items-center rounded-sm bg-black/50 px-0.5 py-px text-center leading-tight text-white">
+      <span className="w-full truncate text-[0.5rem] font-semibold">{info?.descrizione ?? sigla}</span>
+      {info && <span className="text-[0.42rem] font-normal opacity-90">{info.punti} pt</span>}
+    </span>
+  );
+}
 
 export interface BoardProps {
   pieces: BoardState;
@@ -43,6 +58,9 @@ export interface BoardProps {
    * the two pieces are indistinguishable on the board).
    */
   mirageRealSquares?: string[];
+  /** When true, every occupied square shows a small label with the piece name under its icon
+   *  (GameScreen's "show names" mode: hold H, or the permanent toggle button). */
+  showNames?: boolean;
 }
 
 function Board({
@@ -58,6 +76,7 @@ function Board({
   flashSquares = [],
   flashVersion = 0,
   mirageRealSquares = [],
+  showNames = false,
 }: BoardProps) {
   const flashing = new Set(flashSquares);
   const highlighted = new Set(highlightedSquares);
@@ -102,6 +121,7 @@ function Board({
               <span className="board-square-content relative block size-full">
                 {piece && (
                   <span
+                    title={`${piece.sigla} — ${PIECE_INFO_BY_SIGLA.get(piece.sigla)?.descrizione ?? piece.sigla}`}
                     draggable={Boolean(onPieceDragStart)}
                     onDragStart={onPieceDragStart ? (e) => { e.dataTransfer.setData('text/plain', coord); onPieceDragStart(coord); } : undefined}
                     style={onPieceDragStart ? { cursor: 'grab' } : undefined}
@@ -110,6 +130,7 @@ function Board({
                       sigla={piece.sigla}
                       className={cn(
                         'board-piece absolute left-1/2 top-1/2 h-[78%] w-[78%] -translate-x-1/2 -translate-y-1/2',
+                        showNames && 'h-[52%] top-[35%]',
                         isRotated && 'rotate-180',
                         piece.owner === 'A'
                           ? 'board-piece-light text-[#f5f0e6] [stroke:#2b2b2b] [stroke-width:1.5]'
@@ -118,6 +139,7 @@ function Board({
                     />
                   </span>
                 )}
+                {showNames && piece && <PieceNameLabel sigla={piece.sigla} />}
                 {mirageReals.has(coord) && (
                   <span className="board-mirage-real-marker pointer-events-none absolute right-1 top-1 z-[2] size-2.5 rounded-full bg-yellow-400 shadow-[0_0_4px_rgba(250,204,21,0.9)]" aria-label="Miraggio vero" />
                 )}

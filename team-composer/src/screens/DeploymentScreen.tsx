@@ -17,6 +17,7 @@ import Button from '../components/ui/Button';
 import PageShell from '../components/ui/PageShell';
 import Panel from '../components/ui/Panel';
 import PieceCard from '../components/ui/PieceCard';
+import { useShowNames } from '../lib/useShowNames';
 
 function pickCoinToss(): Owner {
   return Math.random() < 0.5 ? 'A' : 'B';
@@ -30,6 +31,7 @@ function DeploymentScreen() {
   const [selectedSigla, setSelectedSigla] = useState<string | null>(null);
   const [orientation, setOrientation] = useState<Owner>('A');
   const [error, setError] = useState<string | null>(null);
+  const { showNames, namesToggled, setNamesToggled, namesKeyHeld } = useShowNames();
 
   const teamAResolved = teamA ?? emptyTeam();
   const teamBResolved = teamB ?? emptyTeam();
@@ -114,10 +116,17 @@ function DeploymentScreen() {
           onSquareClick={handleSquareClick}
           onSquareDrop={handleSquareClick}
           highlightedSquares={emptyOwnRankSquares}
+          showNames={showNames}
         />
-        <Button variant="improve" onClick={() => setOrientation((o) => (o === 'A' ? 'B' : 'A'))}>
-          🔄 Gira scacchiera (vista: {playerLabel(orientation, mode, humanOwner)})
-        </Button>
+        <div className="flex flex-wrap justify-center gap-2">
+          <Button variant="improve" onClick={() => setOrientation((o) => (o === 'A' ? 'B' : 'A'))}>
+            🔄 Gira scacchiera (vista: {playerLabel(orientation, mode, humanOwner)})
+          </Button>
+          <Button variant="improve" onClick={() => setNamesToggled((v) => !v)}>
+            {namesToggled ? '🙈 Nascondi i nomi' : '🏷 Mostra i nomi (tieni H)'}
+          </Button>
+        </div>
+        {showNames && <p className="text-sm text-slate-600 dark:text-slate-400">🏷 Nomi visibili {namesKeyHeld ? '(H premuto)' : '(toggle attivo)'}.</p>}
       </Panel>
 
       <Panel>

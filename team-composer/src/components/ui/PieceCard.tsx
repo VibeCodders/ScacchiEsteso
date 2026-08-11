@@ -59,6 +59,7 @@ function PieceCard({
         selected && 'border-amber-400 bg-amber-50 dark:bg-[#1a1f0a] hover:border-amber-400 hover:bg-amber-100 dark:hover:bg-[#1a1f0a]',
         className,
       )}
+      title={piece.descrizione}
       onClick={onClick}
       onKeyDown={onKeyDown}
       {...rest}

@@ -154,3 +154,45 @@ describe('DeploymentScreen', () => {
     expect(document.querySelector('[data-coord="j6"]')).not.toBeNull(); // only exists on a 10-wide board
   });
 });
+
+describe('DeploymentScreen — show-names mode (hold H / toggle button)', () => {
+  beforeEach(() => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('shows the name of every placed piece while H is held, and hides them on release', () => {
+    renderDeployment(new Map([[KING_SIGLA, 1], ['PE', 1]]), new Map([[KING_SIGLA, 1]]));
+    fireEvent.click(screen.getByText('Tira la moneta'));
+
+    // The Kings are already placed; place the Pedone too.
+    fireEvent.click(screen.getByText('PE'));
+    fireEvent.click(document.querySelector('[data-coord="a2"]')!);
+
+    expect(document.querySelectorAll('.board-piece-name')).toHaveLength(0);
+
+    fireEvent.keyDown(window, { key: 'h' });
+    expect(document.querySelectorAll('.board-piece-name')).toHaveLength(3);
+    const pedoneLabel = document.querySelector('[data-coord="a2"] .board-piece-name')!;
+    expect(pedoneLabel.textContent).toContain('Pedone');
+    expect(pedoneLabel.textContent).toContain('7 pt');
+
+    fireEvent.keyUp(window, { key: 'h' });
+    expect(document.querySelectorAll('.board-piece-name')).toHaveLength(0);
+  });
+
+  it('toggles the names permanently with the button, on and off', () => {
+    renderDeployment(new Map([[KING_SIGLA, 1]]), new Map([[KING_SIGLA, 1]]));
+    fireEvent.click(screen.getByText('Tira la moneta'));
+
+    fireEvent.click(screen.getByText(/Mostra i nomi/i));
+    expect(document.querySelectorAll('.board-piece-name')).toHaveLength(2);
+    expect(screen.getByText(/Nascondi i nomi/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText(/Nascondi i nomi/i));
+    expect(document.querySelectorAll('.board-piece-name')).toHaveLength(0);
+  });
+});

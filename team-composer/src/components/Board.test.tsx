@@ -136,6 +136,30 @@ describe('Board — capture-square highlight (piece encyclopedia)', () => {
   });
 });
 
+describe('Board — show-names mode', () => {
+  it('renders no name labels by default', () => {
+    const board = setPieceAt(createEmptyBoard(), 'e4', createPieceInstance('RE', 'A'));
+    render(<Board pieces={board} orientation="A" />);
+    expect(document.querySelectorAll('.board-piece-name')).toHaveLength(0);
+  });
+
+  it('renders a name label on every occupied square when showNames is true, and none on empty squares', () => {
+    let board = setPieceAt(createEmptyBoard(), 'e4', createPieceInstance('RE', 'A'));
+    board = setPieceAt(board, 'd5', createPieceInstance('MG', 'B'));
+    render(<Board pieces={board} orientation="A" showNames />);
+
+    const labels = document.querySelectorAll('.board-piece-name');
+    expect(labels).toHaveLength(2);
+    const reLabel = document.querySelector('[data-coord="e4"] .board-piece-name')!;
+    expect(reLabel.textContent).toContain('Re');
+    expect(reLabel.textContent).toContain('15 pt');
+    const mgLabel = document.querySelector('[data-coord="d5"] .board-piece-name')!;
+    expect(mgLabel.textContent).toContain('Miraggio');
+    expect(mgLabel.textContent).toContain('27 pt');
+    expect(document.querySelector('[data-coord="e5"] .board-piece-name')).toBeNull();
+  });
+});
+
 describe('Board drag & drop', () => {
   it('fires onPieceDragStart with the coordinate of the dragged piece', () => {
     const onPieceDragStart = vi.fn();

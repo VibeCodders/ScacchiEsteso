@@ -42,9 +42,11 @@ describe('GameScreen — fallback when there is no deployed board', () => {
   it('shows a message and a way back to Home instead of crashing', () => {
     render(
       <MemoryRouter>
-        <GameSetupProvider>
-          <GameScreen />
-        </GameSetupProvider>
+        <ThemeProvider>
+          <GameSetupProvider>
+            <GameScreen />
+          </GameSetupProvider>
+        </ThemeProvider>
       </MemoryRouter>,
     );
     expect(screen.getByText(/Nessuno schieramento trovato/i)).toBeInTheDocument();
@@ -192,6 +194,54 @@ describe('GameScreen — playable match', () => {
 
     fireEvent.click(screen.getByText(/Gira scacchiera/i));
     expect(screen.getByTestId('board')).toHaveClass('board-rotated');
+  });
+});
+
+describe('GameScreen — show-names mode (hold H / toggle button)', () => {
+  it('shows the name of every piece while H is held, and hides them on release', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'TO', 'A');
+    renderGame(board);
+
+    expect(document.querySelectorAll('.board-piece-name')).toHaveLength(0);
+
+    fireEvent.keyDown(window, { key: 'h' });
+    expect(document.querySelectorAll('.board-piece-name')).toHaveLength(3);
+    const torreLabel = document.querySelector('[data-coord="d4"] .board-piece-name')!;
+    expect(torreLabel.textContent).toContain('Torre');
+    expect(torreLabel.textContent).toContain('27 pt');
+
+    fireEvent.keyUp(window, { key: 'h' });
+    expect(document.querySelectorAll('.board-piece-name')).toHaveLength(0);
+  });
+
+  it('toggles the names permanently with the button, on and off', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'TO', 'A');
+    renderGame(board);
+
+    expect(screen.queryByText(/Mostra i nomi/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByText(/Mostra i nomi/i));
+    expect(document.querySelectorAll('.board-piece-name')).toHaveLength(3);
+    expect(screen.getByText(/Nascondi i nomi/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText(/Nascondi i nomi/i));
+    expect(document.querySelectorAll('.board-piece-name')).toHaveLength(0);
+  });
+
+  it('ignores H while typing in an input', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    renderGame(board);
+
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+    input.focus();
+    fireEvent.keyDown(input, { key: 'h' });
+    expect(document.querySelectorAll('.board-piece-name')).toHaveLength(0);
+    input.remove();
   });
 });
 

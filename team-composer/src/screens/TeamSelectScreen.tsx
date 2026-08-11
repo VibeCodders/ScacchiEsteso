@@ -12,6 +12,7 @@ import Panel from '../components/ui/Panel';
 import PieceCard from '../components/ui/PieceCard';
 import { ToastContainer } from '../components/ui/Toasts';
 import { useToasts } from '../components/ui/useToasts';
+import { inputClass } from '../components/ui/Field';
 import { cn } from '../lib/cn';
 
 function getMaxIdentical(sigla: string): number {
@@ -50,6 +51,7 @@ function TeamSelectScreen({
 }: TeamSelectScreenProps) {
   const [team, setTeam] = useState<TeamMap>(() => (initialTeam ? new Map(initialTeam) : emptyTeam()));
   const [filter, setFilter] = useState<Filter>('all');
+  const [search, setSearch] = useState('');
   const { toasts, addToast } = useToasts();
 
   const effectiveRules = useMemo(() => scaleRulesForBoardSize(rules, boardDimensions), [boardDimensions]);
@@ -153,9 +155,15 @@ function TeamSelectScreen({
     [team, maxDistinctSpecialTypes, effectiveRules],
   );
 
-  const filteredPieces = sortByPunti(
-    filter === 'all' ? pickablePieces : pickablePieces.filter((p: Piece) => p.classico === (filter === 'classico')),
-  );
+  const filteredPieces = useMemo(() => {
+    const byFilter = filter === 'all' ? pickablePieces : pickablePieces.filter((p: Piece) => p.classico === (filter === 'classico'));
+    const query = search.trim().toLowerCase();
+    const bySearch =
+      query === ''
+        ? byFilter
+        : byFilter.filter((p: Piece) => p.sigla.toLowerCase().includes(query) || p.descrizione.toLowerCase().includes(query));
+    return sortByPunti(bySearch);
+  }, [filter, search]);
 
   const summaryRows = [
     { label: 'Pezzi totali', value: `${totalPieces} (max ${MAX_PIECES_TOTAL})`, tone: totalPieces <= MAX_PIECES_TOTAL ? 'ok' : 'err' },
@@ -187,7 +195,15 @@ function TeamSelectScreen({
       }
     >
       <Panel title="📦 Roster Pezzi">
-        <div className="mb-3 flex flex-wrap gap-1.5">
+        <div className="mb-3 flex flex-wrap items-center gap-1.5">
+          <input
+            type="text"
+            className={cn(inputClass, 'min-w-[180px] flex-1')}
+            placeholder="Cerca pezzo per nome o sigla…"
+            aria-label="Cerca pezzo"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
           {FILTERS.map((f) => (
             <Button
               key={f.id}
@@ -200,6 +216,9 @@ function TeamSelectScreen({
           ))}
         </div>
         <div className="piece-grid grid max-h-[600px] grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-2.5 overflow-y-auto pr-1">
+          {filteredPieces.length === 0 && (
+            <div className="py-5 text-center text-sm text-slate-500">Nessun pezzo corrisponde alla ricerca.</div>
+          )}
           {filteredPieces.map((piece: Piece) => {
             const currentCount = team.get(piece.sigla) ?? 0;
             const maxForPiece = getMaxIdentical(piece.sigla);

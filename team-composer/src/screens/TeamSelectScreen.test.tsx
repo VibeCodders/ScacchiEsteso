@@ -86,6 +86,35 @@ describe('TeamSelectScreen — parametrized team selection', () => {
     expect(renderedSiglas).toEqual(expectedSiglas);
   });
 
+  it('filters the roster by search text, matching name or sigla, combined with the category filter', () => {
+    renderScreen(<TeamSelectScreen title="Test" onComplete={() => {}} />);
+    const searchInput = screen.getByLabelText('Cerca pezzo');
+
+    // Search by piece name — only the Miraggio card should remain.
+    fireEvent.change(searchInput, { target: { value: 'miraggio' } });
+    expect(screen.getByLabelText(/Aggiungi Miraggio/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Aggiungi Pedone/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Aggiungi Regina/i)).not.toBeInTheDocument();
+
+    // Search by sigla — matches any piece whose sigla or name contains it (Pedone, Spettro, …).
+    fireEvent.change(searchInput, { target: { value: 'PE' } });
+    expect(screen.getAllByLabelText(/Aggiungi Pedone/i).length).toBeGreaterThan(0);
+    expect(screen.queryByLabelText(/Aggiungi Miraggio/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Aggiungi Regina/i)).not.toBeInTheDocument();
+
+    // Clearing the search restores the full roster.
+    fireEvent.change(searchInput, { target: { value: '' } });
+    expect(screen.getByLabelText(/Aggiungi Miraggio/i)).toBeInTheDocument();
+
+    // A name search can be narrowed further by the "Speciale" filter (Miraggio is speciale).
+    fireEvent.change(searchInput, { target: { value: 'miraggio' } });
+    fireEvent.click(screen.getByText('Speciali'));
+    expect(screen.getByLabelText(/Aggiungi Miraggio/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Classici'));
+    expect(screen.queryByLabelText(/Aggiungi Miraggio/i)).not.toBeInTheDocument();
+    expect(screen.getByText('Nessun pezzo corrisponde alla ricerca.')).toBeInTheDocument();
+  });
+
   it('lists "Team Attuale" sorted by point cost, ascending, regardless of the order pieces were added', () => {
     renderScreen(<TeamSelectScreen title="Test" onComplete={() => {}} />);
     // Add a higher-cost piece before a cheaper one — the display order must not follow click order.

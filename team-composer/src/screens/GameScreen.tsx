@@ -16,6 +16,7 @@ import { sortSiglasByPunti } from '../data/pieces';
 import type { Coord, Owner } from '../game/board';
 import { pieceDescription } from '../lib/pieceFormat';
 import { cn } from '../lib/cn';
+import { useShowNames } from '../lib/useShowNames';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -61,6 +62,7 @@ function GameScreen() {
   const [swapperFirstSquare, setSwapperFirstSquare] = useState<Coord | null>(null);
   const [pendingSdoppiamento, setPendingSdoppiamento] = useState<PendingSdoppiamento | null>(null);
   const [revealRealMirage, setRevealRealMirage] = useState(false);
+  const { showNames, namesToggled, setNamesToggled, namesKeyHeld } = useShowNames();
 
   const effectiveSelected = gameState?.pendingExtraMove ?? gameState?.pendingRabbitChain?.at ?? selected;
 
@@ -449,10 +451,14 @@ function GameScreen() {
           flashSquares={lastMoveFlashSquares}
           flashVersion={gameState.history.length}
           mirageRealSquares={mirageRealSquares}
+          showNames={showNames}
         />
         <div className="flex flex-wrap justify-center gap-2">
           <Button variant="improve" onClick={() => setOrientation((o) => (o === 'A' ? 'B' : 'A'))}>
             🔄 Gira scacchiera (vista: {ownerLabel(orientation)})
+          </Button>
+          <Button variant="improve" onClick={() => setNamesToggled((v) => !v)}>
+            {namesToggled ? '🙈 Nascondi i nomi' : '🏷 Mostra i nomi (tieni H)'}
           </Button>
           <Button variant="improve" onClick={() => setRevealRealMirage((r) => !r)}>
             {revealRealMirage ? '🙈 Nascondi Miraggi veri' : '👁 Vedi i Miraggi veri (tuo turno)'}
@@ -495,6 +501,7 @@ function GameScreen() {
             </Button>
           )}
         </div>
+        {showNames && <p className="text-sm text-slate-600 dark:text-slate-400">🏷 Nomi visibili {namesKeyHeld ? '(H premuto)' : '(toggle attivo)'}.</p>}
         {actionMode === 'scocca' && <p className="text-sm text-slate-600 dark:text-slate-400">🏹 Modalità Scoccare: seleziona un bersaglio nemico a 3-4 caselle.</p>}
         {actionMode === 'swap' && <p className="text-sm text-slate-600 dark:text-slate-400">🔀 Modalità Scambio: seleziona un alleato in linea di vista libera (riga, colonna o diagonale).</p>}
         {actionMode === 'revive' && <p className="text-sm text-slate-600 dark:text-slate-400">🧟 Modalità Rianimazione: seleziona una casella vuota adiacente.</p>}
