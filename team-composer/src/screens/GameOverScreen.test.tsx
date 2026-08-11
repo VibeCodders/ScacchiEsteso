@@ -91,6 +91,42 @@ describe('GameOverScreen — dedicated results page', () => {
     expect(screen.queryByText(/vincitore morale/i)).not.toBeInTheDocument();
   });
 
+  it('renders the complete move history with pieces, captures and special-action tags', () => {
+    const richHistory: GameState = {
+      ...stalemateSnapshot('anti_stalemate', 'A'),
+      history: [
+        { turnNumber: 1, owner: 'A', from: 'a1', to: 'a2', sigla: 'RE', isCapture: false },
+        { turnNumber: 2, owner: 'B', from: 'h8', to: 'h7', sigla: 'RE', isCapture: false },
+        // A melee capture of a Bomba that explodes and destroys the capturer.
+        { turnNumber: 3, owner: 'A', from: 'd4', to: 'd5', sigla: 'PE', isCapture: true, capturedSigla: 'BO', isExplosion: true, explodedAt: 'd5' },
+        // A ranged scocca (the Arciere never moves: from === to).
+        { turnNumber: 4, owner: 'B', from: 'h4', to: 'h4', sigla: 'AR', isRangedAttack: true, isCapture: true, capturedSigla: 'CA' },
+        // A Teletrasporto jump to an empty square at distance 3.
+        { turnNumber: 5, owner: 'A', from: 'c3', to: 'c6', sigla: 'TT', isCapture: false, isTeleport: true },
+        // A Repulsore push: the enemy's original square is `to`, the landing is repulsedTo.
+        { turnNumber: 6, owner: 'B', from: 'd3', to: 'd4', sigla: 'RP', isCapture: false, isRepulse: true, repulsedTo: 'd5' },
+        // A Vortice pull: the enemy's original square is `to`, the landing is attractedTo.
+        { turnNumber: 7, owner: 'A', from: 'e4', to: 'e6', sigla: 'VZ', isCapture: false, isAttract: true, attractedTo: 'e5' },
+        // A Miraggio sdoppiamento (the piece itself never moves: from === to).
+        { turnNumber: 8, owner: 'B', from: 'g2', to: 'g2', sigla: 'MG', isCapture: false, isSdoppiamento: true, cloneSquare: 'h2', realSquare: 'g2' },
+      ],
+    };
+    renderResult({ status: 'anti_stalemate', winner: 'A', finalState: richHistory });
+
+    expect(screen.getByText('📜 Cronologia mosse')).toBeInTheDocument();
+    expect(screen.getByText(/Giocatore 1: RE a1 → a2/)).toBeInTheDocument();
+    expect(screen.getByText(/Giocatore 2: RE h8 → h7/)).toBeInTheDocument();
+    expect(screen.getByText(/Giocatore 1: PE d4 → d5 \(cattura BO\) 💥 esplosione in d5/)).toBeInTheDocument();
+    expect(screen.getByText(/Giocatore 2: AR h4 → h4 \(cattura CA\) \(scocca\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Giocatore 1: TT c3 → c6 \(teletrasporto\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Giocatore 2: RP d3 → d4 \(respingi: d5\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Giocatore 1: VZ e4 → e6 \(attira: e5\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Giocatore 2: MG g2 → g2 \(sdoppiamento: vero in g2, clone in h2\)/)).toBeInTheDocument();
+    // All 8 moves are listed (scoped to the history panel — the stats panel has its own lists).
+    const historyPanel = screen.getByText('📜 Cronologia mosse').closest('section')!;
+    expect(historyPanel.querySelectorAll('li')).toHaveLength(8);
+  });
+
   it('declares a moral winner from the remaining points on an anti-stalemate', () => {
     renderResult({
       status: 'anti_stalemate',

@@ -113,6 +113,38 @@ function GameOverScreen() {
         )}
       </Panel>
 
+      <Panel title="📜 Cronologia mosse">
+        <div className="max-h-[320px] overflow-y-auto text-sm">
+          {finalState.history.length === 0 ? (
+            <p className="text-sm text-slate-500">Nessuna mossa.</p>
+          ) : (
+            <ol className="list-inside list-decimal space-y-0.5 text-slate-700 dark:text-slate-300">
+              {finalState.history.map((entry, idx) => (
+                <li key={idx}>
+                  {ownerLabel(entry.owner)}: {entry.sigla} {entry.from} → {entry.to}
+                  {entry.isCapture && ` (cattura ${entry.capturedSigla})`}
+                  {entry.isExplosion && ` 💥 esplosione in ${entry.explodedAt}`}
+                  {entry.promotedTo && ` → promosso a ${entry.promotedTo}`}
+                  {entry.isExtraMove && ' (movimento extra)'}
+                  {entry.isRangedAttack && ' (scocca)'}
+                  {entry.isSwap && ' (scambio)'}
+                  {entry.isSwapperSwap && ` (scambio: ${entry.swapSquares?.join(' ↔ ')})`}
+                  {entry.isRepulse && ` (respingi: ${entry.repulsedTo})`}
+                  {entry.isTeleport && ' (teletrasporto)'}
+                  {entry.isAttract && ` (attira: ${entry.attractedTo})`}
+                  {entry.isRevival && ` (rianimato ${entry.revivedSigla})`}
+                  {entry.isSdoppiamento && ` (sdoppiamento: vero in ${entry.realSquare}, clone in ${entry.cloneSquare})`}
+                  {entry.isMerge && ' (riunione)'}
+                  {entry.isCloneCapture && ' (clone eliminato — nessun punto)'}
+                  {entry.dispelledClone && ' (clone dissolto)'}
+                  {entry.areaDamageCoords && entry.areaDamageCoords.length > 0 && ` 💥 area: ${entry.areaDamageCoords.join(', ')}`}
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+      </Panel>
+
       <div className="flex justify-center pt-4">
         <Button variant="primary" onClick={backToHome}>Torna alla Home</Button>
       </div>
