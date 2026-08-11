@@ -81,3 +81,26 @@ Regole del gioco e della composizione degli eserciti. L'app (composizione team, 
 3. **Riunione:** finché il clone è vivo, in alternativa al movimento il Miraggio può ricostituire vero e clone in un **unico pezzo**, scegliendo la casella in cui ricompare (quella del vero o quella del clone); l'altra metà si dissolve. La riunione non è possibile se lascerebbe il proprio Re sotto scacco (il clone potrebbe star bloccando una linea).
 4. **Limite:** massimo **1 Miraggio per composizione** (in gioco diventano 2 contando il clone). Un clone non può mai sdoppiarsi a sua volta e il Miraggio vero non può sdoppiarsi finché il suo clone è in gioco.
 5. **Cattura del vero:** solo la cattura del Miraggio **vero** lo elimina definitivamente; il clone si dissolve insieme a esso. Né il clone catturato né il clone dissolto assegnano punti: l'avversario deve uccidere quello vero, altrimenti la cattura è sprecata.
+
+## 10. Grifone, Manticora e Drago
+
+Pezzi a movimento "a ginocchio" (prima tratta obbligatoria di 1 casella, poi scivolata illimitata verso l'esterno) e un composto. In entrambi i pezzi a ginocchio la prima tratta **deve essere vuota**: non è mai una casella di cattura e non può essere saltata.
+
+### 10.1 Grifone (GR — 32 punti)
+
+1. **Prima tratta:** una casella in **diagonale** (obbligatoriamente vuota).
+2. **Seconda tratta:** scivolata illimitata in **orizzontale o verticale verso l'esterno** (nella direzione del passo diagonale): dopo un passo NE prosegue verso nord oppure verso est.
+3. **Cattura:** solo sulla seconda tratta, in mischia, sulla casella di arrivo.
+
+### 10.2 Manticora (MA — 26 punti)
+
+Specchio del Grifone:
+
+1. **Prima tratta:** una casella in **orizzontale o verticale** (obbligatoriamente vuota).
+2. **Seconda tratta:** scivolata illimitata in **diagonale verso l'esterno**: dopo un passo verso est prosegue verso nord-est oppure sud-est; dopo un passo verso nord prosegue verso nord-est oppure nord-ovest.
+3. **Cattura:** solo sulla seconda tratta, in mischia, sulla casella di arrivo.
+
+### 10.3 Drago (DR — 45 punti)
+
+1. **Movimento:** si muove come la **Torre** (scivolata illimitata in orizzontale o verticale, cattura in mischia) oppure come il **Cavallo** (salto a "L", ignorando le interposizioni).
+2. **Cattura:** in mischia sulla scivolata, sulla casella di arrivo del salto.
