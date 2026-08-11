@@ -155,6 +155,13 @@ const STAGE1_FEATURE_NAMES = [
   'Promozione',
 ] as const;
 
+/** Index of the 'Promozione' feature in `STAGE1_FEATURE_NAMES` / `stage1FeatureVector`. Its
+ *  coefficient is constrained to be non-negative (see `solveLeastSquares`): promotion potential
+ *  is a strictly positive trait, so the model must never price a promotable piece below the
+ *  identical non-promotable one (guard tested in estimatePunti.test.ts). */
+const PROMOTABLE_FEATURE_INDEX = STAGE1_FEATURE_NAMES.indexOf('Promozione');
+const STAGE1_NON_NEGATIVE_FEATURES: ReadonlySet<number> = new Set([PROMOTABLE_FEATURE_INDEX]);
+
 /**
  * Solves `X·β ≈ y` in the ridge-regularized least-squares sense via the normal equations
  * `(XᵀX + λI)β = Xᵀy`, solved by Gaussian elimination with partial pivoting. `X` is n×k (first
@@ -165,7 +172,7 @@ const STAGE1_FEATURE_NAMES = [
  * implement IRLS without duplicating the normal-equations assembly. No external dependency — the
  * matrices here are tiny (k ≤ 12).
  */
-function solveLeastSquares(X: number[][], y: number[], lambda = 0, weights?: number[]): number[] {
+function solveLeastSquares(X: number[][], y: number[], lambda = 0, weights?: number[], nonNegativeIndices: ReadonlySet<number> = new Set()): number[] {
   const k = X[0].length;
   const XtX: number[][] = Array.from({ length: k }, () => new Array(k).fill(0));
   const Xty: number[] = new Array(k).fill(0);
@@ -181,7 +188,27 @@ function solveLeastSquares(X: number[][], y: number[], lambda = 0, weights?: num
   }
   for (let i = 1; i < k; i++) XtX[i][i] += lambda;
 
-  // Gaussian elimination with partial pivoting on the augmented [XtX | Xty] system.
+  let beta = solveNormalEquations(XtX, Xty);
+  // Non-negativity (active set): if a constrained coefficient comes out negative, re-solve with
+  // those features pinned at exactly 0 (identity rows/cols) and the rest re-fit on the reduced
+  // model. This guarantees structural invariants like "promotion never lowers a piece's price".
+  const violated = [...nonNegativeIndices].filter((i) => beta[i] < 0);
+  if (violated.length > 0) {
+    for (const i of violated) {
+      for (let j = 0; j < k; j++) {
+        XtX[i][j] = i === j ? 1 : 0;
+        XtX[j][i] = i === j ? 1 : 0;
+      }
+      Xty[i] = 0;
+    }
+    beta = solveNormalEquations(XtX, Xty);
+  }
+  return beta;
+}
+
+/** Gaussian elimination with partial pivoting on the augmented [XtX | Xty] system. */
+function solveNormalEquations(XtX: number[][], Xty: number[]): number[] {
+  const k = XtX.length;
   const augmented = XtX.map((r, i) => [...r, Xty[i]]);
   for (let col = 0; col < k; col++) {
     let pivotRow = col;
@@ -227,12 +254,12 @@ function huberWeight(residual: number, delta: number): number {
  * stops once the coefficients stop moving (`IRLS_CONVERGENCE_TOL`) or after `IRLS_MAX_ITERATIONS`.
  * No external dependency, same spirit as `solveLeastSquares` itself.
  */
-function solveRobustLeastSquares(X: number[][], y: number[], lambda: number): number[] {
-  let beta = solveLeastSquares(X, y, lambda);
+function solveRobustLeastSquares(X: number[][], y: number[], lambda: number, nonNegativeIndices: ReadonlySet<number> = new Set()): number[] {
+  let beta = solveLeastSquares(X, y, lambda, undefined, nonNegativeIndices);
   for (let iter = 0; iter < IRLS_MAX_ITERATIONS; iter++) {
     const residuals = X.map((row, i) => dotProduct(beta, row) - y[i]);
     const weights = residuals.map((r) => huberWeight(r, HUBER_DELTA));
-    const newBeta = solveLeastSquares(X, y, lambda, weights);
+    const newBeta = solveLeastSquares(X, y, lambda, weights, nonNegativeIndices);
     const shift = Math.sqrt(newBeta.reduce((sum, v, i) => sum + (v - beta[i]) ** 2, 0));
     beta = newBeta;
     if (shift < IRLS_CONVERGENCE_TOL) break;
@@ -265,7 +292,7 @@ function looMeanAbsoluteError(X: number[][], y: number[], lambda: number): numbe
   for (let holdout = 0; holdout < X.length; holdout++) {
     const trainX = X.filter((_, i) => i !== holdout);
     const trainY = y.filter((_, i) => i !== holdout);
-    const beta = solveRobustLeastSquares(trainX, trainY, lambda);
+    const beta = solveRobustLeastSquares(trainX, trainY, lambda, STAGE1_NON_NEGATIVE_FEATURES);
     const predicted = dotProduct(beta, X[holdout]);
     totalAbsError += Math.abs(predicted - y[holdout]);
   }
@@ -302,7 +329,11 @@ function fitStage1(): Stage1Fit {
     }
   }
 
-  return { coefficients: solveRobustLeastSquares(X, y, bestLambda), lambda: bestLambda, looMeanAbsoluteError: bestLoo };
+  return {
+    coefficients: solveRobustLeastSquares(X, y, bestLambda, STAGE1_NON_NEGATIVE_FEATURES),
+    lambda: bestLambda,
+    looMeanAbsoluteError: bestLoo,
+  };
 }
 
 let stage1FitCache: Stage1Fit | null = null;

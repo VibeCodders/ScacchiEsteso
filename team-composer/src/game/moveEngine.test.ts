@@ -522,8 +522,8 @@ describe('Golem (GL) — armatura blocks capture by weak attackers', () => {
 
 describe('Remaining pieces — destination count from d4 on an empty board', () => {
   it.each([
-    ['PG', 2], // Paggio: 1-step, n/s only, no capture
-    ['FG', 1], // Fante: 1-step, n only, no capture
+    ['PG', 1], // Paggio: 1-step, n only, no capture
+    ['FG', 1], // Fante: 1-step, n only, captures forward (same destination count on an empty board)
     ['BE', 16], // Berserker: step up to 2, all 8 directions
     ['NE', 12], // Necromante: slide up to 3, 4 diagonals
     ['IQ', 12], // Inquisitore: slide up to 3, 4 orthogonals
@@ -535,6 +535,49 @@ describe('Remaining pieces — destination count from d4 on an empty board', () 
   ] as const)('%s has %i destinations', (sigla, expectedCount) => {
     const board = place(createEmptyBoard(), 'd4', sigla);
     expect(destinations(board, 'd4')).toHaveLength(expectedCount);
+  });
+});
+
+describe('Paggio (PG) and Fante (FG) — forward-only step pieces', () => {
+  it('Paggio advances only north (never south), and never captures', () => {
+    let board = place(createEmptyBoard(), 'd4', 'PG', 'A');
+    board = place(board, 'd3', 'PE', 'B'); // enemy behind — a south-capable piece could take it
+    board = place(board, 'd5', 'PE', 'B'); // enemy ahead — but PG has no capture
+    expect(destinations(board, 'd4')).toEqual([]); // can neither retreat south nor capture ahead
+
+    const emptyAhead = place(createEmptyBoard(), 'd4', 'PG', 'A');
+    expect(destinations(emptyAhead, 'd4')).toEqual(['d5']); // the only square it may ever step to
+  });
+
+  it('Fante is like the Paggio but captures the square ahead', () => {
+    let board = place(createEmptyBoard(), 'd4', 'FG', 'A');
+    board = place(board, 'd3', 'PE', 'B'); // enemy behind — never reachable
+    board = place(board, 'd5', 'PE', 'B'); // enemy ahead — capturable in melee
+    const moves = generatePseudoLegalMoves(board, 'd4');
+    expect(moves.map((m) => m.to)).toEqual(['d5']);
+    expect(moves[0].isCapture).toBe(true);
+    expect(moves[0].captureMode).toBe('melee');
+
+    const emptyAhead = place(createEmptyBoard(), 'd4', 'FG', 'A');
+    const step = generatePseudoLegalMoves(emptyAhead, 'd4');
+    expect(step.map((m) => m.to)).toEqual(['d5']); // still steps forward onto an empty square
+    expect(step[0].isCapture).toBe(false);
+  });
+
+  it('"forward" flips with the owner: Player B Paggio/Fante advance toward lower ranks', () => {
+    let board = place(createEmptyBoard(), 'd5', 'PG', 'B');
+    board = place(board, 'd4', 'PE', 'A');
+    expect(destinations(board, 'd5')).toEqual([]); // d4 is an enemy and PG never captures
+
+    const fanteBoard = place(createEmptyBoard(), 'd5', 'FG', 'B');
+    const stepMoves = generatePseudoLegalMoves(fanteBoard, 'd5');
+    expect(stepMoves.map((m) => m.to)).toEqual(['d4']); // B's "north" is toward rank 1
+    expect(stepMoves[0].isCapture).toBe(false); // empty square ahead — a normal step
+
+    const fanteCapture = place(fanteBoard, 'd4', 'PE', 'A');
+    const moves = generatePseudoLegalMoves(fanteCapture, 'd5');
+    expect(moves.map((m) => m.to)).toEqual(['d4']);
+    expect(moves[0].isCapture).toBe(true);
   });
 });
 

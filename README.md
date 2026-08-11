@@ -164,16 +164,16 @@ Paladino con 51). Le sezioni §9 e §10 approfondiscono Miraggio e pezzi a ginoc
 | RP | Repulsore | 10 | 5 | passo Re · Respingere |
 | PE | Pedone | 7 | 5 | avanti 1 (2 alla prima) · cattura diagonale · promozione (→ §5) |
 | DU | Duca | 6 | 5 | diagonale 1 |
-| PG | Paggio | 5 | 5 | verticale 1, non cattura |
-| FG | Fante | 1 | 5 | avanti 1, cattura verticale |
+| PG | Paggio | 5 | 5 | avanti 1 (solo nord), non cattura |
+| FG | Fante | 1 | 5 | avanti 1 (solo nord), cattura in avanti |
 
 ### 11.2 Re e Pedoni
 
 - **RE — Re (15 pt, gratis nel budget, obbligatorio 1):** muove di una casella in qualsiasi
   direzione, cattura in mischia (§3). Catturabile solo in mischia; immune a Scoccare e danno ad
   area (§3.3). I suoi 15 punti contano nel punteggio materiale dell'anti-stallo (§8).
-- **FG — Fante (1 pt):** avanti di una casella; cattura verticalmente in avanti.
-- **PG — Paggio (5 pt):** una casella in verticale (su o giù); non cattura.
+- **FG — Fante (1 pt):** avanti di una casella (solo nord); cattura in avanti.
+- **PG — Paggio (5 pt):** avanti di una casella (solo nord); non cattura.
 - **PE — Pedone (7 pt):** avanti di una casella (due alla prima mossa); cattura diagonalmente;
   promozione (§5) ed en passant (§6).
 - **DA — Pedone di Dama (11 pt):** come una pedina di Dama: avanza di una casella e cattura

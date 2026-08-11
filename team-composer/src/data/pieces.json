@@ -20,9 +20,9 @@
     "punti": 5,
     "categoria": "pedone",
     "classico": false,
-    "regole": "Si muove di una casella in verticale. Non cattura.",
+    "regole": "Si muove di una casella in avanti (solo verso nord). Non cattura.",
     "moves": [
-      { "directions": ["n", "s"], "minSteps": 1, "maxSteps": 1, "capture": false, "captureMode": "none", "movementType": "step" }
+      { "directions": ["n"], "minSteps": 1, "maxSteps": 1, "capture": false, "captureMode": "none", "movementType": "step" }
     ],
     "movimentoTipo": "step",
     "resistance": 0,
@@ -35,9 +35,9 @@
     "punti": 1,
     "categoria": "pedone",
     "classico": false,
-    "regole": "Si muove in avanti di una casella. Cattura verticalmente in avanti.",
+    "regole": "Si muove in avanti di una casella (solo verso nord). Cattura la casella davanti in mischia.",
     "moves": [
-      { "directions": ["n"], "minSteps": 1, "maxSteps": 1, "capture": false, "captureMode": "none", "movementType": "step", "note": "Cattura verticalmente in avanti" }
+      { "directions": ["n"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step", "note": "Cattura in avanti" }
     ],
     "movimentoTipo": "step",
     "resistance": 0,
