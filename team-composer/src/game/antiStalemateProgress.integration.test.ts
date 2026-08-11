@@ -17,16 +17,18 @@ import { getPieceDef } from './moveEngine';
 import { computeMaterialScore, resolveAntiStalemateWinner, ANTI_STALEMATE_TURN_LIMIT } from './antiStalemate';
 
 // From pieces.json: RE 15, PE 7, VZ 24, TT 22, RP 10, SW 28, NE 28, MI 37, MG 27.
+// Current pieces.json prices (rebalanced via the point estimator): RE 15, PE 9, VZ 24, TT 23,
+// RP 17, SW 28, NE 25, MI 37, MG 27, BR 23.
 const RE = 15;
-const PE = 7;
+const PE = 9;
 const VZ = 24;
-const TT = 22;
-const RP = 10;
+const TT = 23;
+const RP = 17;
 const SW = 28;
-const NE = 28;
+const NE = 25;
 const MI = 37;
 const MG = 27;
-const BR = 24;
+const BR = 23;
 
 function place(board: BoardState, coord: Coord, sigla: string, owner: 'A' | 'B' = 'A'): BoardState {
   return setPieceAt(board, coord, createPieceInstance(sigla, owner));

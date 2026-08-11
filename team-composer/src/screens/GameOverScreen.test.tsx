@@ -89,7 +89,7 @@ describe('GameOverScreen — dedicated results page', () => {
     expect(within(statsPanel).getByText('30')).toBeInTheDocument();
     // One captured pawn each.
     expect(screen.getAllByText(/Catturati all'avversario:/i)).toHaveLength(2);
-    expect(screen.getAllByText('7 pt')).toHaveLength(2); // each side captured one 7pt pawn
+    expect(screen.getAllByText('9 pt')).toHaveLength(2); // each side captured one 9pt pawn
     expect(screen.getAllByText(/Pezzi persi:/i)).toHaveLength(2);
     // No moral winner on checkmate.
     expect(screen.queryByText(/vincitore morale/i)).not.toBeInTheDocument();

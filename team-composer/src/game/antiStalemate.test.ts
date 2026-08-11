@@ -10,8 +10,8 @@ describe('computeMaterialScore', () => {
   it('sums the punti of every piece the owner has on the board', () => {
     let board = place(createEmptyBoard(), 'e1', 'RE', 'A'); // 15pt
     board = place(board, 'a1', 'TO', 'A'); // 27pt
-    board = place(board, 'b1', 'PE', 'A'); // 7pt
-    expect(computeMaterialScore(board, 'A')).toBe(49);
+    board = place(board, 'b1', 'PE', 'A'); // 9pt (post-rebalance)
+    expect(computeMaterialScore(board, 'A')).toBe(51);
   });
 
   it('is 0 when the owner has no pieces at all', () => {
@@ -33,8 +33,8 @@ describe('computeMaterialScore', () => {
 
   it('counts a piece placed beyond the default 8×8 bounds when the real board is wider/taller', () => {
     let board = place(createEmptyBoard(), 'e1', 'RE', 'A'); // 15pt, within any board size
-    board = place(board, 'j6', 'RA', 'A'); // 37pt — only a valid square on a board at least 10 wide, 6 tall
-    expect(computeMaterialScore(board, 'A', { width: 10, height: 6 })).toBe(52); // 15 + 37
+    board = place(board, 'j6', 'RA', 'A'); // 38pt — only a valid square on a board at least 10 wide, 6 tall
+    expect(computeMaterialScore(board, 'A', { width: 10, height: 6 })).toBe(53); // 15 + 38
     // Without the matching dimensions, allCoords() never visits j6, so it's silently missed —
     // only the King (already within the default 8×8) is counted.
     expect(computeMaterialScore(board, 'A')).toBe(15);

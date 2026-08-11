@@ -17,7 +17,7 @@
   {
     "sigla": "PG",
     "descrizione": "Paggio",
-    "punti": 5,
+    "punti": 4,
     "categoria": "pedone",
     "classico": false,
     "regole": "Si muove di una casella in avanti (solo verso nord). Non cattura.",
@@ -47,7 +47,7 @@
   {
     "sigla": "PE",
     "descrizione": "Pedone",
-    "punti": 7,
+    "punti": 9,
     "categoria": "pedone",
     "classico": true,
     "regole": "Muove in avanti di una casella (due alla prima mossa); cattura diagonalmente.",
@@ -67,7 +67,7 @@
   {
     "sigla": "CR",
     "descrizione": "Corriere",
-    "punti": 14,
+    "punti": 15,
     "categoria": "base",
     "classico": false,
     "regole": "Si muove in orizzontale o verticale per un massimo di due caselle. Cattura normalmente.",
@@ -175,7 +175,7 @@
   {
     "sigla": "CM",
     "descrizione": "Camaleonte",
-    "punti": 31,
+    "punti": 29,
     "categoria": "base",
     "classico": false,
     "regole": "Si muove come Alfiere per un massimo di 4 caselle sulle caselle chiare e come Torre per un massimo di 3 caselle sulle caselle scure. Può anche muoversi di 1 casella in qualsiasi direzione.",
@@ -210,7 +210,7 @@
   {
     "sigla": "NE",
     "descrizione": "Necromante",
-    "punti": 28,
+    "punti": 25,
     "categoria": "base",
     "classico": false,
     "regole": "Si muove in diagonale per un massimo di 3 caselle. In alternativa al movimento, può rianimare un Pedone alleato precedentemente eliminato, schierandolo su una casella vuota immediatamente adiacente.",
@@ -318,7 +318,7 @@
   {
     "sigla": "CO",
     "descrizione": "Colosso",
-    "punti": 36,
+    "punti": 34,
     "categoria": "base",
     "classico": false,
     "regole": "Si muove di massimo 2 caselle in qualsiasi direzione. Danno ad area: quando cattura in mischia, distrugge automaticamente tutti i pezzi (alleati e nemici) che si trovano nelle quattro caselle ortogonalmente adiacenti alla propria casella di arrivo.",
@@ -336,7 +336,7 @@
   {
     "sigla": "RA",
     "descrizione": "Regina",
-    "punti": 37,
+    "punti": 38,
     "categoria": "base",
     "classico": true,
     "regole": "Si muove in qualsiasi direzione per un numero illimitato di caselle.",
@@ -351,7 +351,7 @@
   {
     "sigla": "DA",
     "descrizione": "Pedone di Dama",
-    "punti": 11,
+    "punti": 10,
     "categoria": "base",
     "classico": false,
     "regole": "Come la pedina di Dama.",
@@ -370,7 +370,7 @@
   {
     "sigla": "CV",
     "descrizione": "Cavalletta",
-    "punti": 20,
+    "punti": 21,
     "categoria": "base",
     "classico": false,
     "regole": "Vedi Grasshopper su https://en.wikipedia.org/wiki/Grasshopper_(chess_variant)",
@@ -385,7 +385,7 @@
   {
     "sigla": "OR",
     "descrizione": "Orfano",
-    "punti": 26,
+    "punti": 25,
     "categoria": "base",
     "classico": false,
     "regole": "Ha tutti i poteri, per quel turno, di chi lo tiene in scacco. Se nessuno lo ha in scacco, può muoversi di 1 cella in qualsiasi direzione",
@@ -402,7 +402,7 @@
   {
     "sigla": "DM",
     "descrizione": "Damone",
-    "punti": 25,
+    "punti": 26,
     "categoria": "base",
     "classico": false,
     "regole": "Ottenuto solo tramite promozione del Pedone di Dama. Si muove di una casella in diagonale in qualsiasi direzione. Cattura saltando un nemico adiacente in diagonale e atterrando sulla casella libera successiva.",
@@ -434,7 +434,7 @@
   {
     "sigla": "GE",
     "descrizione": "Generale",
-    "punti": 34,
+    "punti": 33,
     "categoria": "base",
     "classico": false,
     "regole": "Si muove come il Cavallo oppure di 1 casella in qualsiasi direzione.",
@@ -466,7 +466,7 @@
   {
     "sigla": "RN",
     "descrizione": "Rinoceronte",
-    "punti": 30,
+    "punti": 29,
     "categoria": "base",
     "classico": false,
     "regole": "Si muove come l'Alfiere oppure di 1 casella in qualsiasi direzione.",
@@ -482,7 +482,7 @@
   {
     "sigla": "CN",
     "descrizione": "Coniglio",
-    "punti": 41,
+    "punti": 40,
     "categoria": "base",
     "classico": false,
     "regole": "Se non ha salti disponibili, si muove come il Re (1 casella, cattura in mischia). Se ha un nemico adiacente in una delle 8 direzioni con la casella successiva libera, puo saltarlo senza catturarlo subito; dopo l'atterraggio, se c'e un altro nemico adiacente (anche lo stesso appena saltato) con casella successiva libera, puo continuare a saltare. Quando si ferma, solo l'ultimo nemico saltato viene catturato: tutti gli altri nemici saltati durante la catena restano in gioco.",
@@ -533,7 +533,7 @@
   {
     "sigla": "ST",
     "descrizione": "Stunner",
-    "punti": 28,
+    "punti": 25,
     "categoria": "base",
     "classico": false,
     "regole": "Muove come un Re. Ogni pezzo nemico (tranne il Re avversario, sempre immune) che si trova su una delle 8 caselle adiacenti allo Stunner è completamente congelato: non ha alcuna mossa né azione speciale disponibile, tranne l'unica mossa che catturerebbe lo Stunner stesso.",
@@ -620,7 +620,7 @@
   {
     "sigla": "RP",
     "descrizione": "Repulsore",
-    "punti": 10,
+    "punti": 17,
     "categoria": "base",
     "classico": false,
     "regole": "Si muove di una casella in qualsiasi direzione. Cattura in mischia. In alternativa al movimento, può respingere un nemico adiacente (mai il Re) di una casella direttamente lontano da sé, purché la casella di arrivo sia vuota: il nemico viene spostato senza essere catturato.",
@@ -638,7 +638,7 @@
   {
     "sigla": "TT",
     "descrizione": "Teletrasporto",
-    "punti": 22,
+    "punti": 23,
     "categoria": "base",
     "classico": false,
     "regole": "Si muove di una casella in qualsiasi direzione. Cattura in mischia. In alternativa al movimento, può teletrasportarsi su una casella vuota a esattamente 3 caselle in linea retta (orizzontale, verticale o diagonale), saltando sopra qualsiasi pezzo; non cattura nulla all'arrivo.",
@@ -656,7 +656,7 @@
   {
     "sigla": "BO",
     "descrizione": "Bomba",
-    "punti": 21,
+    "punti": 23,
     "categoria": "base",
     "classico": false,
     "regole": "Si muove di una casella in qualsiasi direzione. Cattura in mischia. Quando viene catturata (con qualsiasi cattura: in mischia, a salto, a distanza o a fine catena), esplode e distrugge anche il pezzo che l'ha catturata — il Re è sempre immune all'esplosione. L'esplosione non scatta mai se lascerebbe sotto scacco il Re di chi cattura.",
@@ -692,7 +692,7 @@
   {
     "sigla": "BS",
     "descrizione": "Basilisco",
-    "punti": 14,
+    "punti": 16,
     "categoria": "base",
     "classico": false,
     "regole": "Si muove di una casella in qualsiasi direzione. Cattura in mischia. Il suo sguardo pietrificante congela ogni pezzo nemico (tranne il Re avversario, sempre immune) che si trova nelle 3 caselle direttamente di fronte a lui, in direzione dell'avversario: lo sguardo attraversa i pezzi in mezzo. Come per lo Stunner, un pezzo congelato non ha alcuna mossa né azione speciale disponibile, tranne l'unica mossa che catturerebbe il Basilisco stesso. È una versione direzionale dello Stunner: aggirabile di fianco.",
@@ -710,7 +710,7 @@
   {
     "sigla": "BR",
     "descrizione": "Brigante",
-    "punti": 24,
+    "punti": 23,
     "categoria": "base",
     "classico": false,
     "regole": "Si muove di una casella in qualsiasi direzione. Cattura in mischia. In alternativa al movimento, può \"sostituirsi\" a un nemico adiacente (mai il Re): i due pezzi si scambiano di posto, senza cattura — il nemico viene spostato ma non eliminato — purché il proprio Re non resti esposto allo scacco. È l'unico pezzo del roster che scambia posizione con un nemico (Mistico e Swapper scambiano solo alleati).",
@@ -728,7 +728,7 @@
   {
     "sigla": "LP",
     "descrizione": "Lampo",
-    "punti": 16,
+    "punti": 17,
     "categoria": "base",
     "classico": false,
     "regole": "Salta esattamente 2 caselle in orizzontale o verticale (N, S, E, O), ignorando i pezzi in mezzo: è il salto \"dabbaba\", l'unico pezzo del roster che atterra sempre a esattamente 2 caselle di distanza. Se sulla casella di arrivo c'è un nemico, lo cattura in salto; se c'è un alleato, non può atterrarci. Non ha mai mosse da 1 o 3 caselle. Fulmine: dopo una cattura in salto riuscita, può immediatamente compiere un secondo salto non-catturante di 2 caselle (come la Furia bellica del Berserker, ma per i salti).",

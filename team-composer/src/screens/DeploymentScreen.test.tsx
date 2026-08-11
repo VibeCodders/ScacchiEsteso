@@ -178,7 +178,7 @@ describe('DeploymentScreen — show-names mode (hold H / toggle button)', () => 
     expect(document.querySelectorAll('.board-piece-name')).toHaveLength(3);
     const pedoneLabel = document.querySelector('[data-coord="a2"] .board-piece-name')!;
     expect(pedoneLabel.textContent).toContain('Pedone');
-    expect(pedoneLabel.textContent).toContain('7 pt');
+    expect(pedoneLabel.textContent).toContain('9 pt');
 
     fireEvent.keyUp(window, { key: 'h' });
     expect(document.querySelectorAll('.board-piece-name')).toHaveLength(0);
