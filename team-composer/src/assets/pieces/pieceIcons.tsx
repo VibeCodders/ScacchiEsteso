@@ -3,7 +3,10 @@ import type { ReactElement, SVGProps } from 'react';
 /**
  * Geometric silhouette for each piece sigla in pieces.json. Classic pieces (RE, RA, TO, AL, CA, PE)
  * echo traditional chess-piece silhouettes in a stylized form; custom pieces use distinct
- * primitive shapes so they read apart from each other and from the classics on the board.
+ * primitive shapes so they read apart from each other and from the classics on the board
+ * (e.g. the Duca's crown, the Generale's star, the Tigre's striped face, the Rinoceronte's horn,
+ * the Coniglio's ears, the Rimbalzatore's bounce, the Swapper's crossed arrows, the Stunner's
+ * snowflake, the Damone's crowned checkers disc).
  * Every shape draws in a 0..100 viewBox and uses `currentColor`, so team color is set by the
  * caller via CSS `color`.
  */
@@ -206,6 +209,77 @@ const PIECE_SHAPES: Record<string, ReactElement> = {
       <rect x="34" y="66" width="32" height="12" rx="3" />
       <polygon points="50,10 74,34 58,34 58,56 42,56 42,34 26,34" />
       <rect x="46" y="56" width="8" height="10" />
+    </g>
+  ),
+  DM: (
+    <g>
+      <circle cx="50" cy="62" r="28" />
+      <circle cx="50" cy="62" r="16" fillOpacity="0.35" />
+      <path d="M36 40 L36 27 L44 33 L50 21 L56 33 L64 27 L64 40 Z" />
+    </g>
+  ),
+  DU: (
+    <g>
+      <path d="M30 74 L30 54 L42 60 L50 46 L58 60 L70 54 L70 74 Z" />
+      <rect x="30" y="74" width="40" height="12" rx="2" />
+    </g>
+  ),
+  GE: (
+    <g>
+      <polygon points="50,10 59,38 86,38 64,55 72,81 50,65 28,81 36,55 14,38 41,38" />
+    </g>
+  ),
+  TI: (
+    <g>
+      <rect x="28" y="66" width="44" height="12" rx="3" />
+      <circle cx="50" cy="48" r="22" />
+      <polygon points="34,32 28,14 46,26" />
+      <polygon points="66,32 72,14 54,26" />
+      <rect x="40" y="34" width="5" height="14" rx="2" fillOpacity="0.4" />
+      <rect x="48" y="30" width="5" height="14" rx="2" fillOpacity="0.4" />
+      <rect x="56" y="34" width="5" height="14" rx="2" fillOpacity="0.4" />
+    </g>
+  ),
+  RN: (
+    <g>
+      <rect x="24" y="58" width="52" height="18" rx="9" />
+      <polygon points="28,58 22,38 38,52" />
+      <circle cx="36" cy="64" r="3.5" fillOpacity="0.35" />
+    </g>
+  ),
+  CN: (
+    <g>
+      <rect x="30" y="66" width="40" height="12" rx="3" />
+      <path d="M40 40 Q34 18 28 12 Q38 22 40 32 Z" />
+      <path d="M60 40 Q66 18 72 12 Q62 22 60 32 Z" />
+      <circle cx="50" cy="52" r="16" />
+    </g>
+  ),
+  RB: (
+    <g>
+      <rect x="30" y="66" width="40" height="12" rx="3" />
+      <path d="M22 70 L46 38" stroke="currentColor" strokeWidth="8" strokeLinecap="round" fill="none" />
+      <path d="M52 28 L74 66" stroke="currentColor" strokeWidth="8" strokeLinecap="round" fill="none" />
+      <polygon points="74,66 58,64 66,50" />
+    </g>
+  ),
+  SW: (
+    <g>
+      <rect x="30" y="66" width="40" height="12" rx="3" />
+      <polygon points="20,36 54,36 54,28 72,44 54,60 54,52 20,52" />
+      <polygon points="80,60 46,60 46,68 28,52 46,36 46,44 80,44" />
+    </g>
+  ),
+  ST: (
+    <g>
+      <rect x="30" y="66" width="40" height="12" rx="3" />
+      {[0, 60, 120, 180, 240, 300].map((deg) => (
+        <g key={deg} transform={`rotate(${deg} 50 50)`}>
+          <rect x="47" y="12" width="6" height="40" rx="2" />
+          <rect x="43" y="22" width="14" height="4" rx="1" />
+          <rect x="41" y="34" width="18" height="4" rx="1" />
+        </g>
+      ))}
     </g>
   ),
 };
