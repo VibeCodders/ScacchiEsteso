@@ -193,6 +193,14 @@ const PIECE_SHAPES: Record<string, ReactElement> = {
       <polygon points="50,12 56,26 68,16 62,30 78,26 64,38 76,48 60,46 62,62 52,52 48,62 38,52 40,62 24,48 36,38 22,26 38,30 32,16 44,26" />
     </g>
   ),
+  DR: (
+    <g>
+      <rect x="34" y="66" width="32" height="12" rx="3" />
+      <path d="M36 58 Q30 42 40 34 Q50 26 60 34 Q70 42 64 58 Z" />
+      <polygon points="60,34 84,18 68,46" />
+      <path d="M40 48 Q28 56 22 72 Q34 62 44 58 Z" />
+    </g>
+  ),
 };
 
 export interface PieceIconProps extends SVGProps<SVGSVGElement> {
