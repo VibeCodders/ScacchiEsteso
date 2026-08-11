@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import type { ActionModalita, CaptureMode, Direction, MovementType, Piece } from '../types';
 import { estimatePunti } from '../data/estimatePunti';
 import BreakdownBarChart from './BreakdownBarChart';
+import Button from '../components/ui/Button';
+import Field, { inputClass } from '../components/ui/Field';
 
 const ALL_DIRECTIONS: Direction[] = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'];
 const CAPTURE_MODES: CaptureMode[] = ['melee', 'leap', 'ranged', 'none', 'area'];
@@ -134,30 +136,30 @@ function PieceDesignerPanel() {
   };
 
   return (
-    <details className="piece-designer">
-      <summary>🛠️ Piece designer — simula un pezzo ipotetico</summary>
+    <details className="mb-5 rounded-md border border-slate-700 bg-slate-900 p-3">
+      <summary className="cursor-pointer select-none text-sm font-semibold text-slate-100">🛠️ Piece designer — simula un pezzo ipotetico</summary>
 
-      <div className="piece-designer-body">
-        <p className="piece-designer-banner">
+      <div className="mt-3.5 flex flex-col gap-4">
+        <p className="m-0 rounded-md border border-amber-800 bg-amber-950 p-2.5 text-[0.72rem] text-amber-400">
           Simulazione — nessun dato viene scritto su pieces.json. Costruisci un pezzo ipotetico qui sotto per vedere
           in tempo reale quanti punti l'algoritmo gli assegnerebbe.
         </p>
 
-        <div className="piece-designer-result">
-          <div className="piece-designer-result-number">{estimate.suggestedPunti} pt</div>
-          <div className="piece-designer-result-range">
+        <div className="rounded-md border border-slate-700 bg-slate-800 p-3.5">
+          <div className="text-3xl font-bold text-slate-50">{estimate.suggestedPunti} pt</div>
+          <div className="mb-2 text-xs text-slate-400">
             intervallo plausibile {estimate.confidenceInterval.low}–{estimate.confidenceInterval.high}
           </div>
           <BreakdownBarChart estimate={estimate} />
         </div>
 
-        <div className="piece-designer-section">
-          <h4>Mosse</h4>
+        <div className="border-t border-slate-800 pt-3">
+          <h4 className="mb-2 text-[0.8rem] text-slate-100">Mosse</h4>
           {moves.map((move) => (
-            <div key={move.id} className="piece-designer-move">
-              <div className="piece-designer-directions">
+            <div key={move.id} className="mb-2.5 rounded-md border border-slate-700 bg-slate-800 p-2.5">
+              <div className="mb-2.5 flex flex-wrap gap-2">
                 {ALL_DIRECTIONS.map((d) => (
-                  <label key={d} className="piece-designer-direction-toggle">
+                  <label key={d} className="flex cursor-pointer flex-row items-center gap-1 text-[0.7rem] text-slate-300">
                     <input
                       type="checkbox"
                       checked={move.directions.includes(d)}
@@ -167,152 +169,155 @@ function PieceDesignerPanel() {
                   </label>
                 ))}
               </div>
-              <div className="piece-designer-move-fields">
-                <label>
-                  Min passi
+              <div className="flex flex-wrap items-end gap-3">
+                <Field label="Min passi" className="min-w-[90px]">
                   <input
                     type="number"
                     min={0}
                     value={move.minSteps}
                     onChange={(e) => updateMove(move.id, { minSteps: Number(e.target.value) })}
+                    className={inputClass}
                   />
-                </label>
-                <label>
-                  Max passi
+                </Field>
+                <Field label="Max passi" className="min-w-[90px]">
                   <input
                     type="number"
                     min={0}
                     value={move.maxSteps}
                     onChange={(e) => updateMove(move.id, { maxSteps: Number(e.target.value) })}
+                    className={inputClass}
                   />
-                </label>
-                <label>
-                  Tipo
+                </Field>
+                <Field label="Tipo" className="min-w-[90px]">
                   <select
                     value={move.movementType}
                     onChange={(e) => updateMove(move.id, { movementType: e.target.value as MovementType })}
+                    className={inputClass}
                   >
                     {MOVEMENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                   </select>
-                </label>
-                <label>
-                  Cattura
+                </Field>
+                <Field label="Cattura" className="min-w-[90px]">
                   <input
                     type="checkbox"
                     checked={move.capture}
                     onChange={(e) => updateMove(move.id, { capture: e.target.checked })}
+                    className="size-4 accent-blue-500"
                   />
-                </label>
-                <label>
-                  Modalità cattura
+                </Field>
+                <Field label="Modalità cattura" className="min-w-[120px]">
                   <select
                     value={move.captureMode}
                     onChange={(e) => updateMove(move.id, { captureMode: e.target.value as CaptureMode })}
+                    className={inputClass}
                   >
                     {CAPTURE_MODES.map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
-                </label>
-                <label>
-                  Ignora interposizioni (salto)
+                </Field>
+                <Field label="Ignora interposizioni (salto)" className="min-w-[150px]">
                   <input
                     type="checkbox"
                     checked={move.jump}
                     onChange={(e) => updateMove(move.id, { jump: e.target.checked })}
+                    className="size-4 accent-blue-500"
                   />
-                </label>
-                <button
-                  type="button"
-                  className="piece-designer-remove-btn"
+                </Field>
+                <Button
+                  variant="danger"
+                  className="px-2.5 py-1 text-xs"
                   onClick={() => setMoves((prev) => prev.filter((m) => m.id !== move.id))}
                   disabled={moves.length === 1}
                 >
                   Rimuovi mossa
-                </button>
+                </Button>
               </div>
             </div>
           ))}
-          <button type="button" className="piece-designer-add-btn" onClick={() => setMoves((prev) => [...prev, defaultMove()])}>
+          <Button variant="ghost" className="px-2.5 py-1 text-xs" onClick={() => setMoves((prev) => [...prev, defaultMove()])}>
             + Aggiungi mossa
-          </button>
+          </Button>
         </div>
 
-        <div className="piece-designer-section">
-          <h4>Resistenza e immunità</h4>
-          <label>
-            Resistenza
-            <input type="number" min={0} value={resistance} onChange={(e) => setResistance(Number(e.target.value))} />
-          </label>
-          <label>
-            Tipi di immunità (separati da virgola)
-            <input
-              type="text"
-              placeholder="es. costo<=14, veleno"
-              value={immunityTypesText}
-              onChange={(e) => setImmunityTypesText(e.target.value)}
-            />
-          </label>
+        <div className="border-t border-slate-800 pt-3">
+          <h4 className="mb-2 text-[0.8rem] text-slate-100">Resistenza e immunità</h4>
+          <div className="flex flex-wrap items-end gap-3">
+            <Field label="Resistenza" className="min-w-[90px]">
+              <input type="number" min={0} value={resistance} onChange={(e) => setResistance(Number(e.target.value))} className={inputClass} />
+            </Field>
+            <Field label="Tipi di immunità (separati da virgola)" className="min-w-[220px] flex-1">
+              <input
+                type="text"
+                placeholder="es. costo<=14, veleno"
+                value={immunityTypesText}
+                onChange={(e) => setImmunityTypesText(e.target.value)}
+                className={inputClass}
+              />
+            </Field>
+          </div>
         </div>
 
-        <div className="piece-designer-section">
-          <h4>Armatura naturale</h4>
-          <label>
-            <input type="checkbox" checked={hasArmatura} onChange={(e) => setHasArmatura(e.target.checked)} />
+        <div className="border-t border-slate-800 pt-3">
+          <h4 className="mb-2 text-[0.8rem] text-slate-100">Armatura naturale</h4>
+          <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-400">
+            <input type="checkbox" checked={hasArmatura} onChange={(e) => setHasArmatura(e.target.checked)} className="size-4 accent-blue-500" />
             Ha armatura naturale
           </label>
           {hasArmatura && (
-            <label>
-              Costo massimo che può catturarlo
+            <Field label="Costo massimo che può catturarlo" className="mt-2 min-w-[150px]">
               <input
                 type="number"
                 min={0}
                 value={armaturaMaxCosto}
                 onChange={(e) => setArmaturaMaxCosto(Number(e.target.value))}
+                className={inputClass}
               />
-            </label>
+            </Field>
           )}
         </div>
 
-        <div className="piece-designer-section">
-          <h4>Meccaniche speciali</h4>
+        <div className="border-t border-slate-800 pt-3">
+          <h4 className="mb-2 text-[0.8rem] text-slate-100">Meccaniche speciali</h4>
           {mechanics.map((mechanic) => (
-            <div key={mechanic.id} className="piece-designer-mechanic">
-              <label>
-                Tipo (anche mai visto nel roster, per testare l'estrapolazione)
-                <input
-                  type="text"
-                  value={mechanic.type}
-                  onChange={(e) => updateMechanic(mechanic.id, { type: e.target.value })}
-                />
-              </label>
-              <label>
-                Modalità
-                <select
-                  value={mechanic.modalita}
-                  onChange={(e) => updateMechanic(mechanic.id, { modalita: e.target.value as ActionModalita })}
+            <div key={mechanic.id} className="mb-2.5 rounded-md border border-slate-700 bg-slate-800 p-2.5">
+              <div className="flex flex-wrap items-end gap-3">
+                <Field label="Tipo (anche mai visto nel roster, per testare l'estrapolazione)" className="min-w-[220px] flex-1">
+                  <input
+                    type="text"
+                    value={mechanic.type}
+                    onChange={(e) => updateMechanic(mechanic.id, { type: e.target.value })}
+                    className={inputClass}
+                  />
+                </Field>
+                <Field label="Modalità" className="min-w-[120px]">
+                  <select
+                    value={mechanic.modalita}
+                    onChange={(e) => updateMechanic(mechanic.id, { modalita: e.target.value as ActionModalita })}
+                    className={inputClass}
+                  >
+                    {ACTION_MODALITA.map((m) => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </Field>
+                <Field label={<>Parametri (es. <code className="text-slate-500">raggio=2; direzioni=n,s,e,w; includeAlleati=true</code>)</>} className="min-w-[220px] flex-1">
+                  <input
+                    type="text"
+                    value={mechanic.paramsText}
+                    onChange={(e) => updateMechanic(mechanic.id, { paramsText: e.target.value })}
+                    className={inputClass}
+                  />
+                </Field>
+                <Button
+                  variant="danger"
+                  className="px-2.5 py-1 text-xs"
+                  onClick={() => setMechanics((prev) => prev.filter((m) => m.id !== mechanic.id))}
                 >
-                  {ACTION_MODALITA.map((m) => <option key={m} value={m}>{m}</option>)}
-                </select>
-              </label>
-              <label>
-                Parametri (es. <code>raggio=2; direzioni=n,s,e,w; includeAlleati=true</code>)
-                <input
-                  type="text"
-                  value={mechanic.paramsText}
-                  onChange={(e) => updateMechanic(mechanic.id, { paramsText: e.target.value })}
-                />
-              </label>
-              <button
-                type="button"
-                className="piece-designer-remove-btn"
-                onClick={() => setMechanics((prev) => prev.filter((m) => m.id !== mechanic.id))}
-              >
-                Rimuovi meccanica
-              </button>
+                  Rimuovi meccanica
+                </Button>
+              </div>
             </div>
           ))}
-          <button type="button" className="piece-designer-add-btn" onClick={() => setMechanics((prev) => [...prev, defaultMechanic()])}>
+          <Button variant="ghost" className="px-2.5 py-1 text-xs" onClick={() => setMechanics((prev) => [...prev, defaultMechanic()])}>
             + Aggiungi meccanica
-          </button>
+          </Button>
         </div>
       </div>
     </details>

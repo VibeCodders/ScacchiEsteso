@@ -13,7 +13,12 @@ import {
 import type { Piece } from '../types';
 import BreakdownBarChart from './BreakdownBarChart';
 import PieceDesignerPanel from './PieceDesignerPanel';
-import '../App.css';
+import Button from '../components/ui/Button';
+import InfoTooltip from '../components/ui/InfoTooltip';
+import PageShell from '../components/ui/PageShell';
+import Panel from '../components/ui/Panel';
+import { cn } from '../lib/cn';
+import { inputClass } from '../components/ui/Field';
 
 /** How close is "close enough" before a suggestion counts as a meaningful over/under estimate. */
 const CLOSE_ENOUGH_ABS_DIFF = 3;
@@ -26,8 +31,14 @@ function diffStatus(actual: number, suggested: number): DiffStatus {
   return diff > 0 ? 'over' : 'under';
 }
 
+const DIFF_BADGE_CLASSES: Record<DiffStatus, string> = {
+  close: 'bg-emerald-950 text-emerald-400',
+  over: 'bg-red-950 text-red-400',
+  under: 'bg-amber-950 text-amber-400',
+};
+
 function diffBadgeClass(actual: number, suggested: number): string {
-  return `punti-diff-${diffStatus(actual, suggested)}`;
+  return DIFF_BADGE_CLASSES[diffStatus(actual, suggested)];
 }
 
 const CONFIDENCE_LABEL: Record<'low' | 'medium' | 'high', string> = {
@@ -66,17 +77,6 @@ const MECHANIC_FEATURE_EXPLANATIONS: Record<string, string> = {
   'Su cattura': 'Vale 1 se la meccanica si attiva solo a seguito di una cattura, altrimenti 0.',
 };
 
-/** Small CSS-only tooltip (native `title` would work too, but this stays visible on keyboard focus
- *  and is more legible) — zero dependencies, consistent with the rest of the file. */
-function InfoTooltip({ text }: { text: string }) {
-  return (
-    <span className="info-tooltip" tabIndex={0}>
-      <span className="info-icon" aria-hidden="true">ⓘ</span>
-      <span className="info-tooltip-bubble" role="tooltip">{text}</span>
-    </span>
-  );
-}
-
 /**
  * Collapsible panel exposing the fitted stage-1 coefficients (incl. the ridge penalty chosen by
  * leave-one-out cross-validation) and the fitted stage-2 parametric mechanic-bonus model (its own
@@ -89,29 +89,29 @@ function ModelTransparencyPanel() {
   const mechanicTable = useMemo(() => mechanicBonusSummary(), []);
 
   return (
-    <details className="model-transparency">
-      <summary>Come funziona il modello (coefficienti e bonus)</summary>
+    <details className="mb-5 rounded-md border border-slate-700 bg-slate-900 p-3">
+      <summary className="cursor-pointer select-none text-sm font-semibold text-slate-100">Come funziona il modello (coefficienti e bonus)</summary>
 
-      <div className="model-transparency-body">
+      <div className="mt-3.5 grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-5">
         <div>
-          <h3>Stage 1 — mobilità e durabilità</h3>
-          <p className="model-transparency-note">
+          <h3 className="mb-1.5 text-[0.8rem] text-slate-100">Stage 1 — mobilità e durabilità</h3>
+          <p className="mb-2 text-[0.72rem] leading-snug text-slate-500">
             Regressione ridge robusta agli outlier (penalità λ = {summary.lambda}, scelta minimizzando l'errore
             leave-one-out) contro i pezzi di puro movimento del roster, con mobilità calcolata su tutte le caselle
-            della scacchiera. Errore leave-one-out attuale: <strong>{summary.looMeanAbsoluteError.toFixed(1)} pt</strong>.
+            della scacchiera. Errore leave-one-out attuale: <strong className="text-slate-100">{summary.looMeanAbsoluteError.toFixed(1)} pt</strong>.
           </p>
-          <table className="model-coefficients-table">
+          <table className="w-full border-collapse text-[0.78rem]">
             <thead>
               <tr>
-                <th>Feature</th>
-                <th>Coefficiente</th>
+                <th className="border-b border-slate-700 px-2 py-1 text-left font-semibold text-slate-400">Feature</th>
+                <th className="border-b border-slate-700 px-2 py-1 text-left font-semibold text-slate-400">Coefficiente</th>
               </tr>
             </thead>
             <tbody>
               {summary.features.map((f) => (
                 <tr key={f.name}>
-                  <td>{f.name} <InfoTooltip text={STAGE1_FEATURE_EXPLANATIONS[f.name] ?? ''} /></td>
-                  <td>{f.coefficient.toFixed(2)}</td>
+                  <td className="border-b border-slate-800 px-2 py-1 text-slate-300">{f.name} <InfoTooltip text={STAGE1_FEATURE_EXPLANATIONS[f.name] ?? ''} /></td>
+                  <td className="border-b border-slate-800 px-2 py-1 text-slate-300">{f.coefficient.toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>
@@ -119,54 +119,54 @@ function ModelTransparencyPanel() {
         </div>
 
         <div>
-          <h3>Stage 2 — modello parametrico dei bonus meccanica</h3>
-          <p className="model-transparency-note">
+          <h3 className="mb-1.5 text-[0.8rem] text-slate-100">Stage 2 — modello parametrico dei bonus meccanica</h3>
+          <p className="mb-2 text-[0.72rem] leading-snug text-slate-500">
             Il bonus di ogni meccanica speciale non è più una costante fissa per tipo: è <em>predetto</em> dai suoi
             parametri effettivi (raggio, direzioni, intensità, ecc.) tramite un piccolo modello lineare condiviso da
             tutte le meccaniche (λ = {mechanicModel.lambda}, errore leave-one-out{' '}
-            <strong>{mechanicModel.looMeanAbsoluteError.toFixed(1)} pt</strong>), poi tirato verso il valore osservato
+            <strong className="text-slate-100">{mechanicModel.looMeanAbsoluteError.toFixed(1)} pt</strong>), poi tirato verso il valore osservato
             per quel tipo specifico (shrinkage con K = {mechanicModel.shrinkageK.toFixed(1)}) quando disponibile —
             questo è ciò che permette di stimare anche una meccanica mai vista nel roster (vedi il piece designer qui
             sotto).
           </p>
-          <table className="model-coefficients-table">
+          <table className="w-full border-collapse text-[0.78rem]">
             <thead>
               <tr>
-                <th>Feature</th>
-                <th>Coefficiente</th>
+                <th className="border-b border-slate-700 px-2 py-1 text-left font-semibold text-slate-400">Feature</th>
+                <th className="border-b border-slate-700 px-2 py-1 text-left font-semibold text-slate-400">Coefficiente</th>
               </tr>
             </thead>
             <tbody>
               {mechanicModel.features.map((f) => (
                 <tr key={f.name}>
-                  <td>{f.name} <InfoTooltip text={MECHANIC_FEATURE_EXPLANATIONS[f.name] ?? ''} /></td>
-                  <td>{f.coefficient.toFixed(2)}</td>
+                  <td className="border-b border-slate-800 px-2 py-1 text-slate-300">{f.name} <InfoTooltip text={MECHANIC_FEATURE_EXPLANATIONS[f.name] ?? ''} /></td>
+                  <td className="border-b border-slate-800 px-2 py-1 text-slate-300">{f.coefficient.toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
 
-          <h4>Bonus applicato per meccanica osservata nel roster</h4>
-          <table className="model-coefficients-table">
+          <h4 className="mb-1.5 mt-3.5 text-[0.76rem] text-slate-300">Bonus applicato per meccanica osservata nel roster</h4>
+          <table className="w-full border-collapse text-[0.78rem]">
             <thead>
               <tr>
-                <th>Meccanica</th>
-                <th>Bonus grezzo</th>
-                <th>Predetto dal modello</th>
-                <th>Bonus applicato</th>
-                <th>Esempi</th>
-                <th>Confidenza</th>
+                <th className="border-b border-slate-700 px-2 py-1 text-left font-semibold text-slate-400">Meccanica</th>
+                <th className="border-b border-slate-700 px-2 py-1 text-left font-semibold text-slate-400">Bonus grezzo</th>
+                <th className="border-b border-slate-700 px-2 py-1 text-left font-semibold text-slate-400">Predetto dal modello</th>
+                <th className="border-b border-slate-700 px-2 py-1 text-left font-semibold text-slate-400">Bonus applicato</th>
+                <th className="border-b border-slate-700 px-2 py-1 text-left font-semibold text-slate-400">Esempi</th>
+                <th className="border-b border-slate-700 px-2 py-1 text-left font-semibold text-slate-400">Confidenza</th>
               </tr>
             </thead>
             <tbody>
               {Object.entries(mechanicTable).map(([type, entry]) => (
                 <tr key={type}>
-                  <td>{type}</td>
-                  <td>{entry.rawValue > 0 ? '+' : ''}{entry.rawValue.toFixed(1)}</td>
-                  <td>{entry.predictedValue > 0 ? '+' : ''}{entry.predictedValue.toFixed(1)}</td>
-                  <td>{entry.value > 0 ? '+' : ''}{entry.value.toFixed(1)}</td>
-                  <td>{entry.sampleCount}</td>
-                  <td>{CONFIDENCE_LABEL[confidenceForSampleCount(entry.sampleCount)]}</td>
+                  <td className="border-b border-slate-800 px-2 py-1 text-slate-300">{type}</td>
+                  <td className="border-b border-slate-800 px-2 py-1 text-slate-300">{entry.rawValue > 0 ? '+' : ''}{entry.rawValue.toFixed(1)}</td>
+                  <td className="border-b border-slate-800 px-2 py-1 text-slate-300">{entry.predictedValue > 0 ? '+' : ''}{entry.predictedValue.toFixed(1)}</td>
+                  <td className="border-b border-slate-800 px-2 py-1 text-slate-300">{entry.value > 0 ? '+' : ''}{entry.value.toFixed(1)}</td>
+                  <td className="border-b border-slate-800 px-2 py-1 text-slate-300">{entry.sampleCount}</td>
+                  <td className="border-b border-slate-800 px-2 py-1 text-slate-300">{CONFIDENCE_LABEL[confidenceForSampleCount(entry.sampleCount)]}</td>
                 </tr>
               ))}
             </tbody>
@@ -216,9 +216,9 @@ function SortableHeader({
 }) {
   const isActive = sortKey === activeKey;
   return (
-    <th className="punti-table-sortable" onClick={() => onSort(sortKey)}>
+    <th className="cursor-pointer select-none whitespace-nowrap border-b border-slate-700 px-2.5 py-2 text-left font-semibold text-slate-400 hover:text-slate-100" onClick={() => onSort(sortKey)}>
       {label}
-      {isActive && <span className="sort-arrow">{dir === 'asc' ? ' ▲' : ' ▼'}</span>}
+      {isActive && <span className="text-blue-400">{dir === 'asc' ? ' ▲' : ' ▼'}</span>}
     </th>
   );
 }
@@ -254,24 +254,24 @@ function PuntiScatterChart({ rows }: { rows: Row[] }) {
   };
 
   return (
-    <div className="scatter-chart-wrapper">
-      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Punti reali vs punti stimati per ogni pezzo" className="scatter-chart">
+    <div className="mb-5 rounded-md border border-slate-700 bg-slate-900 p-3">
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Punti reali vs punti stimati per ogni pezzo" className="h-auto max-h-[360px] w-full">
         {/* gridlines + axis ticks */}
         {tickValues.map((t) => (
           <g key={t}>
-            <line x1={x(t)} y1={margin.top} x2={x(t)} y2={margin.top + plotHeight} className="scatter-gridline" />
-            <line x1={margin.left} y1={y(t)} x2={margin.left + plotWidth} y2={y(t)} className="scatter-gridline" />
-            <text x={x(t)} y={margin.top + plotHeight + 16} className="scatter-tick-label" textAnchor="middle">{t}</text>
-            <text x={margin.left - 8} y={y(t) + 3} className="scatter-tick-label" textAnchor="end">{t}</text>
+            <line x1={x(t)} y1={margin.top} x2={x(t)} y2={margin.top + plotHeight} className="stroke-slate-800 stroke-1" />
+            <line x1={margin.left} y1={y(t)} x2={margin.left + plotWidth} y2={y(t)} className="stroke-slate-800 stroke-1" />
+            <text x={x(t)} y={margin.top + plotHeight + 16} className="fill-slate-500 text-[9px]" textAnchor="middle">{t}</text>
+            <text x={margin.left - 8} y={y(t) + 3} className="fill-slate-500 text-[9px]" textAnchor="end">{t}</text>
           </g>
         ))}
 
         {/* axis labels */}
-        <text x={margin.left + plotWidth / 2} y={height - 4} className="scatter-axis-label" textAnchor="middle">Punti reali</text>
-        <text x={12} y={margin.top + plotHeight / 2} className="scatter-axis-label" textAnchor="middle" transform={`rotate(-90 12 ${margin.top + plotHeight / 2})`}>Punti stimati</text>
+        <text x={margin.left + plotWidth / 2} y={height - 4} className="fill-slate-400 text-[10px]" textAnchor="middle">Punti reali</text>
+        <text x={12} y={margin.top + plotHeight / 2} className="fill-slate-400 text-[10px]" textAnchor="middle" transform={`rotate(-90 12 ${margin.top + plotHeight / 2})`}>Punti stimati</text>
 
         {/* y = x reference line (perfect estimate) */}
-        <line x1={x(0)} y1={y(0)} x2={x(maxValue)} y2={y(maxValue)} className="scatter-reference-line" />
+        <line x1={x(0)} y1={y(0)} x2={x(maxValue)} y2={y(maxValue)} className="stroke-slate-600 stroke-[1.5] [stroke-dasharray:4_4]" />
 
         {/* confidence interval bands, drawn before the markers so they sit underneath them */}
         {rows.map(({ piece, estimate }) => (
@@ -281,7 +281,7 @@ function PuntiScatterChart({ rows }: { rows: Row[] }) {
             y1={y(estimate.confidenceInterval.low)}
             x2={x(piece.punti)}
             y2={y(estimate.confidenceInterval.high)}
-            className="scatter-error-band"
+            className="stroke-slate-600 stroke-[3] opacity-50 [stroke-linecap:round]"
           />
         ))}
 
@@ -297,7 +297,7 @@ function PuntiScatterChart({ rows }: { rows: Row[] }) {
               key={piece.sigla}
               onMouseEnter={() => setHovered(piece.sigla)}
               onMouseLeave={() => setHovered((h) => (h === piece.sigla ? null : h))}
-              className="scatter-point-group"
+              className="cursor-pointer"
             >
               <title>{`${piece.sigla} — reali: ${piece.punti}, stimati: ${estimate.suggestedPunti} (intervallo ${estimate.confidenceInterval.low}–${estimate.confidenceInterval.high})${lowConfidence ? ' (bassa confidenza)' : ''}`}</title>
               {lowConfidence ? (
@@ -308,7 +308,7 @@ function PuntiScatterChart({ rows }: { rows: Row[] }) {
                   height={10}
                   transform={`rotate(45 ${cx} ${cy})`}
                   fill={statusColor[status]}
-                  className="scatter-point"
+                  className="transition-opacity"
                   opacity={isHovered ? 1 : 0.85}
                   stroke={isHovered ? '#f8fafc' : 'none'}
                   strokeWidth={1.5}
@@ -319,7 +319,7 @@ function PuntiScatterChart({ rows }: { rows: Row[] }) {
                   cy={cy}
                   r={5}
                   fill={statusColor[status]}
-                  className="scatter-point"
+                  className="transition-opacity"
                   opacity={isHovered ? 1 : 0.85}
                   stroke={isHovered ? '#f8fafc' : 'none'}
                   strokeWidth={1.5}
@@ -329,13 +329,13 @@ function PuntiScatterChart({ rows }: { rows: Row[] }) {
           );
         })}
       </svg>
-      <div className="scatter-legend">
-        <span className="scatter-legend-item"><span className="scatter-legend-swatch" style={{ background: statusColor.close }} /> vicino (±{CLOSE_ENOUGH_ABS_DIFF})</span>
-        <span className="scatter-legend-item"><span className="scatter-legend-swatch" style={{ background: statusColor.over }} /> sovrastimato</span>
-        <span className="scatter-legend-item"><span className="scatter-legend-swatch" style={{ background: statusColor.under }} /> sottostimato</span>
-        <span className="scatter-legend-item"><span className="scatter-legend-shape scatter-legend-shape-diamond" /> bassa confidenza (1 esempio)</span>
-        <span className="scatter-legend-item"><span className="scatter-legend-shape scatter-legend-shape-circle" /> confidenza normale</span>
-        <span className="scatter-legend-item"><span className="scatter-legend-band" /> intervallo plausibile (± errore di validazione incrociata)</span>
+      <div className="mt-2.5 flex flex-wrap gap-3.5 text-[0.72rem] text-slate-400">
+        <span className="flex items-center gap-1.5"><span className="inline-block size-2.5 rounded-sm" style={{ background: statusColor.close }} /> vicino (±{CLOSE_ENOUGH_ABS_DIFF})</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block size-2.5 rounded-sm" style={{ background: statusColor.over }} /> sovrastimato</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block size-2.5 rounded-sm" style={{ background: statusColor.under }} /> sottostimato</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block size-2.5 rotate-45 bg-slate-400" /> bassa confidenza (1 esempio)</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block size-2.5 rounded-full bg-slate-400" /> confidenza normale</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block h-0.5 w-3.5 rounded-sm bg-slate-600 opacity-70" /> intervallo plausibile (± errore di validazione incrociata)</span>
       </div>
     </div>
   );
@@ -376,123 +376,117 @@ function PuntiEstimatorScreen() {
   };
 
   return (
-    <div className="app">
-      <header className="header">
-        <div>
-          <h1>📊 Stima punti pezzi</h1>
-          <p className="subtitle">Punti reali vs. punti suggeriti dall'algoritmo di stima</p>
+    <PageShell
+      title="📊 Stima punti pezzi"
+      subtitle="Punti reali vs. punti suggeriti dall'algoritmo di stima"
+      actions={<Button variant="secondary" onClick={() => navigate('/')}>← Torna alla Home</Button>}
+    >
+      <Panel>
+        <div className="mb-4 flex flex-wrap gap-5 text-sm text-slate-400">
+          <span>Errore medio assoluto: <strong className="text-slate-100">{quality.meanAbsoluteError.toFixed(1)} pt</strong></span>
+          <span>Errore percentuale medio: <strong className="text-slate-100">{(quality.meanAbsolutePercentError * 100).toFixed(0)}%</strong></span>
+          <span>
+            Peggiori stime: <strong className="text-slate-100">{quality.worstFits.map((f) => `${f.sigla} (${f.actual}→${f.suggested})`).join(', ')}</strong>
+          </span>
         </div>
-        <button className="btn-reset" onClick={() => navigate('/')}>← Torna alla Home</button>
-      </header>
+        <p className="mb-4 text-[0.8rem] text-slate-500">
+          L'algoritmo è un modello statistico (regressione ridge, con penalità scelta per validazione incrociata
+          leave-one-out) calibrato sul roster attuale. È un punto di partenza per la revisione manuale, non un
+          valore definitivo — i pezzi con meccaniche speciali (aure, danno ad area, ecc.) hanno una sola voce di
+          esempio nel roster, quindi il loro bonus viene tirato verso la media globale delle meccaniche
+          (shrinkage) e resta meno affidabile di quello dei pezzi di puro movimento (vedi badge "⚠ 1 esempio" in
+          tabella e il pannello di trasparenza qui sotto).
+        </p>
 
-      <div className="main" style={{ gridTemplateColumns: '1fr' }}>
-        <div className="panel">
-          <div className="fit-quality-summary">
-            <span>Errore medio assoluto: <strong>{quality.meanAbsoluteError.toFixed(1)} pt</strong></span>
-            <span>Errore percentuale medio: <strong>{(quality.meanAbsolutePercentError * 100).toFixed(0)}%</strong></span>
-            <span>
-              Peggiori stime: <strong>{quality.worstFits.map((f) => `${f.sigla} (${f.actual}→${f.suggested})`).join(', ')}</strong>
-            </span>
-          </div>
-          <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '16px' }}>
-            L'algoritmo è un modello statistico (regressione ridge, con penalità scelta per validazione incrociata
-            leave-one-out) calibrato sul roster attuale. È un punto di partenza per la revisione manuale, non un
-            valore definitivo — i pezzi con meccaniche speciali (aure, danno ad area, ecc.) hanno una sola voce di
-            esempio nel roster, quindi il loro bonus viene tirato verso la media globale delle meccaniche
-            (shrinkage) e resta meno affidabile di quello dei pezzi di puro movimento (vedi badge "⚠ 1 esempio" in
-            tabella e il pannello di trasparenza qui sotto).
-          </p>
+        <ModelTransparencyPanel />
 
-          <ModelTransparencyPanel />
+        <PieceDesignerPanel />
 
-          <PieceDesignerPanel />
+        <PuntiScatterChart rows={allRows} />
 
-          <PuntiScatterChart rows={allRows} />
-
-          <div className="punti-controls">
+        <div className="mb-3 flex flex-wrap items-center gap-4">
+          <input
+            type="text"
+            className={cn(inputClass, 'min-w-[220px]')}
+            placeholder="Filtra per sigla o nome…"
+            value={filterText}
+            onChange={(e) => setFilterText(e.target.value)}
+          />
+          <label className="flex cursor-pointer items-center gap-1.5 text-[0.82rem] text-slate-400">
             <input
-              type="text"
-              className="punti-filter-input"
-              placeholder="Filtra per sigla o nome…"
-              value={filterText}
-              onChange={(e) => setFilterText(e.target.value)}
+              type="checkbox"
+              checked={lowConfidenceOnly}
+              onChange={(e) => setLowConfidenceOnly(e.target.checked)}
             />
-            <label className="punti-low-confidence-toggle">
-              <input
-                type="checkbox"
-                checked={lowConfidenceOnly}
-                onChange={(e) => setLowConfidenceOnly(e.target.checked)}
-              />
-              Mostra solo bassa confidenza
-            </label>
-          </div>
+            Mostra solo bassa confidenza
+          </label>
+        </div>
 
-          <div className="punti-table-wrapper">
-            <table className="punti-table">
-              <thead>
-                <tr>
-                  <SortableHeader label="Sigla" sortKey="sigla" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
-                  <th>Nome</th>
-                  <SortableHeader label="Punti reali" sortKey="actual" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
-                  <th>Punti stimati</th>
-                  <SortableHeader label="Differenza" sortKey="diff" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
-                  <th>Dettaglio stima</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleRows.map(({ piece, estimate }) => {
-                  const isExpanded = expandedSigla === piece.sigla;
-                  return (
-                    <Fragment key={piece.sigla}>
-                      <tr>
-                        <td className="sigla-cell">{piece.sigla}</td>
-                        <td>{piece.descrizione}</td>
-                        <td>{piece.punti}</td>
-                        <td>{estimate.suggestedPunti}</td>
-                        <td>
-                          <span className={`punti-diff ${diffBadgeClass(piece.punti, estimate.suggestedPunti)}`}>
-                            {formatDiff(piece.punti, estimate.suggestedPunti)}
-                          </span>
-                        </td>
-                        <td className="breakdown-cell">
-                          <button
-                            type="button"
-                            className="breakdown-toggle-btn"
-                            onClick={() => setExpandedSigla((current) => (current === piece.sigla ? null : piece.sigla))}
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr>
+                <SortableHeader label="Sigla" sortKey="sigla" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+                <th className="whitespace-nowrap border-b border-slate-700 px-2.5 py-2 text-left font-semibold text-slate-400">Nome</th>
+                <SortableHeader label="Punti reali" sortKey="actual" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+                <th className="whitespace-nowrap border-b border-slate-700 px-2.5 py-2 text-left font-semibold text-slate-400">Punti stimati</th>
+                <SortableHeader label="Differenza" sortKey="diff" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+                <th className="whitespace-nowrap border-b border-slate-700 px-2.5 py-2 text-left font-semibold text-slate-400">Dettaglio stima</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visibleRows.map(({ piece, estimate }) => {
+                const isExpanded = expandedSigla === piece.sigla;
+                return (
+                  <Fragment key={piece.sigla}>
+                    <tr className="hover:bg-slate-900">
+                      <td className="border-b border-slate-800 px-2.5 py-2 align-top font-bold text-slate-50">{piece.sigla}</td>
+                      <td className="border-b border-slate-800 px-2.5 py-2 align-top">{piece.descrizione}</td>
+                      <td className="border-b border-slate-800 px-2.5 py-2 align-top">{piece.punti}</td>
+                      <td className="border-b border-slate-800 px-2.5 py-2 align-top">{estimate.suggestedPunti}</td>
+                      <td className="border-b border-slate-800 px-2.5 py-2 align-top">
+                        <span className={cn('whitespace-nowrap rounded px-2 py-0.5 text-[0.8rem] font-semibold', diffBadgeClass(piece.punti, estimate.suggestedPunti))}>
+                          {formatDiff(piece.punti, estimate.suggestedPunti)}
+                        </span>
+                      </td>
+                      <td className="border-b border-slate-800 px-2.5 py-2 align-top text-[0.72rem] leading-snug text-slate-500">
+                        <button
+                          type="button"
+                          className="cursor-pointer rounded bg-slate-800 px-2 py-0.5 text-[0.72rem] text-sky-300 hover:bg-slate-700"
+                          onClick={() => setExpandedSigla((current) => (current === piece.sigla ? null : piece.sigla))}
+                        >
+                          {isExpanded ? '▲ nascondi' : '▼ dettagli'}
+                        </button>
+                        {estimate.breakdown.mechanicConfidence === 'low' && (
+                          <span
+                            className="ml-1.5 inline-block cursor-help whitespace-nowrap rounded-sm bg-amber-950 px-1.5 py-0.5 text-[0.68rem] font-semibold text-amber-400"
+                            title={`Bonus basato su un solo esempio nel roster: ${estimate.breakdown.lowConfidenceMechanics.join(', ')}`}
                           >
-                            {isExpanded ? '▲ nascondi' : '▼ dettagli'}
-                          </button>
-                          {estimate.breakdown.mechanicConfidence === 'low' && (
-                            <span
-                              className="low-confidence-badge"
-                              title={`Bonus basato su un solo esempio nel roster: ${estimate.breakdown.lowConfidenceMechanics.join(', ')}`}
-                            >
-                              ⚠ 1 esempio
-                            </span>
-                          )}
+                            ⚠ 1 esempio
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                    {isExpanded && (
+                      <tr className="bg-slate-900">
+                        <td colSpan={6} className="px-2.5 py-3">
+                          <BreakdownBarChart estimate={estimate} />
                         </td>
                       </tr>
-                      {isExpanded && (
-                        <tr className="breakdown-detail-row">
-                          <td colSpan={6}>
-                            <BreakdownBarChart estimate={estimate} />
-                          </td>
-                        </tr>
-                      )}
-                    </Fragment>
-                  );
-                })}
-                {visibleRows.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="punti-table-empty">Nessun pezzo corrisponde al filtro.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                    )}
+                  </Fragment>
+                );
+              })}
+              {visibleRows.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="py-5 text-center text-slate-500">Nessun pezzo corrisponde al filtro.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
-      </div>
-    </div>
+      </Panel>
+    </PageShell>
   );
 }
 

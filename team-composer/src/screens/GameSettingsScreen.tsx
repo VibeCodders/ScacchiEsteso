@@ -2,7 +2,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGameSetup } from '../context/gameSetup';
 import { MIN_BOARD_DIMENSION, type BoardDimensions } from '../game/board';
-import '../App.css';
+import Button from '../components/ui/Button';
+import Field, { inputClass } from '../components/ui/Field';
+import PageShell from '../components/ui/PageShell';
+import Panel from '../components/ui/Panel';
+import { cn } from '../lib/cn';
 
 function GameSettingsScreen() {
   const navigate = useNavigate();
@@ -32,82 +36,83 @@ function GameSettingsScreen() {
   };
 
   return (
-    <div className="app">
-      <header className="header">
-        <div>
-          <h1>⚙️ Impostazioni partita</h1>
-          <p className="subtitle">Dimensione della scacchiera e limiti opzionali per questa partita</p>
-        </div>
-      </header>
-
-      <div className="main" style={{ gridTemplateColumns: '1fr', justifyItems: 'center', paddingTop: '2rem' }}>
-        <div className="panel" style={{ maxWidth: 480 }}>
-          <h2>📐 Dimensione scacchiera</h2>
-          <p style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
-            Minimo {MIN_BOARD_DIMENSION}×{MIN_BOARD_DIMENSION}. Il budget e il numero massimo di pezzi si adattano
-            proporzionalmente all'area della scacchiera (166pt/16 pezzi restano invariati su 8×8).
-          </p>
-          <div className="actions" style={{ alignItems: 'center' }}>
-            <label htmlFor="board-width">Larghezza</label>
+    <PageShell
+      title="⚙️ Impostazioni partita"
+      subtitle="Dimensione della scacchiera e limiti opzionali per questa partita"
+      layout="center"
+    >
+      <Panel title="📐 Dimensione scacchiera" className="w-full max-w-[480px]">
+        <p className="text-sm text-slate-400">
+          Minimo {MIN_BOARD_DIMENSION}×{MIN_BOARD_DIMENSION}. Il budget e il numero massimo di pezzi si adattano
+          proporzionalmente all'area della scacchiera (166pt/16 pezzi restano invariati su 8×8).
+        </p>
+        <div className="mt-3 flex items-end gap-4">
+          <Field label="Larghezza" htmlFor="board-width">
             <input
               id="board-width"
               type="number"
               min={MIN_BOARD_DIMENSION}
               value={width}
               onChange={(e) => setWidth(Number(e.target.value))}
-              style={{ width: '4rem' }}
+              className={cn(inputClass, 'w-16')}
             />
-            <label htmlFor="board-height">Altezza</label>
+          </Field>
+          <Field label="Altezza" htmlFor="board-height">
             <input
               id="board-height"
               type="number"
               min={MIN_BOARD_DIMENSION}
               value={height}
               onChange={(e) => setHeight(Number(e.target.value))}
-              style={{ width: '4rem' }}
+              className={cn(inputClass, 'w-16')}
+            />
+          </Field>
+        </div>
+        {!widthValid && <p className="mt-2 text-sm text-red-400">Larghezza non valida (minimo {MIN_BOARD_DIMENSION}).</p>}
+        {!heightValid && <p className="mt-2 text-sm text-red-400">Altezza non valida (minimo {MIN_BOARD_DIMENSION}).</p>}
+
+        <div className="mt-4">
+          <Button
+            variant={width === 8 && height === 8 ? 'primary' : 'auto'}
+            className="w-full"
+            onClick={() => { setWidth(8); setHeight(8); }}
+          >
+            8×8 (classica)
+          </Button>
+        </div>
+      </Panel>
+
+      <Panel title="🧩 Limite tipi di pezzi speciali" className="w-full max-w-[480px]">
+        <p className="text-sm text-slate-400">
+          Limita quanti tipi <em>diversi</em> di pezzi non classici ogni team può includere — le copie dello
+          stesso tipo contano una volta sola (es. con limite 2: 3 Colossi + 1 Necromante restano validi).
+        </p>
+        <div className="mt-3 flex flex-col gap-2">
+          <Button variant={!limitEnabled ? 'primary' : 'auto'} className="w-full" onClick={() => setLimitEnabled(false)}>
+            Nessun limite
+          </Button>
+          <div className="flex items-center gap-3">
+            <Button variant={limitEnabled ? 'primary' : 'auto'} className="flex-1" onClick={() => setLimitEnabled(true)}>
+              Limita a:
+            </Button>
+            <input
+              type="number"
+              min={1}
+              value={limitValue}
+              disabled={!limitEnabled}
+              onChange={(e) => setLimitValue(Number(e.target.value))}
+              className={cn(inputClass, 'w-16')}
             />
           </div>
-          {!widthValid && <p style={{ color: '#f87171' }}>Larghezza non valida (minimo {MIN_BOARD_DIMENSION}).</p>}
-          {!heightValid && <p style={{ color: '#f87171' }}>Altezza non valida (minimo {MIN_BOARD_DIMENSION}).</p>}
-
-          <div className="actions" style={{ flexDirection: 'column' }}>
-            <button className={width === 8 && height === 8 ? 'btn-save' : 'btn-auto'} onClick={() => { setWidth(8); setHeight(8); }}>
-              8×8 (classica)
-            </button>
-          </div>
-
-          <h2>🧩 Limite tipi di pezzi speciali</h2>
-          <p style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
-            Limita quanti tipi <em>diversi</em> di pezzi non classici ogni team può includere — le copie dello
-            stesso tipo contano una volta sola (es. con limite 2: 3 Colossi + 1 Necromante restano validi).
-          </p>
-          <div className="actions" style={{ flexDirection: 'column' }}>
-            <button className={!limitEnabled ? 'btn-save' : 'btn-auto'} onClick={() => setLimitEnabled(false)}>
-              Nessun limite
-            </button>
-            <div className="actions" style={{ alignItems: 'center' }}>
-              <button className={limitEnabled ? 'btn-save' : 'btn-auto'} onClick={() => setLimitEnabled(true)}>
-                Limita a:
-              </button>
-              <input
-                type="number"
-                min={1}
-                value={limitValue}
-                disabled={!limitEnabled}
-                onChange={(e) => setLimitValue(Number(e.target.value))}
-                style={{ width: '4rem' }}
-              />
-            </div>
-          </div>
-
-          <div className="actions" style={{ justifyContent: 'center', paddingTop: '1rem' }}>
-            <button className="btn-save" disabled={!canContinue} onClick={handleContinue}>
-              {canContinue ? 'Continua →' : '✗ Impostazioni non valide'}
-            </button>
-          </div>
         </div>
-      </div>
-    </div>
+
+        <div className="mt-5 flex justify-center border-t border-slate-700 pt-4">
+          <Button variant="primary" disabled={!canContinue} onClick={handleContinue}>
+            {canContinue ? 'Continua →' : '✗ Impostazioni non valide'}
+          </Button>
+        </div>
+      </Panel>
+    </PageShell>
   );
 }
 

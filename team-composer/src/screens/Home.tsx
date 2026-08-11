@@ -1,7 +1,9 @@
 import { useNavigate } from 'react-router-dom';
 import { useGameSetup } from '../context/gameSetup';
 import type { Owner } from '../game/board';
-import '../App.css';
+import Button from '../components/ui/Button';
+import PageShell from '../components/ui/PageShell';
+import Panel from '../components/ui/Panel';
 
 function Home() {
   const navigate = useNavigate();
@@ -21,44 +23,34 @@ function Home() {
   };
 
   return (
-    <div className="app">
-      <header className="header">
-        <div>
-          <h1>♟️ Scacchi Esteso</h1>
-          <p className="subtitle">Scegli come giocare</p>
+    <PageShell title="♟️ Scacchi Esteso" subtitle="Scegli come giocare" layout="center">
+      <Panel title="🎮 Modalità" className="w-full max-w-[480px]">
+        <div className="flex flex-col gap-2">
+          <Button variant="primary" onClick={startPvp}>
+            PvP locale (stesso dispositivo)
+          </Button>
+          <Button variant="auto" onClick={() => startPvc('A')}>
+            PvC — gioco come Giocatore A (muovo per primo)
+          </Button>
+          <Button variant="auto" onClick={() => startPvc('B')}>
+            PvC — gioco come Giocatore B (muovo per secondo)
+          </Button>
         </div>
-      </header>
-      <div className="main" style={{ gridTemplateColumns: '1fr', justifyItems: 'center', paddingTop: '2rem' }}>
-        <div className="panel" style={{ maxWidth: 480 }}>
-          <h2>🎮 Modalità</h2>
-          <div className="actions" style={{ flexDirection: 'column' }}>
-            <button className="btn-save" onClick={startPvp}>
-              PvP locale (stesso dispositivo)
-            </button>
-            <button className="btn-auto" onClick={() => startPvc('A')}>
-              PvC — gioco come Giocatore A (muovo per primo)
-            </button>
-            <button className="btn-auto" onClick={() => startPvc('B')}>
-              PvC — gioco come Giocatore B (muovo per secondo)
-            </button>
-          </div>
+      </Panel>
+      <Panel title="📖 Impara" className="w-full max-w-[480px]">
+        <div className="flex flex-col gap-2">
+          <Button variant="improve" onClick={() => navigate('/pieces')}>
+            Enciclopedia dei pezzi
+          </Button>
+          <Button variant="improve" onClick={() => navigate('/punti-estimator')}>
+            📊 Stima punti pezzi
+          </Button>
+          <Button variant="improve" onClick={() => navigate('/pezzi-simili')}>
+            🧬 Pezzi simili
+          </Button>
         </div>
-        <div className="panel" style={{ maxWidth: 480 }}>
-          <h2>📖 Impara</h2>
-          <div className="actions" style={{ flexDirection: 'column' }}>
-            <button className="btn-improve" onClick={() => navigate('/pieces')}>
-              Enciclopedia dei pezzi
-            </button>
-            <button className="btn-improve" onClick={() => navigate('/punti-estimator')}>
-              📊 Stima punti pezzi
-            </button>
-            <button className="btn-improve" onClick={() => navigate('/pezzi-simili')}>
-              🧬 Pezzi simili
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+      </Panel>
+    </PageShell>
   );
 }
 

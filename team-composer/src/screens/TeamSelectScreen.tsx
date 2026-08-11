@@ -2,22 +2,20 @@ import { useState, useCallback, useMemo } from 'react';
 import { pieces, pickablePieces, rules, sortByPunti, scaleRulesForBoardSize, KING_SIGLA } from '../data/pieces';
 import { autoFillTeam, improveTeam } from '../data/optimizer';
 import { getMaxIdenticalBySigla, countByCategory, computeValidation } from '../data/validators';
-import { ACTION_LABELS } from '../data/actionLabels';
 import { emptyTeam, type TeamMap } from '../context/gameSetup';
 import { DEFAULT_BOARD_DIMENSIONS, type BoardDimensions } from '../game/board';
 import type { Piece, TeamMember } from '../types';
-import '../App.css';
+import Button from '../components/ui/Button';
+import Badge from '../components/ui/Badge';
+import PageShell from '../components/ui/PageShell';
+import Panel from '../components/ui/Panel';
+import PieceCard from '../components/ui/PieceCard';
+import { ToastContainer } from '../components/ui/Toasts';
+import { useToasts } from '../components/ui/useToasts';
+import { cn } from '../lib/cn';
 
 function getMaxIdentical(sigla: string): number {
   return getMaxIdenticalBySigla(sigla, pieces, rules);
-}
-
-type ToastType = 'info' | 'success' | 'warning' | 'error';
-
-interface Toast {
-  message: string;
-  type: ToastType;
-  id: number;
 }
 
 export interface TeamSelectScreenProps {
@@ -32,25 +30,31 @@ export interface TeamSelectScreenProps {
   boardDimensions?: BoardDimensions;
 }
 
+type Filter = 'all' | 'classico' | 'speciale';
+
+const FILTERS: Array<{ id: Filter; label: string }> = [
+  { id: 'all', label: 'Tutti' },
+  { id: 'classico', label: 'Classici' },
+  { id: 'speciale', label: 'Speciali' },
+];
+
+const VALIDATION_LEVEL_CLASSES: Record<string, string> = {
+  error: 'bg-red-950 text-red-300',
+  warning: 'bg-amber-950 text-amber-200',
+  success: 'bg-green-950 text-green-300',
+};
+
 function TeamSelectScreen({
   title, subtitle, initialTeam, completeButtonLabel, onComplete,
   maxDistinctSpecialTypes = null, boardDimensions = DEFAULT_BOARD_DIMENSIONS,
 }: TeamSelectScreenProps) {
   const [team, setTeam] = useState<TeamMap>(() => (initialTeam ? new Map(initialTeam) : emptyTeam()));
-  const [filter, setFilter] = useState<string>('all');
-  const [toasts, setToasts] = useState<Toast[]>([]);
+  const [filter, setFilter] = useState<Filter>('all');
+  const { toasts, addToast } = useToasts();
 
   const effectiveRules = useMemo(() => scaleRulesForBoardSize(rules, boardDimensions), [boardDimensions]);
   const BUDGET = effectiveRules.budget;
   const MAX_PIECES_TOTAL = effectiveRules.maxPiecesTotal;
-
-  const addToast = useCallback((message: string, type: ToastType) => {
-    const id = Date.now();
-    setToasts((prev) => [...prev, { message, type, id }]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 4000);
-  }, []);
 
   const handleAutoFill = useCallback(() => {
     const result = autoFillTeam(team, effectiveRules, maxDistinctSpecialTypes);
@@ -153,228 +157,186 @@ function TeamSelectScreen({
     filter === 'all' ? pickablePieces : pickablePieces.filter((p: Piece) => p.classico === (filter === 'classico')),
   );
 
-  const getCostClass = (cost: number) => {
-    if (cost === 0) return 'cost-free';
-    if (cost <= 10) return 'cost-low';
-    if (cost <= 25) return 'cost-med';
-    return 'cost-high';
-  };
+  const summaryRows = [
+    { label: 'Pezzi totali', value: `${totalPieces} (max ${MAX_PIECES_TOTAL})`, tone: totalPieces <= MAX_PIECES_TOTAL ? 'ok' : 'err' },
+    { label: 'Pedoni', value: `${totalPawns}/${rules.maxCountByCategory.pedone}`, tone: validation.maxPawns.valid ? 'ok' : 'err' },
+    { label: 'Re', value: hasKing ? '✓ Presente' : '✗ Mancante', tone: hasKing ? 'ok' : 'err' },
+    { label: 'Budget speso', value: `${budgetSpent}/${BUDGET}`, tone: budgetOk ? 'ok' : 'err' },
+    { label: 'Budget residuo', value: `${budgetRemaining}`, tone: budgetRemaining < 0 ? 'err' : budgetRemaining === 0 ? 'ok' : 'warn' },
+  ] as const;
 
-  // Movement/capture quirks and the Golem's armatura — the special ACTIONS themselves (scocca,
-  // egida, sdoppiamento, riunione, …) come from `alternativeActions` below, with the same labels
-  // the encyclopedia uses, so no piece's abilities are duplicated or forgotten.
-  const flagLabels: Record<string, string> = {
-    saltaInterposizioni: 'Salta interposizioni',
-    catturaSoloInMischia: 'Solo mischia',
-    catturaADistanza: 'A distanza',
-    armatura: 'Armatura',
-  };
-
-  const activeFlags = (piece: Piece) => {
-    const flags: string[] = [];
-    for (const [key, label] of Object.entries(flagLabels)) {
-      if (piece[key as keyof Piece]) flags.push(label);
-    }
-    return flags;
-  };
-
-  /** Special-action badges: one per `alternativeActions` entry (e.g. Sdoppiamento + Riunione for
-   *  the Miraggio), labeled exactly like the encyclopedia's "Azioni speciali" section. */
-  const actionBadges = (piece: Piece) =>
-    piece.alternativeActions.map((action) => ACTION_LABELS[action.type] ?? action.type);
-
-  const renderMoves = (piece: Piece) => {
-    if (!piece.moves || piece.moves.length === 0) return null;
-    return (
-      <div className="moves-info">
-        {piece.moves.map((move, idx) => (
-          <span key={idx} className="move-item">
-            <span className="move-dir">{move.directions.join(',')}</span>
-            <span className="move-step">{move.maxSteps === 99 ? '∞' : move.maxSteps}</span>
-            {move.capture && <span className="move-capture">✦</span>}
-            {move.jump && <span className="move-jump">⭮</span>}
-          </span>
-        ))}
-      </div>
-    );
-  };
+  const validationItems = [
+    validation.budget,
+    validation.totalPieces,
+    validation.maxFive,
+    validation.maxPawns,
+    validation.hasKing,
+    validation.kingCount,
+    ...(maxDistinctSpecialTypes != null ? [validation.specialTypesLimit] : []),
+  ];
 
   return (
-    <div className="app">
-      <header className="header">
-        <div>
-          <h1>⚔️ {title}</h1>
-          <p className="subtitle">{subtitle ?? `Scacchi Esteso — Budget ${BUDGET} punti`}</p>
-        </div>
-        <div className="budget-badge">
-          <span className="label">Budget:</span>
-          <span className={`value ${budgetOk ? 'ok' : 'err'}`}>
-            {budgetSpent}/{BUDGET}
-          </span>
-        </div>
-      </header>
-
-      <div className="main">
-        <div className="panel">
-          <h2>📦 Roster Pezzi</h2>
-          <div className="piece-filter">
-            <button className={`filter-btn ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')}>Tutti</button>
-            <button className={`filter-btn ${filter === 'classico' ? 'active' : ''}`} onClick={() => setFilter('classico')}>Classici</button>
-            <button className={`filter-btn ${filter === 'speciale' ? 'active' : ''}`} onClick={() => setFilter('speciale')}>Speciali</button>
-          </div>
-          <div className="piece-grid">
-            {filteredPieces.map((piece: Piece) => {
-              const currentCount = team.get(piece.sigla) ?? 0;
-              const maxForPiece = getMaxIdentical(piece.sigla);
-              const isMaxed = currentCount >= maxForPiece;
-              const isKing = piece.sigla === KING_SIGLA;
-              return (
-                <div
-                  key={piece.sigla}
-                  className={`piece-card ${currentCount > 0 ? 'selected' : ''}`}
-                  onClick={() => !isMaxed && !isKing && addPiece(piece)}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`Aggiungi ${piece.descrizione}`}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (!isMaxed && !isKing) addPiece(piece); } }}
-                >
-                  <div className="piece-header">
-                    <span className="sigla">{piece.sigla}</span>
-                    <span className={`cost ${getCostClass(piece.punti)}`}>{piece.punti} pt</span>
-                  </div>
-                  <span className="desc">{piece.descrizione}</span>
-                  <span className="regole">{piece.regole}</span>
-                  {renderMoves(piece)}
-                  {(() => {
-                    const badges = [...activeFlags(piece), ...actionBadges(piece)];
-                    return badges.length > 0 ? (
-                      <div className="flags">
-                        {badges.map((b) => (
-                          <span key={b} className="flag-badge">{b}</span>
-                        ))}
-                      </div>
-                    ) : null;
-                  })()}
-                  {piece.noteCondizionali && <div className="note-cond">{piece.noteCondizionali}</div>}
-                  {currentCount > 0 && (
-                    <span style={{ fontSize: '0.75rem', color: '#60a5fa' }}>
-                      Nel team: {currentCount}/{maxForPiece}
-                    </span>
-                  )}
-                  {isMaxed && <span style={{ fontSize: '0.75rem', color: '#f87171' }}>Limite raggiunto</span>}
-                  {isKing && <span style={{ fontSize: '0.75rem', color: '#fbbf24' }}>Gratuito — obbligatorio</span>}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="panel composer-panel">
-          <h2>🎯 Team Attuale</h2>
-
-          {teamMembers.length === 0 ? (
-            <div className="empty-state">Il Re è obbligatorio e viene sempre incluso nel team.<br />Aggiungi altri pezzi per completare il team.</div>
-          ) : (
-            <>
-              <div className="team-list">
-                {teamMembers.map(({ piece, count }) => {
-                  const isKing = piece.sigla === KING_SIGLA;
-                  return (
-                    <div key={piece.sigla} className={`team-member ${isKing ? 'king-member' : ''}`}>
-                      <div className="member-info">
-                        <span className="member-sigla">{piece.sigla}</span>
-                        <span className="member-name">{piece.descrizione}</span>
-                        <span className="member-cost">{piece.punti}pt × {count} = {piece.punti * count}</span>
-                      </div>
-                      <div className="member-count">
-                        {!isKing && <button className="count-btn" onClick={() => removePiece(piece.sigla)} aria-label={`Rimuovi un ${piece.descrizione}`}>−</button>}
-                        <span className="count-num">{count}</span>
-                        {!isKing && <button className="count-btn" onClick={() => addPiece(piece)} aria-label={`Aggiungi un ${piece.descrizione}`} disabled={count >= getMaxIdentical(piece.sigla)}>+</button>}
-                        {!isKing && <button className="remove-btn" onClick={() => removeAll(piece.sigla)} aria-label={`Rimuovi tutti i ${piece.descrizione}`}>✕</button>}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="summary">
-                <div className="summary-row">
-                  <span className="label">Pezzi totali</span>
-                  <span className={`value ${totalPieces <= MAX_PIECES_TOTAL ? 'ok' : 'err'}`}>{totalPieces} (max {MAX_PIECES_TOTAL})</span>
-                </div>
-                <div className="summary-row">
-                  <span className="label">Pedoni</span>
-                  <span className={`value ${validation.maxPawns.valid ? 'ok' : 'err'}`}>{totalPawns}/{rules.maxCountByCategory.pedone}</span>
-                </div>
-                <div className="summary-row">
-                  <span className="label">Re</span>
-                  <span className={`value ${hasKing ? 'ok' : 'err'}`}>{hasKing ? '✓ Presente' : '✗ Mancante'}</span>
-                </div>
-                <div className="summary-row">
-                  <span className="label">Budget speso</span>
-                  <span className={`value ${budgetOk ? 'ok' : 'err'}`}>{budgetSpent}/{BUDGET}</span>
-                </div>
-                <div className="summary-row">
-                  <span className="label">Budget residuo</span>
-                  <span className={`value ${budgetRemaining < 0 ? 'err' : budgetRemaining === 0 ? 'ok' : 'warn'}`}>{budgetRemaining}</span>
-                </div>
-              </div>
-
-              <div className="validation">
-                <div className={`validation-item ${validation.budget.level}`}>
-                  <span className="icon">{validation.budget.valid ? '✓' : '✗'}</span>
-                  <span>{validation.budget.message}</span>
-                </div>
-                <div className={`validation-item ${validation.totalPieces.level}`}>
-                  <span className="icon">{validation.totalPieces.valid ? '✓' : '✗'}</span>
-                  <span>{validation.totalPieces.message}</span>
-                </div>
-                <div className={`validation-item ${validation.maxFive.level}`}>
-                  <span className="icon">{validation.maxFive.valid ? '✓' : '✗'}</span>
-                  <span>{validation.maxFive.message}</span>
-                </div>
-                <div className={`validation-item ${validation.maxPawns.level}`}>
-                  <span className="icon">{validation.maxPawns.valid ? '✓' : '✗'}</span>
-                  <span>{validation.maxPawns.message}</span>
-                </div>
-                <div className={`validation-item ${validation.hasKing.level}`}>
-                  <span className="icon">{validation.hasKing.valid ? '✓' : '✗'}</span>
-                  <span>{validation.hasKing.message}</span>
-                </div>
-                <div className={`validation-item ${validation.kingCount.level}`}>
-                  <span className="icon">{validation.kingCount.valid ? '✓' : '✗'}</span>
-                  <span>{validation.kingCount.message}</span>
-                </div>
-                {maxDistinctSpecialTypes != null && (
-                  <div className={`validation-item ${validation.specialTypesLimit.level}`}>
-                    <span className="icon">{validation.specialTypesLimit.valid ? '✓' : '✗'}</span>
-                    <span>{validation.specialTypesLimit.message}</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="actions">
-                <button className="btn-reset" onClick={resetTeam}>Reset Team</button>
-                <button className="btn-auto" onClick={handleAutoFill}>Completa</button>
-                <button className="btn-improve" onClick={handleImprove}>Migliora</button>
-                <button className="btn-save" disabled={!validation.overall} onClick={() => validation.overall && onComplete(team)}>
-                  {validation.overall ? (completeButtonLabel ?? '✓ Team Completo') : '✗ Vincoli non rispettati'}
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-      {toasts.length > 0 && (
-        <div className="toast-container">
-          {toasts.map((toast) => (
-            <div key={toast.id} className={`toast toast-${toast.type}`}>
-              {toast.message}
-            </div>
+    <PageShell
+      title={`⚔️ ${title}`}
+      subtitle={subtitle ?? `Scacchi Esteso — Budget ${BUDGET} punti`}
+      layout="two"
+      actions={
+        <Badge tone={budgetOk ? 'ok' : 'err'} className="text-base">
+          Budget: <span className="font-bold">{budgetSpent}/{BUDGET}</span>
+        </Badge>
+      }
+    >
+      <Panel title="📦 Roster Pezzi">
+        <div className="mb-3 flex flex-wrap gap-1.5">
+          {FILTERS.map((f) => (
+            <Button
+              key={f.id}
+              variant={filter === f.id ? 'primary' : 'ghost'}
+              className="px-2.5 py-1 text-xs"
+              onClick={() => setFilter(f.id)}
+            >
+              {f.label}
+            </Button>
           ))}
         </div>
-      )}
-    </div>
+        <div className="piece-grid grid max-h-[600px] grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-2.5 overflow-y-auto pr-1">
+          {filteredPieces.map((piece: Piece) => {
+            const currentCount = team.get(piece.sigla) ?? 0;
+            const maxForPiece = getMaxIdentical(piece.sigla);
+            const isMaxed = currentCount >= maxForPiece;
+            const isKing = piece.sigla === KING_SIGLA;
+            return (
+              <PieceCard
+                key={piece.sigla}
+                piece={piece}
+                selected={currentCount > 0}
+                role="button"
+                tabIndex={0}
+                aria-label={`Aggiungi ${piece.descrizione}`}
+                onClick={() => !isMaxed && !isKing && addPiece(piece)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    if (!isMaxed && !isKing) addPiece(piece);
+                  }
+                }}
+                footer={
+                  <>
+                    {currentCount > 0 && (
+                      <span className="text-[0.75rem] text-blue-400">Nel team: {currentCount}/{maxForPiece}</span>
+                    )}
+                    {isMaxed && <span className="text-[0.75rem] text-red-400">Limite raggiunto</span>}
+                    {isKing && <span className="text-[0.75rem] text-amber-400">Gratuito — obbligatorio</span>}
+                  </>
+                }
+              />
+            );
+          })}
+        </div>
+      </Panel>
+
+      <Panel title="🎯 Team Attuale" className="flex flex-col gap-4">
+        {teamMembers.length === 0 ? (
+          <div className="py-5 text-center text-sm text-slate-500">
+            Il Re è obbligatorio e viene sempre incluso nel team.<br />Aggiungi altri pezzi per completare il team.
+          </div>
+        ) : (
+          <>
+            <div className="team-list flex max-h-[400px] flex-col gap-1.5 overflow-y-auto">
+              {teamMembers.map(({ piece, count }) => {
+                const isKing = piece.sigla === KING_SIGLA;
+                return (
+                  <div
+                    key={piece.sigla}
+                    className={cn(
+                      'team-member flex items-center justify-between rounded-md border border-slate-700 bg-slate-900 px-3 py-2',
+                      isKing && 'border-amber-400 bg-[#1a1f0a]',
+                    )}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span className="member-sigla w-10 text-sm font-bold">{piece.sigla}</span>
+                      <span className="text-sm text-slate-300">{piece.descrizione}</span>
+                      <span className="text-[0.8rem] text-slate-400">{piece.punti}pt × {count} = {piece.punti * count}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {!isKing && (
+                        <button
+                          className="flex size-6 cursor-pointer items-center justify-center rounded border border-slate-600 bg-slate-800 text-sm text-slate-200 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
+                          onClick={() => removePiece(piece.sigla)}
+                          aria-label={`Rimuovi un ${piece.descrizione}`}
+                        >−</button>
+                      )}
+                      <span className="min-w-4 text-center text-sm font-semibold">{count}</span>
+                      {!isKing && (
+                        <button
+                          className="flex size-6 cursor-pointer items-center justify-center rounded border border-slate-600 bg-slate-800 text-sm text-slate-200 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
+                          onClick={() => addPiece(piece)}
+                          aria-label={`Aggiungi un ${piece.descrizione}`}
+                          disabled={count >= getMaxIdentical(piece.sigla)}
+                        >+</button>
+                      )}
+                      {!isKing && (
+                        <button
+                          className="cursor-pointer rounded p-0.5 text-base text-red-400 hover:bg-red-950/60"
+                          onClick={() => removeAll(piece.sigla)}
+                          aria-label={`Rimuovi tutti i ${piece.descrizione}`}
+                        >✕</button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex flex-col gap-2 rounded-lg border border-slate-700 bg-slate-900 p-3">
+              {summaryRows.map((row) => (
+                <div key={row.label} className="flex justify-between text-sm">
+                  <span className="text-slate-400">{row.label}</span>
+                  <span
+                    className={cn(
+                      'font-semibold',
+                      row.tone === 'ok' && 'text-emerald-400',
+                      row.tone === 'warn' && 'text-amber-400',
+                      row.tone === 'err' && 'text-red-400',
+                    )}
+                  >
+                    {row.value}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-1 flex flex-col gap-1">
+              {validationItems.map((item) => (
+                <div
+                  key={item.message}
+                  className={cn('flex items-center gap-1.5 rounded px-2 py-1 text-[0.8rem]', VALIDATION_LEVEL_CLASSES[item.level])}
+                >
+                  <span className="text-sm">{item.valid ? '✓' : '✗'}</span>
+                  <span>{item.message}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-2 flex gap-2">
+              <Button variant="secondary" className="flex-1" onClick={resetTeam}>Reset Team</Button>
+              <Button variant="auto" className="flex-1" onClick={handleAutoFill}>Completa</Button>
+              <Button variant="improve" className="flex-1" onClick={handleImprove}>Migliora</Button>
+              <Button
+                variant="primary"
+                className="flex-1"
+                disabled={!validation.overall}
+                onClick={() => validation.overall && onComplete(team)}
+              >
+                {validation.overall ? (completeButtonLabel ?? '✓ Team Completo') : '✗ Vincoli non rispettati'}
+              </Button>
+            </div>
+          </>
+        )}
+      </Panel>
+
+      <ToastContainer toasts={toasts} />
+    </PageShell>
   );
 }
 

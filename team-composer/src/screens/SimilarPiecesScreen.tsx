@@ -1,7 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { findSimilarPiecePairs, DEFAULT_SIMILARITY_THRESHOLD } from '../data/similarPieces';
-import '../App.css';
+import Button from '../components/ui/Button';
+import PageShell from '../components/ui/PageShell';
+import Panel from '../components/ui/Panel';
+import { cn } from '../lib/cn';
 
 function formatDiff(diff: number, siglaA: string, siglaB: string): string {
   const sign = diff > 0 ? '+' : '';
@@ -19,78 +22,73 @@ function SimilarPiecesScreen() {
   const visiblePairs = showingFallback ? pairs.slice(0, 10) : flagged;
 
   return (
-    <div className="app">
-      <header className="header">
-        <div>
-          <h1>🧬 Pezzi simili</h1>
-          <p className="subtitle">Coppie di pezzi con mobilità e meccaniche quasi identiche</p>
+    <PageShell
+      title="🧬 Pezzi simili"
+      subtitle="Coppie di pezzi con mobilità e meccaniche quasi identiche"
+      actions={<Button variant="secondary" onClick={() => navigate('/')}>← Torna alla Home</Button>}
+    >
+      <Panel>
+        <p className="mb-4 text-[0.8rem] text-slate-500">
+          Per ogni coppia di pezzi (Re escluso) viene calcolata una distanza tra i profili di mobilità/struttura
+          (standardizzati) e le meccaniche speciali — più bassa è la distanza, più i due pezzi si comportano allo
+          stesso modo in gioco. Una meccanica speciale non condivisa pesa molto sulla distanza anche a parità di
+          mobilità, perché è proprio quello che differenzia due pezzi altrimenti identici.
+        </p>
+
+        <div className="mb-4 flex flex-wrap items-center gap-5 rounded-md border border-slate-700 bg-slate-900 p-3">
+          <label className="flex items-center gap-2.5 text-[0.8rem] text-slate-400">
+            Soglia di somiglianza
+            <input
+              type="range"
+              min={0}
+              max={3}
+              step={0.05}
+              value={threshold}
+              onChange={(e) => setThreshold(Number(e.target.value))}
+              className="w-[180px] accent-blue-500"
+            />
+            <span className="min-w-[2.5em] font-semibold text-slate-100">{threshold.toFixed(2)}</span>
+          </label>
+          <span className="text-[0.78rem] text-slate-500">
+            {showingFallback
+              ? `Nessuna coppia sotto la soglia — mostro le 10 coppie più simili in assoluto (su ${pairs.length} coppie confrontate, ${comparedPieceCount} pezzi).`
+              : `${flagged.length} coppie sotto soglia su ${pairs.length} confrontate (${comparedPieceCount} pezzi, Re escluso).`}
+          </span>
         </div>
-        <button className="btn-reset" onClick={() => navigate('/')}>← Torna alla Home</button>
-      </header>
 
-      <div className="main" style={{ gridTemplateColumns: '1fr' }}>
-        <div className="panel">
-          <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '16px' }}>
-            Per ogni coppia di pezzi (Re escluso) viene calcolata una distanza tra i profili di mobilità/struttura
-            (standardizzati) e le meccaniche speciali — più bassa è la distanza, più i due pezzi si comportano allo
-            stesso modo in gioco. Una meccanica speciale non condivisa pesa molto sulla distanza anche a parità di
-            mobilità, perché è proprio quello che differenzia due pezzi altrimenti identici.
-          </p>
-
-          <div className="similar-pieces-controls">
-            <label>
-              Soglia di somiglianza
-              <input
-                type="range"
-                min={0}
-                max={3}
-                step={0.05}
-                value={threshold}
-                onChange={(e) => setThreshold(Number(e.target.value))}
-              />
-              <span className="similar-pieces-threshold-value">{threshold.toFixed(2)}</span>
-            </label>
-            <span className="similar-pieces-summary">
-              {showingFallback
-                ? `Nessuna coppia sotto la soglia — mostro le 10 coppie più simili in assoluto (su ${pairs.length} coppie confrontate, ${comparedPieceCount} pezzi).`
-                : `${flagged.length} coppie sotto soglia su ${pairs.length} confrontate (${comparedPieceCount} pezzi, Re escluso).`}
-            </span>
-          </div>
-
-          <div className="similar-pieces-list">
-            {visiblePairs.map(({ a, b, distance, featureDiffs, differingMechanicTypes }) => (
-              <div key={`${a.sigla}-${b.sigla}`} className="similar-pieces-card">
-                <div className="similar-pieces-card-header">
-                  <span className="similar-pieces-pair-label">
-                    <strong>{a.sigla}</strong> {a.descrizione} ({a.punti}pt) &nbsp;~&nbsp; <strong>{b.sigla}</strong> {b.descrizione} ({b.punti}pt)
-                  </span>
-                  <span className={`similar-pieces-distance ${distance < 0.05 ? 'similar-pieces-distance-exact' : ''}`}>
-                    distanza {distance.toFixed(2)}
-                  </span>
-                </div>
-                {featureDiffs.length === 0 ? (
-                  <p className="similar-pieces-note">Identici su tutte le feature di mobilità/struttura considerate.</p>
-                ) : (
-                  <ul className="similar-pieces-diff-list">
-                    {featureDiffs.map((d) => (
-                      <li key={d.name}>{d.name}: {formatDiff(d.diff, a.sigla, b.sigla)}</li>
-                    ))}
-                  </ul>
-                )}
-                {differingMechanicTypes.length > 0 && (
-                  <p className="similar-pieces-note similar-pieces-mechanic-note">
-                    Meccaniche non condivise: {differingMechanicTypes.join(', ')}
-                  </p>
-                )}
+        <div className="flex flex-col gap-2.5">
+          {visiblePairs.map(({ a, b, distance, featureDiffs, differingMechanicTypes }) => (
+            <div key={`${a.sigla}-${b.sigla}`} className="rounded-md border border-slate-700 bg-slate-800 px-3.5 py-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2.5">
+                <span className="text-sm text-slate-200">
+                  <strong>{a.sigla}</strong> {a.descrizione} ({a.punti}pt) &nbsp;~&nbsp; <strong>{b.sigla}</strong> {b.descrizione} ({b.punti}pt)
+                </span>
+                <span className={cn('whitespace-nowrap rounded bg-amber-950 px-2 py-0.5 text-xs font-semibold text-amber-400', distance < 0.05 && 'bg-emerald-950 text-emerald-400')}>
+                  distanza {distance.toFixed(2)}
+                </span>
               </div>
-            ))}
-            {visiblePairs.length === 0 && (
-              <p className="punti-table-empty">Nessuna coppia da mostrare.</p>
-            )}
-          </div>
+              {featureDiffs.length === 0 ? (
+                <p className="mt-2 text-xs text-slate-400">Identici su tutte le feature di mobilità/struttura considerate.</p>
+              ) : (
+                <ul className="mt-2 list-disc pl-4 text-xs leading-relaxed text-slate-400">
+                  {featureDiffs.map((d) => (
+                    <li key={d.name}>{d.name}: {formatDiff(d.diff, a.sigla, b.sigla)}</li>
+                  ))}
+                </ul>
+              )}
+              {differingMechanicTypes.length > 0 && (
+                <p className="mt-2 text-xs text-sky-300">
+                  Meccaniche non condivise: {differingMechanicTypes.join(', ')}
+                </p>
+              )}
+            </div>
+          ))}
+          {visiblePairs.length === 0 && (
+            <p className="py-5 text-center text-slate-500">Nessuna coppia da mostrare.</p>
+          )}
         </div>
-      </div>
-    </div>
+      </Panel>
+    </PageShell>
   );
 }
 

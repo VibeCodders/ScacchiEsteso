@@ -6,7 +6,10 @@ import { computePieceRangeSquares } from '../game/pieceInfo';
 import { createEmptyBoard, createPieceInstance, setPieceAt, type Coord } from '../game/board';
 import { ACTION_LABELS } from '../data/actionLabels';
 import type { ActionModalita, Piece } from '../types';
-import '../App.css';
+import Button from '../components/ui/Button';
+import PageShell from '../components/ui/PageShell';
+import Panel from '../components/ui/Panel';
+import PieceCard from '../components/ui/PieceCard';
 
 const DEMO_ENEMY_SIGLA = 'PE';
 
@@ -70,14 +73,14 @@ function PieceDetail({ piece, onClose }: { piece: Piece; onClose: () => void }) 
   }
 
   return (
-    <div className="piece-detail-overlay" role="dialog" aria-label={`Dettagli — ${piece.descrizione}`}>
-      <div className="piece-detail-panel panel">
-        <div className="piece-detail-header">
-          <h2>{piece.sigla} — {piece.descrizione}</h2>
-          <button className="btn-reset" onClick={onClose}>✕ Chiudi</button>
+    <div className="fixed inset-0 z-10 flex items-center justify-center overflow-y-auto bg-black/85 p-4" role="dialog" aria-label={`Dettagli — ${piece.descrizione}`}>
+      <div className="panel flex w-full max-w-[640px] flex-col items-center gap-4 rounded-xl border border-slate-700 bg-slate-800 p-5">
+        <div className="flex w-full items-center justify-between gap-4">
+          <h2 className="text-lg font-semibold text-slate-100">{piece.sigla} — {piece.descrizione}</h2>
+          <Button variant="secondary" onClick={onClose}>✕ Chiudi</Button>
         </div>
-        <p className="regole">{piece.regole}</p>
-        <div className="piece-detail-board">
+        <p className="text-[0.72rem] leading-snug text-slate-500">{piece.regole}</p>
+        <div className="max-w-full overflow-x-auto">
           <Board
             pieces={board}
             orientation="A"
@@ -86,26 +89,26 @@ function PieceDetail({ piece, onClose }: { piece: Piece; onClose: () => void }) 
             selectedSquare={from}
           />
         </div>
-        <div className="piece-detail-legend">
-          <span><span className="legend-swatch legend-move" /> Movimento</span>
-          <span><span className="legend-swatch legend-capture" /> Cattura</span>
-          <span><span className="legend-swatch legend-both" /> Entrambi</span>
+        <div className="flex flex-wrap gap-4 text-sm text-slate-400">
+          <span><span className="mr-1 inline-block size-3.5 rounded-sm bg-blue-500/75 align-middle" /> Movimento</span>
+          <span><span className="mr-1 inline-block size-3.5 rounded-sm bg-red-500/75 align-middle" /> Cattura</span>
+          <span><span className="mr-1 inline-block size-3.5 rounded-sm bg-[linear-gradient(135deg,rgba(59,130,246,0.75),rgba(239,68,68,0.75))] align-middle" /> Entrambi</span>
         </div>
         {exampleCapture ? (
-          <p className="piece-detail-example">
+          <p className="m-0 text-center text-slate-300">
             Esempio: un pezzo nemico su <strong>{exampleCapture.enemyAt}</strong> verrebbe catturato.
           </p>
         ) : (
-          <p className="piece-detail-example">Questo pezzo non ha mosse di cattura di base.</p>
+          <p className="m-0 text-center text-slate-300">Questo pezzo non ha mosse di cattura di base.</p>
         )}
         {abilities.length > 0 && (
-          <div className="piece-detail-actions">
-            <h3>🎭 Azioni speciali</h3>
-            <ul className="piece-detail-actions-list">
+          <div className="piece-detail-actions w-full text-left">
+            <h3 className="mb-1 text-[0.95rem] text-slate-50">🎭 Azioni speciali</h3>
+            <ul className="m-0 flex list-disc flex-col gap-1 pl-5 text-sm text-slate-300">
               {abilities.map((ability, idx) => (
                 <li key={`${ability.label}-${idx}`}>
-                  <strong>{ability.label}</strong>
-                  <span className="piece-detail-action-modalita">({MODALITA_LABELS[ability.modalita]})</span>
+                  <strong className="text-sky-300">{ability.label}</strong>
+                  <span className="ml-1 text-xs text-slate-400">({MODALITA_LABELS[ability.modalita]})</span>
                   {ability.description && <span> — {ability.description}</span>}
                 </li>
               ))}
@@ -123,37 +126,29 @@ function PieceEncyclopediaScreen() {
   const selectedPiece = selectedSigla ? (pieces.find((p) => p.sigla === selectedSigla) ?? null) : null;
 
   return (
-    <div className="app">
-      <header className="header">
-        <div>
-          <h1>📖 Enciclopedia dei pezzi</h1>
-          <p className="subtitle">Scopri come si muove e cattura ciascun pezzo</p>
-        </div>
-        <button className="btn-reset" onClick={() => navigate('/')}>← Torna alla Home</button>
-      </header>
-
-      <div className="main" style={{ gridTemplateColumns: '1fr' }}>
-        <div className="panel">
-          <div className="piece-grid">
-            {sortByPunti(pieces).map((piece) => (
-              <div key={piece.sigla} className="piece-card">
-                <div className="piece-header">
-                  <span className="sigla">{piece.sigla}</span>
-                  <span className="cost">{piece.punti} pt</span>
-                </div>
-                <span className="desc">{piece.descrizione}</span>
-                <span className="regole">{piece.regole}</span>
-                <button className="btn-auto" onClick={() => setSelectedSigla(piece.sigla)}>
+    <PageShell
+      title="📖 Enciclopedia dei pezzi"
+      subtitle="Scopri come si muove e cattura ciascun pezzo"
+      actions={<Button variant="secondary" onClick={() => navigate('/')}>← Torna alla Home</Button>}
+    >
+      <Panel>
+        <div className="piece-grid grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-2.5">
+          {sortByPunti(pieces).map((piece) => (
+            <PieceCard
+              key={piece.sigla}
+              piece={piece}
+              footer={
+                <Button variant="auto" className="w-full py-1.5 text-xs" onClick={() => setSelectedSigla(piece.sigla)}>
                   🔍 Più info
-                </button>
-              </div>
-            ))}
-          </div>
+                </Button>
+              }
+            />
+          ))}
         </div>
-      </div>
+      </Panel>
 
       {selectedPiece && <PieceDetail piece={selectedPiece} onClose={() => setSelectedSigla(null)} />}
-    </div>
+    </PageShell>
   );
 }
 

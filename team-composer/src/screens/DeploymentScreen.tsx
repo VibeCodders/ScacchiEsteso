@@ -13,7 +13,10 @@ import {
 } from '../game/deployment';
 import { allCoords, coordToFileRank, type Owner } from '../game/board';
 import { pieces, sortSiglasByPunti } from '../data/pieces';
-import '../App.css';
+import Button from '../components/ui/Button';
+import PageShell from '../components/ui/PageShell';
+import Panel from '../components/ui/Panel';
+import PieceCard from '../components/ui/PieceCard';
 
 function pickCoinToss(): Owner {
   return Math.random() < 0.5 ? 'A' : 'B';
@@ -77,21 +80,14 @@ function DeploymentScreen() {
 
   if (!coinToss || !deployment) {
     return (
-      <div className="app">
-        <header className="header">
-          <div>
-            <h1>🏳️ Schieramento</h1>
-            <p className="subtitle">Modalità: {mode === 'pvc' ? 'PvC' : 'PvP locale'}</p>
+      <PageShell title="🏳️ Schieramento" subtitle={`Modalità: ${mode === 'pvc' ? 'PvC' : 'PvP locale'}`} layout="center">
+        <Panel title="🪙 Tiro a sorte" className="w-full max-w-[480px] text-center">
+          <p className="text-sm text-slate-300">Chi vince tira a sorte decide chi schiera per primo.</p>
+          <div className="mt-4">
+            <Button variant="primary" onClick={handleCoinToss}>Tira la moneta</Button>
           </div>
-        </header>
-        <div className="main" style={{ gridTemplateColumns: '1fr', justifyItems: 'center', paddingTop: '2rem' }}>
-          <div className="panel" style={{ maxWidth: 480, textAlign: 'center' }}>
-            <h2>🪙 Tiro a sorte</h2>
-            <p>Chi vince tira a sorte decide chi schiera per primo.</p>
-            <button className="btn-save" onClick={handleCoinToss}>Tira la moneta</button>
-          </div>
-        </div>
-      </div>
+        </Panel>
+      </PageShell>
     );
   }
 
@@ -100,82 +96,78 @@ function DeploymentScreen() {
   const currentPlacerLabel = playerLabel(deployment.currentPlacer, mode, humanOwner);
 
   return (
-    <div className="app">
-      <header className="header">
-        <div>
-          <h1>🏳️ Schieramento</h1>
-          <p className="subtitle">
-            Ha vinto il tiro a sorte: {playerLabel(deployment.firstPlacer, mode, humanOwner)}.
-            {' '}Le posizioni sono visibili a entrambi.
-          </p>
-        </div>
-      </header>
+    <PageShell
+      title="🏳️ Schieramento"
+      subtitle={
+        <>
+          Ha vinto il tiro a sorte: {playerLabel(deployment.firstPlacer, mode, humanOwner)}.
+          {' '}Le posizioni sono visibili a entrambi.
+        </>
+      }
+      layout="board"
+    >
+      <Panel className="flex flex-col items-center gap-4 overflow-x-auto">
+        <Board
+          pieces={deployment.board}
+          orientation={orientation}
+          dimensions={deployment.dimensions}
+          onSquareClick={handleSquareClick}
+          onSquareDrop={handleSquareClick}
+          highlightedSquares={emptyOwnRankSquares}
+        />
+        <Button variant="improve" onClick={() => setOrientation((o) => (o === 'A' ? 'B' : 'A'))}>
+          🔄 Gira scacchiera (vista: {playerLabel(orientation, mode, humanOwner)})
+        </Button>
+      </Panel>
 
-      <div className="main main-board-layout" style={{ paddingTop: '1rem' }}>
-        <div className="panel" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', overflowX: 'auto' }}>
-          <Board
-            pieces={deployment.board}
-            orientation={orientation}
-            dimensions={deployment.dimensions}
-            onSquareClick={handleSquareClick}
-            onSquareDrop={handleSquareClick}
-            highlightedSquares={emptyOwnRankSquares}
-          />
-          <button className="btn-improve" onClick={() => setOrientation((o) => (o === 'A' ? 'B' : 'A'))}>
-            🔄 Gira scacchiera (vista: {playerLabel(orientation, mode, humanOwner)})
-          </button>
-        </div>
-
-        <div className="panel">
-          {complete ? (
-            <>
-              <h2>✅ Schieramento completo</h2>
-              <p>Entrambi gli eserciti sono stati posizionati.</p>
-              <button className="btn-save" onClick={handleContinue}>Vai alla partita →</button>
-            </>
-          ) : (
-            <>
-              <h2>Turno: {currentPlacerLabel}</h2>
-              <p>Seleziona (o trascina) un pezzo, poi indica una casella libera nelle tue 2 traverse.</p>
-              <div className="actions" style={{ flexDirection: 'column', marginBottom: '1rem' }}>
-                <button className="btn-auto" onClick={handleAutoPlaceMine}>
-                  🤖 Piazza automaticamente i miei pezzi
-                </button>
-                <button className="btn-auto" onClick={handleAutoPlaceBoth}>
-                  ⚡ Piazza automaticamente entrambi gli eserciti
-                </button>
-              </div>
-              <div className="piece-grid" style={{ gridTemplateColumns: '1fr' }}>
-                {sortSiglasByPunti([...currentRoster.keys()]).map((sigla) => {
-                  const count = currentRoster.get(sigla)!;
-                  const pieceDef = pieces.find((p) => p.sigla === sigla);
-                  return (
-                    <div
-                      key={sigla}
-                      className={`piece-card ${selectedSigla === sigla ? 'selected' : ''}`}
-                      role="button"
-                      tabIndex={0}
-                      draggable
-                      onDragStart={(e) => { e.dataTransfer.setData('text/plain', sigla); setSelectedSigla(sigla); }}
-                      onClick={() => setSelectedSigla(sigla)}
-                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedSigla(sigla); } }}
-                      style={{ cursor: 'grab' }}
-                    >
-                      <div className="piece-header">
-                        <span className="sigla">{sigla}</span>
-                        <span className="cost">×{count}</span>
-                      </div>
-                      <span className="desc">{pieceDef?.descrizione ?? sigla}</span>
-                    </div>
-                  );
-                })}
-              </div>
-              {error && <p style={{ color: '#f87171' }}>{error}</p>}
-            </>
-          )}
-        </div>
-      </div>
-    </div>
+      <Panel>
+        {complete ? (
+          <>
+            <h2 className="mb-2 text-lg font-semibold text-slate-100">✅ Schieramento completo</h2>
+            <p className="text-sm text-slate-400">Entrambi gli eserciti sono stati posizionati.</p>
+            <Button variant="primary" className="mt-4" onClick={handleContinue}>Vai alla partita →</Button>
+          </>
+        ) : (
+          <>
+            <h2 className="mb-2 text-lg font-semibold text-slate-100">Turno: {currentPlacerLabel}</h2>
+            <p className="text-sm text-slate-400">Seleziona (o trascina) un pezzo, poi indica una casella libera nelle tue 2 traverse.</p>
+            <div className="mb-4 mt-3 flex flex-col gap-2">
+              <Button variant="auto" onClick={handleAutoPlaceMine}>
+                🤖 Piazza automaticamente i miei pezzi
+              </Button>
+              <Button variant="auto" onClick={handleAutoPlaceBoth}>
+                ⚡ Piazza automaticamente entrambi gli eserciti
+              </Button>
+            </div>
+            <div className="piece-grid grid grid-cols-1 gap-2.5">
+              {sortSiglasByPunti([...currentRoster.keys()]).map((sigla) => {
+                const count = currentRoster.get(sigla)!;
+                const pieceDef = pieces.find((p) => p.sigla === sigla);
+                if (!pieceDef) return null;
+                return (
+                  <PieceCard
+                    key={sigla}
+                    piece={pieceDef}
+                    costLabel={`×${count}`}
+                    selected={selectedSigla === sigla}
+                    showMoves={false}
+                    showFlags={false}
+                    role="button"
+                    tabIndex={0}
+                    draggable
+                    onDragStart={(e) => { e.dataTransfer.setData('text/plain', sigla); setSelectedSigla(sigla); }}
+                    onClick={() => setSelectedSigla(sigla)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedSigla(sigla); } }}
+                    className="cursor-grab"
+                  />
+                );
+              })}
+            </div>
+            {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
+          </>
+        )}
+      </Panel>
+    </PageShell>
   );
 }
 

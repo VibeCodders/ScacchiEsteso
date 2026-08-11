@@ -12,13 +12,14 @@ import { canMimic, getOrphanThreats } from '../game/orphan';
 import { canSdoppiare, canRiunire, getSdoppiamentoSquares, getRiunioneSquares, isRealMirage } from '../game/mirage';
 import { createInitialGameState, applyTurn, applyScocca, applySwap, applySwapperSwap, applyRevive, applySdoppiamento, applyRiunione, getLegalMovesForTurn, skipExtraMove, stopRabbitChain, type GameState } from '../game/turnManager';
 import { chooseBotAction, applyBotAction, formatMovesAhead, BOT_DIFFICULTY_MAX } from '../game/bot';
-import { pieces, sortSiglasByPunti } from '../data/pieces';
+import { sortSiglasByPunti } from '../data/pieces';
 import type { Coord, Owner } from '../game/board';
-import '../App.css';
-
-function pieceDescription(sigla: string): string {
-  return pieces.find((p) => p.sigla === sigla)?.descrizione ?? sigla;
-}
+import { pieceDescription } from '../lib/pieceFormat';
+import { cn } from '../lib/cn';
+import Badge from '../components/ui/Badge';
+import Button from '../components/ui/Button';
+import PageShell from '../components/ui/PageShell';
+import Panel from '../components/ui/Panel';
 
 interface PendingPromotion {
   from: Coord;
@@ -41,6 +42,9 @@ interface PendingSdoppiamento {
   from: Coord;
   cloneSquare: Coord;
 }
+
+/** Shared look for the full-board choice overlays (promotion, revival, mimic, mirage, game over). */
+const OVERLAY_CLASSES = 'absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 rounded-xl bg-black/85';
 
 function GameScreen() {
   const navigate = useNavigate();
@@ -126,19 +130,12 @@ function GameScreen() {
 
   if (!deployedBoard || !gameState) {
     return (
-      <div className="app">
-        <header className="header">
-          <div>
-            <h1>♟️ Partita</h1>
-          </div>
-        </header>
-        <div className="main" style={{ gridTemplateColumns: '1fr', justifyItems: 'center', paddingTop: '2rem' }}>
-          <div className="panel" style={{ maxWidth: 480, textAlign: 'center' }}>
-            <p>Nessuno schieramento trovato. Torna alla Home per iniziare una nuova partita.</p>
-            <button className="btn-save" onClick={() => navigate('/')}>Torna alla Home</button>
-          </div>
-        </div>
-      </div>
+      <PageShell title="♟️ Partita" layout="center">
+        <Panel className="w-full max-w-[480px] text-center">
+          <p className="text-sm text-slate-400">Nessuno schieramento trovato. Torna alla Home per iniziare una nuova partita.</p>
+          <Button variant="primary" className="mt-4" onClick={() => navigate('/')}>Torna alla Home</Button>
+        </Panel>
+      </PageShell>
     );
   }
 
@@ -411,283 +408,259 @@ function GameScreen() {
     navigate('/game-over');
   };
 
+  const selectedPiece = selected ? gameState.board.get(selected) : undefined;
+
   return (
-    <div className="app">
-      <header className="header">
-        <div>
-          <h1>♟️ Partita</h1>
-          <p className="subtitle">Modalità: {mode === 'pvc' ? 'PvC' : 'PvP locale'}</p>
-        </div>
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+    <PageShell
+      title="♟️ Partita"
+      subtitle={`Modalità: ${mode === 'pvc' ? 'PvC' : 'PvP locale'}`}
+      layout="board"
+      actions={
+        <>
           {mode === 'pvc' && (
-            <span className="status-badge status-badge-difficulty" title="Livello di difficoltà del PC (1–50)">
+            <Badge tone="info" title="Livello di difficoltà del PC (1–50)">
               🤖 PC: difficoltà {botDifficulty}/{BOT_DIFFICULTY_MAX} — vede {formatMovesAhead(botDifficulty)} avanti
+            </Badge>
+          )}
+          <Badge className={cn('turn-badge-human', isBotTurn && 'turn-badge-bot border-amber-800 bg-amber-950/60 text-amber-400')}>
+            Turno: {ownerLabel(gameState.turn)}
+          </Badge>
+          {gameState.status === 'check' && (
+            <span className="animate-pulse rounded-lg border border-red-800 bg-red-950/60 px-4 py-2 text-sm font-bold text-red-400">
+              ⚠️ Scacco!
             </span>
           )}
-          <span className={`turn-badge ${isBotTurn ? 'turn-badge-bot' : 'turn-badge-human'}`}>
-            Turno: {ownerLabel(gameState.turn)}
-          </span>
-          {gameState.status === 'check' && <span className="status-badge status-badge-check">⚠️ Scacco!</span>}
-          {isBotTurn && <span className="status-badge status-badge-thinking">🤖 Il PC sta pensando...</span>}
+          {isBotTurn && (
+            <span className="rounded-lg border border-amber-800 bg-amber-950/60 px-4 py-2 text-sm font-bold text-amber-400">
+              🤖 Il PC sta pensando...
+            </span>
+          )}
+        </>
+      }
+    >
+      <Panel className="relative flex flex-col items-center gap-4 overflow-x-auto">
+        <Board
+          pieces={gameState.board}
+          orientation={orientation}
+          dimensions={gameState.dimensions}
+          onSquareClick={handleSquareClick}
+          highlightedSquares={legalDestinations}
+          selectedSquare={effectiveSelected}
+          onPieceDragStart={gameOver || isBotTurn || pendingPromotion || pendingRevival || pendingMimicChoice || gameState.pendingExtraMove || gameState.pendingRabbitChain || actionMode ? undefined : handleDragStart}
+          onSquareDrop={gameOver || isBotTurn || pendingPromotion || pendingRevival || pendingMimicChoice || actionMode ? undefined : handleSquareClick}
+          flashSquares={lastMoveFlashSquares}
+          flashVersion={gameState.history.length}
+          mirageRealSquares={mirageRealSquares}
+        />
+        <div className="flex flex-wrap justify-center gap-2">
+          <Button variant="improve" onClick={() => setOrientation((o) => (o === 'A' ? 'B' : 'A'))}>
+            🔄 Gira scacchiera (vista: {ownerLabel(orientation)})
+          </Button>
+          <Button variant="improve" onClick={() => setRevealRealMirage((r) => !r)}>
+            {revealRealMirage ? '🙈 Nascondi Miraggi veri' : '👁 Vedi i Miraggi veri (tuo turno)'}
+          </Button>
+          {selected && selectedPiece && !gameState.pendingExtraMove && !gameState.pendingRabbitChain && canUseScocca(getPieceDef(selectedPiece.sigla))
+            && getScoccaTargets(gameState.board, selected, selectedPiece.owner).length > 0 && (
+            <Button variant="auto" onClick={() => setActionMode((m) => (m === 'scocca' ? null : 'scocca'))}>
+              {actionMode === 'scocca' ? '↩️ Annulla Scoccare' : '🏹 Scoccare'}
+            </Button>
+          )}
+          {selected && selectedPiece && !gameState.pendingExtraMove && !gameState.pendingRabbitChain && canSwap(getPieceDef(selectedPiece.sigla))
+            && getSwapTargets(gameState.board, selected, selectedPiece.owner).length > 0 && (
+            <Button variant="auto" onClick={() => setActionMode((m) => (m === 'swap' ? null : 'swap'))}>
+              {actionMode === 'swap' ? '↩️ Annulla Scambio' : '🔀 Scambia posizione'}
+            </Button>
+          )}
+          {selected && selectedPiece && !gameState.pendingExtraMove && !gameState.pendingRabbitChain && canSwapperSwap(getPieceDef(selectedPiece.sigla))
+            && getSwapperCandidateSquares(gameState.board, selected, selectedPiece.owner).length > 1 && (
+            <Button variant="auto" onClick={() => { setActionMode((m) => (m === 'swapperSwap' ? null : 'swapperSwap')); setSwapperFirstSquare(null); }}>
+              {actionMode === 'swapperSwap' ? '↩️ Annulla Scambio' : '🔁 Scambia due alleati'}
+            </Button>
+          )}
+          {selected && selectedPiece && !gameState.pendingExtraMove && !gameState.pendingRabbitChain && canRevive(getPieceDef(selectedPiece.sigla))
+            && getRevivableSiglas(gameState.captured[selectedPiece.owner]).length > 0
+            && getRevivalSquares(gameState.board, selected, selectedPiece.owner).length > 0 && (
+            <Button variant="auto" onClick={() => setActionMode((m) => (m === 'revive' ? null : 'revive'))}>
+              {actionMode === 'revive' ? '↩️ Annulla Rianimazione' : '🧟 Rianima alleato'}
+            </Button>
+          )}
+          {selected && selectedPiece && !gameState.pendingExtraMove && !gameState.pendingRabbitChain && canSdoppiare(getPieceDef(selectedPiece.sigla))
+            && getSdoppiamentoSquares(gameState.board, selected, selectedPiece.owner, getPieceDef, gameState.dimensions).length > 0 && (
+            <Button variant="auto" onClick={() => setActionMode((m) => (m === 'sdoppiamento' ? null : 'sdoppiamento'))}>
+              {actionMode === 'sdoppiamento' ? '↩️ Annulla Sdoppiamento' : '🌫️ Sdoppia'}
+            </Button>
+          )}
+          {selected && selectedPiece && !gameState.pendingExtraMove && !gameState.pendingRabbitChain && canRiunire(getPieceDef(selectedPiece.sigla))
+            && getRiunioneSquares(gameState.board, selected, selectedPiece.owner, getPieceDef, gameState.dimensions).length > 0 && (
+            <Button variant="auto" onClick={() => setActionMode((m) => (m === 'riunione' ? null : 'riunione'))}>
+              {actionMode === 'riunione' ? '↩️ Annulla Riunione' : '🔗 Riunisci'}
+            </Button>
+          )}
         </div>
-      </header>
+        {actionMode === 'scocca' && <p className="text-sm text-slate-400">🏹 Modalità Scoccare: seleziona un bersaglio nemico a 3-4 caselle.</p>}
+        {actionMode === 'swap' && <p className="text-sm text-slate-400">🔀 Modalità Scambio: seleziona un alleato in linea di vista libera (riga, colonna o diagonale).</p>}
+        {actionMode === 'revive' && <p className="text-sm text-slate-400">🧟 Modalità Rianimazione: seleziona una casella vuota adiacente.</p>}
+        {actionMode === 'swapperSwap' && !swapperFirstSquare && <p className="text-sm text-slate-400">🔁 Scambio: seleziona la prima casella (un alleato adiacente, o lo Swapper stesso).</p>}
+        {actionMode === 'swapperSwap' && swapperFirstSquare && <p className="text-sm text-slate-400">🔁 Scambio: seleziona la seconda casella da scambiare con {swapperFirstSquare}.</p>}
+        {actionMode === 'sdoppiamento' && <p className="text-sm text-slate-400">🌫️ Modalità Sdoppiamento: scegli una casella vuota adiacente dove materializzare il clone.</p>}
+        {actionMode === 'riunione' && <p className="text-sm text-slate-400">🔗 Modalità Riunione: scegli la casella (quella del vero o quella del clone) dove ricompare il Miraggio unico.</p>}
+        {revealRealMirage && <p className="text-sm text-slate-400">👁 I Miraggi veri del giocatore di turno sono contrassegnati da un punto giallo.</p>}
+        {orphanMimicSource && (
+          <p className="text-sm text-slate-400">🎭 L'Orfano è sotto scacco: imita {gameState.board.get(orphanMimicSource)?.sigla} da {orphanMimicSource}.</p>
+        )}
+        {error && <p className="text-sm text-red-400">{error}</p>}
 
-      <div className="main main-board-layout" style={{ paddingTop: '1rem' }}>
-        <div className="panel" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', position: 'relative', overflowX: 'auto' }}>
-          <Board
-            pieces={gameState.board}
-            orientation={orientation}
-            dimensions={gameState.dimensions}
-            onSquareClick={handleSquareClick}
-            highlightedSquares={legalDestinations}
-            selectedSquare={effectiveSelected}
-            onPieceDragStart={gameOver || isBotTurn || pendingPromotion || pendingRevival || pendingMimicChoice || gameState.pendingExtraMove || gameState.pendingRabbitChain || actionMode ? undefined : handleDragStart}
-            onSquareDrop={gameOver || isBotTurn || pendingPromotion || pendingRevival || pendingMimicChoice || actionMode ? undefined : handleSquareClick}
-            flashSquares={lastMoveFlashSquares}
-            flashVersion={gameState.history.length}
-            mirageRealSquares={mirageRealSquares}
-          />
-          <div className="actions">
-            <button className="btn-improve" onClick={() => setOrientation((o) => (o === 'A' ? 'B' : 'A'))}>
-              🔄 Gira scacchiera (vista: {ownerLabel(orientation)})
-            </button>
-            <button className="btn-improve" onClick={() => setRevealRealMirage((r) => !r)}>
-              {revealRealMirage ? '🙈 Nascondi Miraggi veri' : '👁 Vedi i Miraggi veri (tuo turno)'}
-            </button>
-            {selected && !gameState.pendingExtraMove && !gameState.pendingRabbitChain && canUseScocca(getPieceDef(gameState.board.get(selected)!.sigla))
-              && getScoccaTargets(gameState.board, selected, gameState.board.get(selected)!.owner).length > 0 && (
-              <button className="btn-auto" onClick={() => setActionMode((m) => (m === 'scocca' ? null : 'scocca'))}>
-                {actionMode === 'scocca' ? '↩️ Annulla Scoccare' : '🏹 Scoccare'}
-              </button>
-            )}
-            {selected && !gameState.pendingExtraMove && !gameState.pendingRabbitChain && canSwap(getPieceDef(gameState.board.get(selected)!.sigla))
-              && getSwapTargets(gameState.board, selected, gameState.board.get(selected)!.owner).length > 0 && (
-              <button className="btn-auto" onClick={() => setActionMode((m) => (m === 'swap' ? null : 'swap'))}>
-                {actionMode === 'swap' ? '↩️ Annulla Scambio' : '🔀 Scambia posizione'}
-              </button>
-            )}
-            {selected && !gameState.pendingExtraMove && !gameState.pendingRabbitChain && canSwapperSwap(getPieceDef(gameState.board.get(selected)!.sigla))
-              && getSwapperCandidateSquares(gameState.board, selected, gameState.board.get(selected)!.owner).length > 1 && (
-              <button className="btn-auto" onClick={() => { setActionMode((m) => (m === 'swapperSwap' ? null : 'swapperSwap')); setSwapperFirstSquare(null); }}>
-                {actionMode === 'swapperSwap' ? '↩️ Annulla Scambio' : '🔁 Scambia due alleati'}
-              </button>
-            )}
-            {selected && !gameState.pendingExtraMove && !gameState.pendingRabbitChain && canRevive(getPieceDef(gameState.board.get(selected)!.sigla))
-              && getRevivableSiglas(gameState.captured[gameState.board.get(selected)!.owner]).length > 0
-              && getRevivalSquares(gameState.board, selected, gameState.board.get(selected)!.owner).length > 0 && (
-              <button className="btn-auto" onClick={() => setActionMode((m) => (m === 'revive' ? null : 'revive'))}>
-                {actionMode === 'revive' ? '↩️ Annulla Rianimazione' : '🧟 Rianima alleato'}
-              </button>
-            )}
-            {selected && !gameState.pendingExtraMove && !gameState.pendingRabbitChain && canSdoppiare(getPieceDef(gameState.board.get(selected)!.sigla))
-              && getSdoppiamentoSquares(gameState.board, selected, gameState.board.get(selected)!.owner, getPieceDef, gameState.dimensions).length > 0 && (
-              <button className="btn-auto" onClick={() => setActionMode((m) => (m === 'sdoppiamento' ? null : 'sdoppiamento'))}>
-                {actionMode === 'sdoppiamento' ? '↩️ Annulla Sdoppiamento' : '🌫️ Sdoppia'}
-              </button>
-            )}
-            {selected && !gameState.pendingExtraMove && !gameState.pendingRabbitChain && canRiunire(getPieceDef(gameState.board.get(selected)!.sigla))
-              && getRiunioneSquares(gameState.board, selected, gameState.board.get(selected)!.owner, getPieceDef, gameState.dimensions).length > 0 && (
-              <button className="btn-auto" onClick={() => setActionMode((m) => (m === 'riunione' ? null : 'riunione'))}>
-                {actionMode === 'riunione' ? '↩️ Annulla Riunione' : '🔗 Riunisci'}
-              </button>
-            )}
+        {gameState.pendingExtraMove && !pendingPromotion && !isBotTurn && (
+          <Panel className="w-full text-center">
+            <p className="text-sm text-slate-300">⚔️ Movimento extra Berserker disponibile (senza cattura).</p>
+            <Button variant="secondary" className="mt-3" onClick={handleSkipExtraMove}>Salta movimento extra</Button>
+          </Panel>
+        )}
+
+        {gameState.pendingRabbitChain && !isBotTurn && (
+          <Panel className="w-full text-center">
+            <p className="text-sm text-slate-300">
+              🐇 Catena di salti del Coniglio: continua saltando un altro nemico, oppure fermati per catturare{' '}
+              {gameState.board.get(gameState.pendingRabbitChain.lastHurdle)?.sigla} in {gameState.pendingRabbitChain.lastHurdle}.
+            </p>
+            <Button variant="secondary" className="mt-3" onClick={handleStopRabbitChain}>Ferma la catena e cattura</Button>
+          </Panel>
+        )}
+
+        {pendingPromotion && (
+          <div className={OVERLAY_CLASSES}>
+            <h2 className="text-xl font-semibold text-slate-50">🎖️ Scegli la promozione</h2>
+            <div className="flex w-full max-w-xs flex-col gap-2">
+              {pendingPromotion.options.map((sigla) => (
+                <Button
+                  key={sigla}
+                  variant="primary"
+                  onClick={() => commitPlainMove(pendingPromotion.from, pendingPromotion.to, sigla)}
+                >
+                  {sigla} — {pieceDescription(sigla)}
+                </Button>
+              ))}
+            </div>
           </div>
-          {actionMode === 'scocca' && <p>🏹 Modalità Scoccare: seleziona un bersaglio nemico a 3-4 caselle.</p>}
-          {actionMode === 'swap' && <p>🔀 Modalità Scambio: seleziona un alleato in linea di vista libera (riga, colonna o diagonale).</p>}
-          {actionMode === 'revive' && <p>🧟 Modalità Rianimazione: seleziona una casella vuota adiacente.</p>}
-          {actionMode === 'swapperSwap' && !swapperFirstSquare && <p>🔁 Scambio: seleziona la prima casella (un alleato adiacente, o lo Swapper stesso).</p>}
-          {actionMode === 'swapperSwap' && swapperFirstSquare && <p>🔁 Scambio: seleziona la seconda casella da scambiare con {swapperFirstSquare}.</p>}
-          {actionMode === 'sdoppiamento' && <p>🌫️ Modalità Sdoppiamento: scegli una casella vuota adiacente dove materializzare il clone.</p>}
-          {actionMode === 'riunione' && <p>🔗 Modalità Riunione: scegli la casella (quella del vero o quella del clone) dove ricompare il Miraggio unico.</p>}
-          {revealRealMirage && <p>👁 I Miraggi veri del giocatore di turno sono contrassegnati da un punto giallo.</p>}
-          {orphanMimicSource && (
-            <p>🎭 L'Orfano è sotto scacco: imita {gameState.board.get(orphanMimicSource)?.sigla} da {orphanMimicSource}.</p>
-          )}
-          {error && <p style={{ color: '#f87171' }}>{error}</p>}
+        )}
 
-          {gameState.pendingExtraMove && !pendingPromotion && !isBotTurn && (
-            <div className="panel" style={{ textAlign: 'center' }}>
-              <p>⚔️ Movimento extra Berserker disponibile (senza cattura).</p>
-              <button className="btn-reset" onClick={handleSkipExtraMove}>Salta movimento extra</button>
+        {pendingRevival && (
+          <div className={OVERLAY_CLASSES}>
+            <h2 className="text-xl font-semibold text-slate-50">🧟 Chi rianimare?</h2>
+            <div className="flex w-full max-w-xs flex-col gap-2">
+              {pendingRevival.options.map((sigla) => (
+                <Button
+                  key={sigla}
+                  variant="primary"
+                  onClick={() => commitRevive(pendingRevival.from, pendingRevival.target, sigla)}
+                >
+                  {sigla} — {pieceDescription(sigla)}
+                </Button>
+              ))}
             </div>
-          )}
+          </div>
+        )}
 
-          {gameState.pendingRabbitChain && !isBotTurn && (
-            <div className="panel" style={{ textAlign: 'center' }}>
-              <p>
-                🐇 Catena di salti del Coniglio: continua saltando un altro nemico, oppure fermati per catturare{' '}
-                {gameState.board.get(gameState.pendingRabbitChain.lastHurdle)?.sigla} in {gameState.pendingRabbitChain.lastHurdle}.
-              </p>
-              <button className="btn-reset" onClick={handleStopRabbitChain}>Ferma la catena e cattura</button>
-            </div>
-          )}
-
-          {pendingPromotion && (
-            <div
-              style={{
-                position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
-                alignItems: 'center', justifyContent: 'center', gap: '1rem',
-                background: 'rgba(15, 15, 20, 0.85)', borderRadius: '0.5rem',
-              }}
-            >
-              <h2>🎖️ Scegli la promozione</h2>
-              <div className="actions" style={{ flexDirection: 'column' }}>
-                {pendingPromotion.options.map((sigla) => (
-                  <button
-                    key={sigla}
-                    className="btn-save"
-                    onClick={() => commitPlainMove(pendingPromotion.from, pendingPromotion.to, sigla)}
-                  >
-                    {sigla} — {pieceDescription(sigla)}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {pendingRevival && (
-            <div
-              style={{
-                position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
-                alignItems: 'center', justifyContent: 'center', gap: '1rem',
-                background: 'rgba(15, 15, 20, 0.85)', borderRadius: '0.5rem',
-              }}
-            >
-              <h2>🧟 Chi rianimare?</h2>
-              <div className="actions" style={{ flexDirection: 'column' }}>
-                {pendingRevival.options.map((sigla) => (
-                  <button
-                    key={sigla}
-                    className="btn-save"
-                    onClick={() => commitRevive(pendingRevival.from, pendingRevival.target, sigla)}
-                  >
-                    {sigla} — {pieceDescription(sigla)}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {pendingMimicChoice && (
-            <div
-              style={{
-                position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
-                alignItems: 'center', justifyContent: 'center', gap: '1rem',
-                background: 'rgba(15, 15, 20, 0.85)', borderRadius: '0.5rem',
-              }}
-            >
-              <h2>🎭 Chi imitare?</h2>
-              <div className="actions" style={{ flexDirection: 'column' }}>
-                {[...pendingMimicChoice.threats]
-                  .sort((a, b) => {
-                    const siglaA = gameState.board.get(a)!.sigla;
-                    const siglaB = gameState.board.get(b)!.sigla;
-                    return getPieceDef(siglaA).punti - getPieceDef(siglaB).punti || siglaA.localeCompare(siglaB);
-                  })
-                  .map((threatCoord) => {
+        {pendingMimicChoice && (
+          <div className={OVERLAY_CLASSES}>
+            <h2 className="text-xl font-semibold text-slate-50">🎭 Chi imitare?</h2>
+            <div className="flex w-full max-w-xs flex-col gap-2">
+              {[...pendingMimicChoice.threats]
+                .sort((a, b) => {
+                  const siglaA = gameState.board.get(a)!.sigla;
+                  const siglaB = gameState.board.get(b)!.sigla;
+                  return getPieceDef(siglaA).punti - getPieceDef(siglaB).punti || siglaA.localeCompare(siglaB);
+                })
+                .map((threatCoord) => {
                   const threatSigla = gameState.board.get(threatCoord)?.sigla ?? '?';
                   return (
-                    <button
+                    <Button
                       key={threatCoord}
-                      className="btn-save"
+                      variant="primary"
                       onClick={() => {
                         setOrphanMimicSource(threatCoord);
                         setPendingMimicChoice(null);
                       }}
                     >
                       {threatSigla} — {pieceDescription(threatSigla)} ({threatCoord})
-                    </button>
+                    </Button>
                   );
                 })}
-              </div>
             </div>
-          )}
-
-          {pendingSdoppiamento && (
-            <div
-              style={{
-                position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
-                alignItems: 'center', justifyContent: 'center', gap: '1rem',
-                background: 'rgba(15, 15, 20, 0.85)', borderRadius: '0.5rem',
-              }}
-            >
-              <h2>🌫️ Dove sta il Miraggio vero?</h2>
-              <p style={{ maxWidth: 420, textAlign: 'center' }}>
-                I due pezzi sono indistinguibili. L'avversario deve catturare quello vero: se cattura il clone,
-                l'illusione si dissolve e il Miraggio vero sopravvive.
-              </p>
-              <div className="actions" style={{ flexDirection: 'column' }}>
-                <button
-                  className="btn-save"
-                  onClick={() => commitSdoppiamento(pendingSdoppiamento.from, pendingSdoppiamento.cloneSquare, pendingSdoppiamento.from)}
-                >
-                  Il vero resta in {pendingSdoppiamento.from} (clone in {pendingSdoppiamento.cloneSquare})
-                </button>
-                <button
-                  className="btn-save"
-                  onClick={() => commitSdoppiamento(pendingSdoppiamento.from, pendingSdoppiamento.cloneSquare, pendingSdoppiamento.cloneSquare)}
-                >
-                  Il vero è in {pendingSdoppiamento.cloneSquare} (clone in {pendingSdoppiamento.from})
-                </button>
-              </div>
-            </div>
-          )}
-
-          {gameOver && (
-            <div
-              style={{
-                position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
-                alignItems: 'center', justifyContent: 'center', gap: '1rem',
-                background: 'rgba(15, 15, 20, 0.85)', borderRadius: '0.5rem',
-              }}
-            >
-              <h2>
-                {gameState.status === 'checkmate' && `🏆 Scacco matto! Vince ${ownerLabel(gameState.winner!)}`}
-                {gameState.status === 'stalemate' && '🤝 Stallo — Patta'}
-                {gameState.status === 'anti_stalemate' && (
-                  gameState.winner
-                    ? `⏱️ Limite di 20 turni senza progressi — vince ${ownerLabel(gameState.winner)} per punteggio`
-                    : '⏱️ Limite di 20 turni senza progressi — Patta per punteggio pari'
-                )}
-              </h2>
-              <button className="btn-save" onClick={handleContinueToResult}>Vedi risultato →</button>
-            </div>
-          )}
-        </div>
-
-        <div className="panel">
-          <h2>📜 Storico mosse</h2>
-          <div style={{ maxHeight: 200, overflowY: 'auto', fontSize: '0.85rem' }}>
-            {gameState.history.length === 0 ? (
-              <p>Nessuna mossa ancora.</p>
-            ) : (
-              <ol>
-                {gameState.history.map((entry, idx) => (
-                  <li key={idx}>
-                    {ownerLabel(entry.owner)}: {entry.sigla} {entry.from} → {entry.to}
-                    {entry.isCapture && ` (cattura ${entry.capturedSigla})`}
-                    {entry.promotedTo && ` → promosso a ${entry.promotedTo}`}
-                    {entry.isExtraMove && ' (movimento extra)'}
-                    {entry.isRangedAttack && ' (scocca)'}
-                    {entry.isSwap && ' (scambio)'}
-                    {entry.isRevival && ` (rianimato ${entry.revivedSigla})`}
-                    {entry.isSdoppiamento && ` (sdoppiamento: vero in ${entry.realSquare}, clone in ${entry.cloneSquare})`}
-                    {entry.isMerge && ' (riunione)'}
-                    {entry.isCloneCapture && ' (clone eliminato — nessun punto)'}
-                    {entry.dispelledClone && ' (clone dissolto)'}
-                    {entry.areaDamageCoords && entry.areaDamageCoords.length > 0 && ` 💥 area: ${entry.areaDamageCoords.join(', ')}`}
-                  </li>
-                ))}
-              </ol>
-            )}
           </div>
+        )}
 
-          <h2>💀 Pezzi catturati</h2>
-          <p><strong>{ownerLabel('A')}:</strong> {sortSiglasByPunti(gameState.captured.A.map((p) => p.sigla)).join(', ') || '—'}</p>
-          <p><strong>{ownerLabel('B')}:</strong> {sortSiglasByPunti(gameState.captured.B.map((p) => p.sigla)).join(', ') || '—'}</p>
+        {pendingSdoppiamento && (
+          <div className={OVERLAY_CLASSES}>
+            <h2 className="text-xl font-semibold text-slate-50">🌫️ Dove sta il Miraggio vero?</h2>
+            <p className="max-w-[420px] text-center text-sm text-slate-400">
+              I due pezzi sono indistinguibili. L'avversario deve catturare quello vero: se cattura il clone,
+              l'illusione si dissolve e il Miraggio vero sopravvive.
+            </p>
+            <div className="flex w-full max-w-xs flex-col gap-2">
+              <Button
+                variant="primary"
+                onClick={() => commitSdoppiamento(pendingSdoppiamento.from, pendingSdoppiamento.cloneSquare, pendingSdoppiamento.from)}
+              >
+                Il vero resta in {pendingSdoppiamento.from} (clone in {pendingSdoppiamento.cloneSquare})
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => commitSdoppiamento(pendingSdoppiamento.from, pendingSdoppiamento.cloneSquare, pendingSdoppiamento.cloneSquare)}
+              >
+                Il vero è in {pendingSdoppiamento.cloneSquare} (clone in {pendingSdoppiamento.from})
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {gameOver && (
+          <div className={OVERLAY_CLASSES}>
+            <h2 className="text-xl font-semibold text-slate-50">
+              {gameState.status === 'checkmate' && `🏆 Scacco matto! Vince ${ownerLabel(gameState.winner!)}`}
+              {gameState.status === 'stalemate' && '🤝 Stallo — Patta'}
+              {gameState.status === 'anti_stalemate' && (
+                gameState.winner
+                  ? `⏱️ Limite di 20 turni senza progressi — vince ${ownerLabel(gameState.winner)} per punteggio`
+                  : '⏱️ Limite di 20 turni senza progressi — Patta per punteggio pari'
+              )}
+            </h2>
+            <Button variant="primary" onClick={handleContinueToResult}>Vedi risultato →</Button>
+          </div>
+        )}
+      </Panel>
+
+      <Panel title="📜 Storico mosse">
+        <div className="max-h-[200px] overflow-y-auto text-sm">
+          {gameState.history.length === 0 ? (
+            <p className="text-sm text-slate-500">Nessuna mossa ancora.</p>
+          ) : (
+            <ol className="list-inside list-decimal space-y-0.5">
+              {gameState.history.map((entry, idx) => (
+                <li key={idx}>
+                  {ownerLabel(entry.owner)}: {entry.sigla} {entry.from} → {entry.to}
+                  {entry.isCapture && ` (cattura ${entry.capturedSigla})`}
+                  {entry.promotedTo && ` → promosso a ${entry.promotedTo}`}
+                  {entry.isExtraMove && ' (movimento extra)'}
+                  {entry.isRangedAttack && ' (scocca)'}
+                  {entry.isSwap && ' (scambio)'}
+                  {entry.isRevival && ` (rianimato ${entry.revivedSigla})`}
+                  {entry.isSdoppiamento && ` (sdoppiamento: vero in ${entry.realSquare}, clone in ${entry.cloneSquare})`}
+                  {entry.isMerge && ' (riunione)'}
+                  {entry.isCloneCapture && ' (clone eliminato — nessun punto)'}
+                  {entry.dispelledClone && ' (clone dissolto)'}
+                  {entry.areaDamageCoords && entry.areaDamageCoords.length > 0 && ` 💥 area: ${entry.areaDamageCoords.join(', ')}`}
+                </li>
+              ))}
+            </ol>
+          )}
         </div>
-      </div>
-    </div>
+
+        <h2 className="mb-2 mt-5 border-b border-slate-700 pb-2 text-lg font-semibold text-slate-100">💀 Pezzi catturati</h2>
+        <p className="text-sm"><strong>{ownerLabel('A')}:</strong> {sortSiglasByPunti(gameState.captured.A.map((p) => p.sigla)).join(', ') || '—'}</p>
+        <p className="mt-1 text-sm"><strong>{ownerLabel('B')}:</strong> {sortSiglasByPunti(gameState.captured.B.map((p) => p.sigla)).join(', ') || '—'}</p>
+      </Panel>
+    </PageShell>
   );
 }
 

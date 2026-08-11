@@ -8,7 +8,7 @@ import {
   type BoardState,
   type Owner,
 } from '../game/board';
-import './Board.css';
+import { cn } from '../lib/cn';
 
 export interface BoardProps {
   pieces: BoardState;
@@ -63,11 +63,12 @@ function Board({
   const highlighted = new Set(highlightedSquares);
   const captureHighlighted = new Set(captureSquares);
   const mirageReals = new Set(mirageRealSquares);
+  const isRotated = orientation === 'B';
 
   return (
-    <div className={`board-wrapper ${orientation === 'B' ? 'board-rotated' : ''}`} data-testid="board" data-orientation={orientation}>
+    <div className={cn('board-wrapper inline-block transition-transform duration-500', isRotated && 'board-rotated rotate-180')} data-testid="board" data-orientation={orientation}>
       <div
-        className="board-grid"
+        className="board-grid grid border-4 border-[#1a1a1a]"
         style={{
           gridTemplateColumns: `repeat(${dimensions.width}, minmax(2.5rem, 4rem))`,
           gridTemplateRows: `repeat(${dimensions.height}, minmax(2.5rem, 4rem))`,
@@ -85,20 +86,20 @@ function Board({
             <button
               key={coord}
               type="button"
-              className={[
-                'board-square',
-                isLight ? 'board-square-light' : 'board-square-dark',
-                isSelected ? 'board-square-selected' : '',
-                isHighlighted ? 'board-square-highlighted' : '',
-                isCaptureHighlighted ? 'board-square-capture-highlighted' : '',
-              ].filter(Boolean).join(' ')}
+              className={cn(
+                'board-square relative aspect-square cursor-pointer border-none p-0',
+                isLight ? 'board-square-light bg-[#e8dcc8]' : 'board-square-dark bg-[#6b5544]',
+                isSelected && 'board-square-selected outline-[3px] outline-blue-500 outline-offset-[-3px]',
+                isHighlighted && 'board-square-highlighted after:pointer-events-none after:absolute after:inset-0 after:bg-blue-500/35',
+                isCaptureHighlighted && 'board-square-capture-highlighted before:pointer-events-none before:absolute before:inset-0 before:z-[1] before:bg-red-500/40',
+              )}
               data-coord={coord}
               onClick={() => onSquareClick?.(coord)}
               onDragOver={onSquareDrop ? (e) => e.preventDefault() : undefined}
               onDrop={onSquareDrop ? (e) => { e.preventDefault(); onSquareDrop(coord); } : undefined}
               aria-label={`Casella ${coord}${piece ? `, ${piece.sigla} (${piece.owner === 'A' ? 'Giocatore 1' : 'Giocatore 2'})` : ''}`}
             >
-              <span className="board-square-content">
+              <span className="board-square-content relative block size-full">
                 {piece && (
                   <span
                     draggable={Boolean(onPieceDragStart)}
@@ -107,14 +108,32 @@ function Board({
                   >
                     <PieceIcon
                       sigla={piece.sigla}
-                      className={`board-piece board-piece-${piece.owner === 'A' ? 'light' : 'dark'}`}
+                      className={cn(
+                        'board-piece absolute left-1/2 top-1/2 h-[78%] w-[78%] -translate-x-1/2 -translate-y-1/2',
+                        isRotated && 'rotate-180',
+                        piece.owner === 'A'
+                          ? 'board-piece-light text-[#f5f0e6] [stroke:#2b2b2b] [stroke-width:1.5]'
+                          : 'board-piece-dark text-[#2b2b2b] [stroke:#f5f0e6] [stroke-width:1.5]',
+                      )}
                     />
                   </span>
                 )}
-                {mirageReals.has(coord) && <span className="board-mirage-real-marker" aria-label="Miraggio vero" />}
-                {flashing.has(coord) && <span key={flashVersion} className="board-square-flash" />}
-                {col === 0 && <span className="board-rank-label">{dimensions.height - row}</span>}
-                {row === dimensions.height - 1 && <span className="board-file-label">{indexToFile(col)}</span>}
+                {mirageReals.has(coord) && (
+                  <span className="board-mirage-real-marker pointer-events-none absolute right-1 top-1 z-[2] size-2.5 rounded-full bg-yellow-400 shadow-[0_0_4px_rgba(250,204,21,0.9)]" aria-label="Miraggio vero" />
+                )}
+                {flashing.has(coord) && (
+                  <span key={flashVersion} className="board-square-flash pointer-events-none absolute inset-0 animate-board-square-flash bg-yellow-400/55" />
+                )}
+                {col === 0 && (
+                  <span className={cn('board-rank-label pointer-events-none absolute left-1 top-0.5 text-[0.65rem] font-semibold text-[#8b7355]', isRotated && 'rotate-180')}>
+                    {dimensions.height - row}
+                  </span>
+                )}
+                {row === dimensions.height - 1 && (
+                  <span className={cn('board-file-label pointer-events-none absolute bottom-0.5 right-1 text-[0.65rem] font-semibold text-[#8b7355]', isRotated && 'rotate-180')}>
+                    {indexToFile(col)}
+                  </span>
+                )}
               </span>
             </button>
           );

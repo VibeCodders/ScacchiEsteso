@@ -4,7 +4,9 @@ import { useGameSetup } from '../context/gameSetup';
 import { rules, scaleRulesForBoardSize } from '../data/pieces';
 import { getPresetTeams, buildPresetTeam, randomFillTeam, isPresetValid, type PresetTeamId } from '../data/presetTeams';
 import { BOT_DIFFICULTY_MAX, BOT_DIFFICULTY_MIN, difficultyToDepth, formatMovesAhead } from '../game/bot';
-import '../App.css';
+import Button from '../components/ui/Button';
+import PageShell from '../components/ui/PageShell';
+import Panel from '../components/ui/Panel';
 
 function PcTeamChoiceScreen() {
   const navigate = useNavigate();
@@ -47,64 +49,57 @@ function PcTeamChoiceScreen() {
   };
 
   return (
-    <div className="app">
-      <header className="header">
-        <div>
-          <h1>🤖 Team del PC</h1>
-          <p className="subtitle">Come vuoi comporre l'esercito avversario?</p>
+    <PageShell title="🤖 Team del PC" subtitle="Come vuoi comporre l'esercito avversario?" layout="center">
+      <Panel title="🧠 Difficoltà" className="w-full max-w-[640px]">
+        <div className="flex flex-col gap-2">
+          <label htmlFor="bot-difficulty" className="text-sm text-slate-400">
+            Livello di difficoltà: {botDifficulty} / {BOT_DIFFICULTY_MAX}
+          </label>
+          <input
+            id="bot-difficulty"
+            type="range"
+            min={BOT_DIFFICULTY_MIN}
+            max={BOT_DIFFICULTY_MAX}
+            step={1}
+            value={botDifficulty}
+            onChange={(e) => setBotDifficulty(Number(e.target.value))}
+            aria-label="Difficoltà del bot"
+            className="w-full accent-blue-500"
+          />
+          <p className="text-sm text-slate-400">
+            Il PC vede {formatMovesAhead(botDifficulty)} avanti
+            (profondità di ricerca {difficultyToDepth(botDifficulty)} mezze mosse).
+          </p>
         </div>
-      </header>
-      <div className="main" style={{ gridTemplateColumns: '1fr', justifyItems: 'center', paddingTop: '2rem' }}>
-        <div className="panel" style={{ maxWidth: 640 }}>
-          <h2>🧠 Difficoltà</h2>
-          <div className="difficulty-control">
-            <label htmlFor="bot-difficulty">
-              Livello di difficoltà: {botDifficulty} / {BOT_DIFFICULTY_MAX}
-            </label>
-            <input
-              id="bot-difficulty"
-              type="range"
-              min={BOT_DIFFICULTY_MIN}
-              max={BOT_DIFFICULTY_MAX}
-              step={1}
-              value={botDifficulty}
-              onChange={(e) => setBotDifficulty(Number(e.target.value))}
-              aria-label="Difficoltà del bot"
-            />
-            <p className="difficulty-hint">
-              Il PC vede {formatMovesAhead(botDifficulty)} avanti
-              (profondità di ricerca {difficultyToDepth(botDifficulty)} mezze mosse).
-            </p>
-          </div>
+      </Panel>
 
-          <h2>🎯 Composizione</h2>
-          <div className="actions" style={{ flexDirection: 'column' }}>
-            <button className="btn-save" onClick={chooseManual}>Manuale — lo compongo io</button>
-            {getPresetTeams().map((preset) => {
-              const valid = isPresetValid(preset.id, effectiveRules, maxDistinctSpecialTypes);
-              return (
-                <button
-                  key={preset.id}
-                  className="btn-auto"
-                  onClick={() => choosePreset(preset.id)}
-                  disabled={!valid}
-                  title={valid ? undefined : 'Non valido con le impostazioni attuali della partita (budget o limite di tipi speciali)'}
-                >
-                  Preset: {preset.label} — {preset.description}
-                  {!valid && ' (non valido con queste impostazioni)'}
-                </button>
-              );
-            })}
-            <button className="btn-improve" onClick={chooseMirror} disabled={!humanTeam}>
-              Specchio — copia il mio team
-            </button>
-            <button className="btn-reset" onClick={chooseRandom}>
-              Casuale — genera entro il budget
-            </button>
-          </div>
+      <Panel title="🎯 Composizione" className="w-full max-w-[640px]">
+        <div className="flex flex-col gap-2">
+          <Button variant="primary" onClick={chooseManual}>Manuale — lo compongo io</Button>
+          {getPresetTeams().map((preset) => {
+            const valid = isPresetValid(preset.id, effectiveRules, maxDistinctSpecialTypes);
+            return (
+              <Button
+                key={preset.id}
+                variant="auto"
+                onClick={() => choosePreset(preset.id)}
+                disabled={!valid}
+                title={valid ? undefined : 'Non valido con le impostazioni attuali della partita (budget o limite di tipi speciali)'}
+              >
+                Preset: {preset.label} — {preset.description}
+                {!valid && ' (non valido con queste impostazioni)'}
+              </Button>
+            );
+          })}
+          <Button variant="improve" onClick={chooseMirror} disabled={!humanTeam}>
+            Specchio — copia il mio team
+          </Button>
+          <Button variant="secondary" onClick={chooseRandom}>
+            Casuale — genera entro il budget
+          </Button>
         </div>
-      </div>
-    </div>
+      </Panel>
+    </PageShell>
   );
 }
 
