@@ -99,6 +99,10 @@ export interface Piece {
    *  itself. Checked by moveEngine.ts's generatePseudoLegalMoves and by every alternative-action
    *  module (scocca.ts, swap.ts, necromancy.ts, swapper.ts). */
   stunAura?: boolean;
+  /** True only for Repulsore (RP): in addition to a King-style move, may push an adjacent enemy
+   *  (never the King) one square directly away from itself, onto an empty on-board square — an
+   *  alternative action that captures nothing. Drives getRepulseTargets / applyRepulse. */
+  respingeNemici?: boolean;
 }
 
 export interface MirageMarker {

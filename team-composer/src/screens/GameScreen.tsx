@@ -5,12 +5,13 @@ import Board from '../components/Board';
 import { getPieceDef } from '../game/moveEngine';
 import { getPromotionOptions, isPromotionMove } from '../game/promotion';
 import { canUseScocca, getScoccaTargets } from '../game/scocca';
+import { canRepulse, getRepulseTargets } from '../game/repulse';
 import { canSwap, getSwapTargets } from '../game/swap';
 import { canSwapperSwap, getSwapperCandidateSquares } from '../game/swapper';
 import { canRevive, getRevivalSquares, getRevivableSiglas } from '../game/necromancy';
 import { canMimic, getOrphanThreats } from '../game/orphan';
 import { canSdoppiare, canRiunire, getSdoppiamentoSquares, getRiunioneSquares, isRealMirage } from '../game/mirage';
-import { createInitialGameState, applyTurn, applyScocca, applySwap, applySwapperSwap, applyRevive, applySdoppiamento, applyRiunione, getLegalMovesForTurn, skipExtraMove, stopRabbitChain, type GameState } from '../game/turnManager';
+import { createInitialGameState, applyTurn, applyScocca, applyRepulse, applySwap, applySwapperSwap, applyRevive, applySdoppiamento, applyRiunione, getLegalMovesForTurn, skipExtraMove, stopRabbitChain, type GameState } from '../game/turnManager';
 import { chooseBotAction, applyBotAction, formatMovesAhead, BOT_DIFFICULTY_MAX } from '../game/bot';
 import { sortSiglasByPunti } from '../data/pieces';
 import type { Coord, Owner } from '../game/board';
@@ -58,7 +59,7 @@ function GameScreen() {
   const [pendingRevival, setPendingRevival] = useState<PendingRevival | null>(null);
   const [pendingMimicChoice, setPendingMimicChoice] = useState<PendingMimicChoice | null>(null);
   const [orphanMimicSource, setOrphanMimicSource] = useState<Coord | null>(null);
-  const [actionMode, setActionMode] = useState<'scocca' | 'swap' | 'revive' | 'swapperSwap' | 'sdoppiamento' | 'riunione' | null>(null);
+  const [actionMode, setActionMode] = useState<'scocca' | 'repulse' | 'swap' | 'revive' | 'swapperSwap' | 'sdoppiamento' | 'riunione' | null>(null);
   const [swapperFirstSquare, setSwapperFirstSquare] = useState<Coord | null>(null);
   const [pendingSdoppiamento, setPendingSdoppiamento] = useState<PendingSdoppiamento | null>(null);
   const [revealRealMirage, setRevealRealMirage] = useState(false);
@@ -93,6 +94,9 @@ function GameScreen() {
     const mover = gameState.board.get(effectiveSelected);
     if (actionMode === 'scocca') {
       return mover ? getScoccaTargets(gameState.board, effectiveSelected, mover.owner) : [];
+    }
+    if (actionMode === 'repulse') {
+      return mover ? getRepulseTargets(gameState.board, effectiveSelected, mover.owner) : [];
     }
     if (actionMode === 'swap') {
       return mover ? getSwapTargets(gameState.board, effectiveSelected, mover.owner) : [];
@@ -203,6 +207,20 @@ function GameScreen() {
 
   const commitScocca = (from: Coord, target: Coord) => {
     const result = applyScocca(gameState, from, target);
+    if (result.ok) {
+      setGameState(result.state);
+      setOrientation(result.state.turn);
+      setSelected(null);
+      setActionMode(null);
+      setSwapperFirstSquare(null);
+      setError(null);
+    } else {
+      setError(result.reason);
+    }
+  };
+
+  const commitRepulse = (from: Coord, target: Coord) => {
+    const result = applyRepulse(gameState, from, target);
     if (result.ok) {
       setGameState(result.state);
       setOrientation(result.state.turn);
@@ -330,6 +348,7 @@ function GameScreen() {
     if (actionMode && selected) {
       if (legalDestinations.includes(coord)) {
         if (actionMode === 'scocca') commitScocca(selected, coord);
+        else if (actionMode === 'repulse') commitRepulse(selected, coord);
         else if (actionMode === 'swap') commitSwap(selected, coord);
         else if (actionMode === 'sdoppiamento') setPendingSdoppiamento({ from: selected, cloneSquare: coord });
         else if (actionMode === 'riunione') commitRiunione(selected, coord);
@@ -469,6 +488,12 @@ function GameScreen() {
               {actionMode === 'scocca' ? '↩️ Annulla Scoccare' : '🏹 Scoccare'}
             </Button>
           )}
+          {selected && selectedPiece && !gameState.pendingExtraMove && !gameState.pendingRabbitChain && canRepulse(getPieceDef(selectedPiece.sigla))
+            && getRepulseTargets(gameState.board, selected, selectedPiece.owner).length > 0 && (
+            <Button variant="auto" onClick={() => setActionMode((m) => (m === 'repulse' ? null : 'repulse'))}>
+              {actionMode === 'repulse' ? '↩️ Annulla Respingi' : '💨 Respingi'}
+            </Button>
+          )}
           {selected && selectedPiece && !gameState.pendingExtraMove && !gameState.pendingRabbitChain && canSwap(getPieceDef(selectedPiece.sigla))
             && getSwapTargets(gameState.board, selected, selectedPiece.owner).length > 0 && (
             <Button variant="auto" onClick={() => setActionMode((m) => (m === 'swap' ? null : 'swap'))}>
@@ -503,6 +528,7 @@ function GameScreen() {
         </div>
         {showNames && <p className="text-sm text-slate-600 dark:text-slate-400">🏷 Nomi visibili {namesKeyHeld ? '(H premuto)' : '(toggle attivo)'}.</p>}
         {actionMode === 'scocca' && <p className="text-sm text-slate-600 dark:text-slate-400">🏹 Modalità Scoccare: seleziona un bersaglio nemico a 3-4 caselle.</p>}
+        {actionMode === 'repulse' && <p className="text-sm text-slate-600 dark:text-slate-400">💨 Modalità Respingi: seleziona un nemico adiacente da spingere via di una casella (la casella dietro deve essere libera).</p>}
         {actionMode === 'swap' && <p className="text-sm text-slate-600 dark:text-slate-400">🔀 Modalità Scambio: seleziona un alleato in linea di vista libera (riga, colonna o diagonale).</p>}
         {actionMode === 'revive' && <p className="text-sm text-slate-600 dark:text-slate-400">🧟 Modalità Rianimazione: seleziona una casella vuota adiacente.</p>}
         {actionMode === 'swapperSwap' && !swapperFirstSquare && <p className="text-sm text-slate-600 dark:text-slate-400">🔁 Scambio: seleziona la prima casella (un alleato adiacente, o lo Swapper stesso).</p>}

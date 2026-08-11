@@ -12,6 +12,7 @@ export const ACTION_LABELS: Record<string, string> = {
   danno_ad_area: 'Danno ad area',
   copia_poteri: 'Copia poteri',
   congelamento: 'Congelamento',
+  respingi: 'Respingere',
   scambio_due_alleati: 'Scambio di due alleati',
   sdoppiamento: 'Sdoppiamento',
   riunione: 'Riunione',

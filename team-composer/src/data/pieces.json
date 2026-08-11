@@ -616,5 +616,23 @@
     "resistance": 0,
     "immunityTypes": [],
     "alternativeActions": []
+  },
+  {
+    "sigla": "RP",
+    "descrizione": "Repulsore",
+    "punti": 10,
+    "categoria": "base",
+    "classico": false,
+    "regole": "Si muove di una casella in qualsiasi direzione. Cattura in mischia. In alternativa al movimento, può respingere un nemico adiacente (mai il Re) di una casella direttamente lontano da sé, purché la casella di arrivo sia vuota: il nemico viene spostato senza essere catturato.",
+    "moves": [
+      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step" }
+    ],
+    "movimentoTipo": "step",
+    "resistance": 0,
+    "immunityTypes": [],
+    "alternativeActions": [
+      { "type": "respingi", "modalita": "alternativa", "params": { "raggio": 1, "target": "nemico_adiacente", "esclusi": ["re"], "senzaCattura": true } }
+    ],
+    "respingeNemici": true
   }
 ]

@@ -32,6 +32,7 @@ const ACTION_DESCRIPTIONS: Record<string, string> = {
   danno_ad_area: 'dopo una cattura distrugge i pezzi ortogonalmente adiacenti alla casella di arrivo',
   copia_poteri: 'assume i poteri del pezzo che lo tiene in scacco',
   congelamento: 'congela i nemici adiacenti (mai il Re): nessuna mossa o azione, tranne catturare lo Stunner',
+  respingi: 'spinge un nemico adiacente (mai il Re) di una casella lontano da sé, su una casella vuota',
   scambio_due_alleati: 'scambia le posizioni di due alleati adiacenti allo Swapper',
   sdoppiamento: 'crea un clone illusorio su una casella vuota adiacente e sceglie quale dei due è quello vero',
   riunione: 'ricostituisce vero e clone in un unico pezzo, scegliendo la casella in cui ricompare',

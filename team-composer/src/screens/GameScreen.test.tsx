@@ -475,6 +475,56 @@ describe('GameScreen — Arciere scocca', () => {
   });
 });
 
+describe('GameScreen — Repulsore respingi', () => {
+  it('shows the "Respingi" toggle only when a Repulsore with a pushable enemy is selected', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'RP', 'A');
+    board = place(board, 'e5', 'TO', 'B'); // adjacent enemy, landing f6 empty
+    board = place(board, 'a1', 'TO', 'A');
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="a1"]')!);
+    expect(screen.queryByText(/Respingi/i)).not.toBeInTheDocument();
+
+    fireEvent.click(document.querySelector('[data-coord="a1"]')!); // deselect
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    expect(screen.getByText(/💨 Respingi/i)).toBeInTheDocument();
+  });
+
+  it('entering repulse mode highlights the pushable enemy instead of normal move destinations', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'RP', 'A');
+    board = place(board, 'e5', 'TO', 'B'); // pushable enemy
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    expect(document.querySelector('[data-coord="e5"]')).toHaveClass('board-square-highlighted'); // normal move too
+
+    fireEvent.click(screen.getByText(/💨 Respingi/i));
+    expect(document.querySelector('[data-coord="e5"]')).toHaveClass('board-square-highlighted'); // still highlighted as the push target
+    expect(document.querySelector('[data-coord="d5"]')).not.toHaveClass('board-square-highlighted'); // plain move square, not a push target
+  });
+
+  it('pushes the enemy one square away without moving the Repulsore, and passes the turn', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'RP', 'A');
+    board = place(board, 'e5', 'TO', 'B');
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    fireEvent.click(screen.getByText(/💨 Respingi/i));
+    fireEvent.click(document.querySelector('[data-coord="e5"]')!);
+
+    expect(document.querySelector('[data-coord="d4"]')?.querySelector('svg')?.getAttribute('aria-label')).toBe('RP');
+    expect(document.querySelector('[data-coord="e5"]')?.querySelector('svg')).toBeNull(); // the enemy left its square
+    expect(document.querySelector('[data-coord="f6"]')?.querySelector('svg')?.getAttribute('aria-label')).toBe('TO');
+    expect(screen.getByText(/Turno: Giocatore 2/i)).toBeInTheDocument();
+  });
+});
+
 describe('GameScreen — Mistico swap', () => {
   it('shows the "Scambia posizione" toggle only when a Mistico is selected', () => {
     let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');

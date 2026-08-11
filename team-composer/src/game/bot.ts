@@ -3,6 +3,7 @@ import { getPieceDef } from './moveEngine';
 import { findKingCoord } from './check';
 import { getPromotionOptions, isPromotionMove } from './promotion';
 import { canUseScocca, getScoccaTargets } from './scocca';
+import { canRepulse, getRepulseTargets } from './repulse';
 import { canSwap, getSwapTargets } from './swap';
 import { canSwapperSwap, getSwapperCandidatePairs } from './swapper';
 import { canRevive, getRevivalSquares, getRevivableSiglas } from './necromancy';
@@ -12,6 +13,7 @@ import { computeMaterialScore } from './antiStalemate';
 import {
   applyTurn,
   applyScocca,
+  applyRepulse,
   applySwap,
   applySwapperSwap,
   applyRevive,
@@ -68,6 +70,7 @@ export function formatMovesAhead(difficulty: number): string {
 export type BotAction =
   | { kind: 'move'; from: Coord; to: Coord; promotionChoice?: string; orphanMimicSource?: Coord }
   | { kind: 'scocca'; from: Coord; target: Coord }
+  | { kind: 'repulse'; from: Coord; target: Coord }
   | { kind: 'swap'; from: Coord; target: Coord }
   | { kind: 'swapperSwap'; from: Coord; squareA: Coord; squareB: Coord }
   | { kind: 'revive'; from: Coord; target: Coord; sigla: string }
@@ -82,6 +85,8 @@ export function applyBotAction(state: GameState, action: BotAction): ApplyTurnRe
       return applyTurn(state, action.from, action.to, action.promotionChoice, action.orphanMimicSource);
     case 'scocca':
       return applyScocca(state, action.from, action.target);
+    case 'repulse':
+      return applyRepulse(state, action.from, action.target);
     case 'swap':
       return applySwap(state, action.from, action.target);
     case 'swapperSwap':
@@ -151,6 +156,12 @@ export function generateBotActions(state: GameState, owner: Owner): BotAction[] 
     if (canUseScocca(pieceDef)) {
       for (const target of getScoccaTargets(state.board, from, owner, state.dimensions)) {
         actions.push({ kind: 'scocca', from, target });
+      }
+    }
+
+    if (canRepulse(pieceDef)) {
+      for (const target of getRepulseTargets(state.board, from, owner, state.dimensions)) {
+        actions.push({ kind: 'repulse', from, target });
       }
     }
 
@@ -273,6 +284,7 @@ export function actionKey(action: BotAction): string {
     case 'move':
       return `move:${action.from}:${action.to}:${action.promotionChoice ?? ''}:${action.orphanMimicSource ?? ''}`;
     case 'scocca': return `scocca:${action.from}:${action.target}`;
+    case 'repulse': return `repulse:${action.from}:${action.target}`;
     case 'swap': return `swap:${action.from}:${action.target}`;
     case 'swapperSwap': return `swapperSwap:${action.squareA}:${action.squareB}`;
     case 'revive': return `revive:${action.from}:${action.target}:${action.sigla}`;
