@@ -670,5 +670,23 @@
       { "type": "esplosione", "modalita": "passiva", "params": { "raggio": 0, "target": "catturatore", "reImmune": true } }
     ],
     "esplodeSeCatturato": true
+  },
+  {
+    "sigla": "VZ",
+    "descrizione": "Vortice",
+    "punti": 24,
+    "categoria": "base",
+    "classico": false,
+    "regole": "Si muove di una casella in qualsiasi direzione. Cattura in mischia. In alternativa al movimento, può \"attirare\": un nemico a esattamente 2 caselle in linea retta (mai il Re) viene trascinato di 1 casella verso il Vortice, sulla casella vuota in mezzo — non lo cattura, ma lo sposta più vicino.",
+    "moves": [
+      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step" }
+    ],
+    "movimentoTipo": "step",
+    "resistance": 0,
+    "immunityTypes": [],
+    "alternativeActions": [
+      { "type": "attira", "modalita": "alternativa", "params": { "distanza": 2, "target": "nemico_a_distanza_2", "direzioni": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "senzaCattura": true, "reEscluso": true } }
+    ],
+    "attiraNemici": true
   }
 ]

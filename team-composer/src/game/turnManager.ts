@@ -20,6 +20,7 @@ import { getPromotionOptions, isPromotionMove } from './promotion';
 import { canUseScocca, getScoccaTargets } from './scocca';
 import { canRepulse, getRepulseTargets } from './repulse';
 import { canTeleport, getTeleportTargets } from './teleport';
+import { canAttract, getAttractTargets } from './vortex';
 import { canSwap, getSwapTargets } from './swap';
 import { canSwapperSwap, getSwapperCandidateSquares } from './swapper';
 import { canRevive, getRevivalSquares, getRevivableSiglas } from './necromancy';
@@ -1086,6 +1087,93 @@ export function applyTeleport(state: GameState, from: Coord, to: Coord): ApplyTu
     sigla: piece.sigla,
     isCapture: false,
     isTeleport: true,
+  };
+
+  return {
+    ok: true,
+    state: {
+      board: nextBoard,
+      dimensions: state.dimensions,
+      turn: nextTurn,
+      turnNumber: state.turnNumber + 1,
+      history: [...state.history, historyEntry],
+      captured: state.captured,
+      status,
+      winner: resolveWinner(status, nextBoard, piece.owner, state.dimensions),
+      enPassantTarget: null,
+      pendingExtraMove: null,
+      pendingRabbitChain: null,
+      turnsSinceProgress,
+    },
+  };
+}
+
+/**
+ * Plays a Vortice's "attira" as the turn's action: instead of moving, the Vortice drags an
+ * enemy at exactly 2 squares in a straight line (never the King) one square closer, onto the
+ * empty square in between — no capture, the enemy simply changes square. Like any action, it's
+ * rejected if it would leave the acting player's own King in check (README §3.2).
+ */
+export function applyAttract(state: GameState, from: Coord, target: Coord): ApplyTurnResult {
+  if (GAME_OVER_STATUSES.has(state.status)) {
+    return { ok: false, reason: 'La partita è terminata.' };
+  }
+  if (state.pendingExtraMove) {
+    return { ok: false, reason: 'Devi prima completare (o saltare) il movimento extra del Berserker.' };
+  }
+  if (state.pendingRabbitChain) {
+    return { ok: false, reason: 'Devi prima continuare (o fermare) la catena di salti del Coniglio.' };
+  }
+
+  const piece = getPieceAt(state.board, from);
+  if (!piece) {
+    return { ok: false, reason: `Nessun pezzo in ${from}.` };
+  }
+  if (piece.owner !== state.turn) {
+    return { ok: false, reason: 'Non è il turno di questo giocatore.' };
+  }
+
+  const pieceDef = getPieceDef(piece.sigla);
+  if (!canAttract(pieceDef)) {
+    return { ok: false, reason: 'Questo pezzo non può attirare.' };
+  }
+
+  const targets = getAttractTargets(state.board, from, piece.owner, state.dimensions);
+  if (!targets.includes(target)) {
+    return { ok: false, reason: `Bersaglio non valido per attirare: ${target}.` };
+  }
+
+  // The landing square is the empty square halfway between the Vortice and the enemy — guaranteed
+  // valid by getAttractTargets, but re-derived here so applyAttract stays self-contained.
+  const { file: fromFile, rank: fromRank } = coordToFileRank(from);
+  const { file: targetFile, rank: targetRank } = coordToFileRank(target);
+  const landing = fileRankToCoord(
+    (fromFile + targetFile) / 2,
+    (fromRank + targetRank) / 2,
+    state.dimensions,
+  );
+  if (!landing || getPieceAt(state.board, landing)) {
+    return { ok: false, reason: 'La casella di arrivo non è libera.' };
+  }
+
+  const nextBoard = movePiece(state.board, target, landing);
+  if (isKingInCheck(nextBoard, piece.owner, state.dimensions)) {
+    return { ok: false, reason: 'Questa azione lascerebbe il tuo Re sotto scacco.' };
+  }
+
+  const nextTurn: Owner = piece.owner === 'A' ? 'B' : 'A';
+  const turnsSinceProgress = 0; // a board-changing special action — always progress (mirrors applyRepulse/applyTeleport)
+  const status = computeStatus(nextBoard, nextTurn, turnsSinceProgress, state.dimensions);
+
+  const historyEntry: HistoryEntry = {
+    turnNumber: state.turnNumber,
+    owner: piece.owner,
+    from,
+    to: target,
+    sigla: piece.sigla,
+    isCapture: false,
+    isAttract: true,
+    attractedTo: landing,
   };
 
   return {
