@@ -652,5 +652,23 @@
       { "type": "teletrasporto", "modalita": "alternativa", "params": { "distanza": 3, "target": "casella_vuota_a_distanza_3", "direzioni": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "ignoraInterposizioni": true, "senzaCattura": true } }
     ],
     "teletrasporto": true
+  },
+  {
+    "sigla": "BO",
+    "descrizione": "Bomba",
+    "punti": 21,
+    "categoria": "base",
+    "classico": false,
+    "regole": "Si muove di una casella in qualsiasi direzione. Cattura in mischia. Quando viene catturata (con qualsiasi cattura: in mischia, a salto, a distanza o a fine catena), esplode e distrugge anche il pezzo che l'ha catturata — il Re è sempre immune all'esplosione. L'esplosione non scatta mai se lascerebbe sotto scacco il Re di chi cattura.",
+    "moves": [
+      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step" }
+    ],
+    "movimentoTipo": "step",
+    "resistance": 0,
+    "immunityTypes": [],
+    "alternativeActions": [
+      { "type": "esplosione", "modalita": "passiva", "params": { "raggio": 0, "target": "catturatore", "reImmune": true } }
+    ],
+    "esplodeSeCatturato": true
   }
 ]

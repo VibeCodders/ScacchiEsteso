@@ -290,6 +290,15 @@ const PIECE_SHAPES: Record<string, ReactElement> = {
       <path d="M50 33 Q58 40 50 47 Q42 54 50 61" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
     </g>
   ),
+  BO: (
+    <g>
+      <rect x="30" y="68" width="40" height="12" rx="3" />
+      <circle cx="50" cy="48" r="19" />
+      <path d="M48 30 L44 12" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
+      <path d="M50 30 Q58 34 55 42" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
+      <path d="M46 47 h8 M50 43 v8" stroke="var(--piece-label-color, #fff)" strokeWidth="3" strokeLinecap="round" />
+    </g>
+  ),
 };
 
 export interface PieceIconProps extends SVGProps<SVGSVGElement> {

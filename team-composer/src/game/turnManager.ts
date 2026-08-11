@@ -24,6 +24,7 @@ import { canSwap, getSwapTargets } from './swap';
 import { canSwapperSwap, getSwapperCandidateSquares } from './swapper';
 import { canRevive, getRevivalSquares, getRevivableSiglas } from './necromancy';
 import { getAreaDamageVictims, triggersAreaDamage } from './areaDamage';
+import { resolveExplosion } from './bomb';
 import { canMimic, getMimicMoves, getOrphanThreats } from './orphan';
 import { isSilenced } from './auras';
 import { ANTI_STALEMATE_TURN_LIMIT, resolveAntiStalemateWinner } from './antiStalemate';
@@ -346,9 +347,25 @@ function resolveMove(state: GameState, piece: PieceInstance, move: GeneratedMove
     nextCaptured[capturedPiece.owner] = [...nextCaptured[capturedPiece.owner], capturedPiece];
   }
 
+  // Bomba (esplodeSeCatturato): capturing it destroys the capturer too — never a King, and never
+  // when the blast would expose the capturer's own King. The exploded capturer joins its owner's
+  // graveyard like any captured piece. Collateral area-damage victims never trigger the blast.
+  let explodedAt: Coord | undefined;
+  if (capturedPiece && !isMirageClone(capturedPiece)) {
+    const explosion = resolveExplosion(nextBoard, capturedPiece, move.to, piece.owner, state.dimensions);
+    if (explosion.explodedAt) {
+      explodedAt = explosion.explodedAt;
+      nextBoard = explosion.board;
+      if (explosion.explodedCapturer && !isMirageClone(explosion.explodedCapturer)) {
+        nextCaptured[explosion.explodedCapturer.owner] = [...nextCaptured[explosion.explodedCapturer.owner], explosion.explodedCapturer];
+      }
+    }
+  }
+
   let areaDamageCoords: Coord[] | undefined;
   const pieceDef = getPieceDef(piece.sigla);
-  if (triggersAreaDamage(pieceDef, move) && !isSilenced(nextBoard, move.to, piece.owner, state.dimensions)) {
+  // A Colosso destroyed by the blast is gone: no area damage fires from its empty square.
+  if (!explodedAt && triggersAreaDamage(pieceDef, move) && !isSilenced(nextBoard, move.to, piece.owner, state.dimensions)) {
     const victims = getAreaDamageVictims(nextBoard, move.to, state.dimensions);
     if (victims.length > 0) {
       // Collect victims plus any clones dissolved as fallout into one removal set (a real mirage
@@ -386,6 +403,8 @@ function resolveMove(state: GameState, piece: PieceInstance, move: GeneratedMove
     promotedTo: promotionChoice,
     isExtraMove: isExtraMove || undefined,
     areaDamageCoords,
+    isExplosion: explodedAt ? true : undefined,
+    explodedAt,
     isCloneCapture: capturedPiece && isMirageClone(capturedPiece) ? true : undefined,
     dispelledClone: dispelledClone ? true : undefined,
   };
@@ -491,10 +510,25 @@ export function stopRabbitChain(state: GameState): ApplyTurnResult {
   // Miraggio fallout: capturing the real one dissolves its clone (no punti); capturing a clone is
   // itself a wasted capture (no punti). Only the real piece lands in the graveyard.
   const dispelledClone = isRealMirage(capturedPiece) ? Boolean(findCloneOf(state.board, capturedPiece.mirage!.id)) : false;
-  const { board: nextBoard } = removeWithMirageFallout(state.board, lastHurdle);
+  const { board: nextBoard0 } = removeWithMirageFallout(state.board, lastHurdle);
   const nextCaptured: Record<Owner, PieceInstance[]> = { ...state.captured };
   if (!isMirageClone(capturedPiece)) {
     nextCaptured[capturedPiece.owner] = [...nextCaptured[capturedPiece.owner], capturedPiece];
+  }
+
+  // Bomba (esplodeSeCatturato): the last jump lands on a live mine — the blast destroys the
+  // Coniglio too (never a King, and never when it would expose its own King). Clones can't explode.
+  let nextBoard = nextBoard0;
+  let explodedAt: Coord | undefined;
+  if (!isMirageClone(capturedPiece)) {
+    const explosion = resolveExplosion(nextBoard0, capturedPiece, at, piece.owner, state.dimensions);
+    if (explosion.explodedAt) {
+      explodedAt = explosion.explodedAt;
+      nextBoard = explosion.board;
+      if (explosion.explodedCapturer) {
+        nextCaptured[explosion.explodedCapturer.owner] = [...nextCaptured[explosion.explodedCapturer.owner], explosion.explodedCapturer];
+      }
+    }
   }
 
   const historyEntry: HistoryEntry = {
@@ -506,6 +540,8 @@ export function stopRabbitChain(state: GameState): ApplyTurnResult {
     isCapture: true,
     capturedCoord: lastHurdle,
     capturedSigla: capturedPiece.sigla,
+    isExplosion: explodedAt ? true : undefined,
+    explodedAt,
     isCloneCapture: isMirageClone(capturedPiece) ? true : undefined,
     dispelledClone: dispelledClone ? true : undefined,
   };
@@ -618,7 +654,8 @@ export function applyTurn(state: GameState, from: Coord, to: Coord, promotionCho
   }
 
   const outcome = resolveMove(state, piece, move, undefined, false);
-  if (triggersExtraMove(pieceDef, move)) {
+  // A Berserker destroyed by a Bomba's blast gets no bonus move — it's no longer on the board.
+  if (triggersExtraMove(pieceDef, move) && !outcome.historyEntry.isExplosion) {
     return { ok: true, state: enterExtraMovePhase(state, piece, outcome) };
   }
   return { ok: true, state: finalizeTurn(state, piece, move, outcome, false) };
@@ -689,10 +726,30 @@ export function applyScocca(state: GameState, from: Coord, target: Coord): Apply
   // Miraggio fallout: shooting the real one dissolves its clone (no punti); shooting a clone is a
   // wasted shot (no punti). Only the real piece lands in the graveyard.
   const dispelledClone = isRealMirage(targetPiece) ? Boolean(findCloneOf(state.board, targetPiece.mirage!.id)) : false;
-  const { board: nextBoard } = removeWithMirageFallout(state.board, target);
+  const { board: nextBoard0 } = removeWithMirageFallout(state.board, target);
 
-  if (isKingInCheck(nextBoard, piece.owner, state.dimensions)) {
+  if (isKingInCheck(nextBoard0, piece.owner, state.dimensions)) {
     return { ok: false, reason: 'Questa azione lascerebbe il tuo Re sotto scacco.' };
+  }
+
+  const nextCaptured: Record<Owner, PieceInstance[]> = { A: state.captured.A, B: state.captured.B };
+  if (!isMirageClone(targetPiece)) {
+    nextCaptured[targetPiece.owner] = [...nextCaptured[targetPiece.owner], targetPiece];
+  }
+
+  // Bomba (esplodeSeCatturato): shooting one detonates it, destroying the Arciere too — never a
+  // King, and never when the blast would expose the Arciere's own King. A clone cannot explode.
+  let nextBoard = nextBoard0;
+  let explodedAt: Coord | undefined;
+  if (!isMirageClone(targetPiece)) {
+    const explosion = resolveExplosion(nextBoard0, targetPiece, from, piece.owner, state.dimensions);
+    if (explosion.explodedAt) {
+      explodedAt = explosion.explodedAt;
+      nextBoard = explosion.board;
+      if (explosion.explodedCapturer) {
+        nextCaptured[explosion.explodedCapturer.owner] = [...nextCaptured[explosion.explodedCapturer.owner], explosion.explodedCapturer];
+      }
+    }
   }
 
   const nextTurn: Owner = piece.owner === 'A' ? 'B' : 'A';
@@ -709,14 +766,11 @@ export function applyScocca(state: GameState, from: Coord, target: Coord): Apply
     capturedCoord: target,
     capturedSigla: targetPiece.sigla,
     isRangedAttack: true,
+    isExplosion: explodedAt ? true : undefined,
+    explodedAt,
     isCloneCapture: isMirageClone(targetPiece) ? true : undefined,
     dispelledClone: dispelledClone ? true : undefined,
   };
-
-  const nextCaptured: Record<Owner, PieceInstance[]> = { A: state.captured.A, B: state.captured.B };
-  if (!isMirageClone(targetPiece)) {
-    nextCaptured[targetPiece.owner] = [...nextCaptured[targetPiece.owner], targetPiece];
-  }
 
   return {
     ok: true,

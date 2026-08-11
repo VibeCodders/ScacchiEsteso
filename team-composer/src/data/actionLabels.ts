@@ -15,6 +15,7 @@ export const ACTION_LABELS: Record<string, string> = {
   respingi: 'Respingere',
   teletrasporto: 'Teletrasporto',
   attira: 'Attira',
+  esplosione: 'Esplosione',
   scambio_due_alleati: 'Scambio di due alleati',
   sdoppiamento: 'Sdoppiamento',
   riunione: 'Riunione',
