@@ -174,6 +174,16 @@ export function coordToFileRank(coord: Coord): { file: number; rank: number } {
   return { file: fileToIndex(match[1]), rank: Number(match[2]) };
 }
 
+/** True when `coord` shares no rank, file or diagonal with the square at (fromFile, fromRank) —
+ *  the geometric signature of off-axis movement (knight L-leaps, the Manticora's bent legs).
+ *  Shared by the similarity detector and the point estimator, which used identical copies. */
+export function isOffAxis(coord: Coord, fromFile: number, fromRank: number): boolean {
+  const { file, rank } = coordToFileRank(coord);
+  const df = Math.abs(file - fromFile);
+  const dr = Math.abs(rank - fromRank);
+  return df !== 0 && dr !== 0 && df !== dr;
+}
+
 export function fileRankToCoord(file: number, rank: number, dimensions: BoardDimensions = DEFAULT_BOARD_DIMENSIONS): Coord | null {
   if (file < 0 || file >= dimensions.width || rank < 1 || rank > dimensions.height) return null;
   return `${indexToFile(file)}${rank}`;

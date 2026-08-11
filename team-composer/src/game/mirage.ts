@@ -1,7 +1,5 @@
 import type { Piece } from '../types';
 import {
-  coordToFileRank,
-  fileRankToCoord,
   getPieceAt,
   removePieceAt,
   DEFAULT_BOARD_DIMENSIONS,
@@ -12,11 +10,7 @@ import {
   type PieceInstance,
 } from './board';
 import { isAdjacentToEnemyStunner } from './stun';
-
-const ADJACENT_OFFSETS: Array<{ df: number; dr: number }> = [
-  { df: 0, dr: 1 }, { df: 0, dr: -1 }, { df: 1, dr: 0 }, { df: -1, dr: 0 },
-  { df: 1, dr: 1 }, { df: -1, dr: 1 }, { df: 1, dr: -1 }, { df: -1, dr: -1 },
-];
+import { emptyAdjacentCoords } from './directions';
 
 export function canSdoppiare(pieceDef: Piece): boolean {
   return Boolean(pieceDef.sdoppiamento);
@@ -87,14 +81,7 @@ export function getSdoppiamentoSquares(
   if (hasLivingClone(board, piece)) return [];
   if (isAdjacentToEnemyStunner(board, from, owner, getDef, dimensions)) return [];
 
-  const { file, rank } = coordToFileRank(from);
-  const results: Coord[] = [];
-  for (const { df, dr } of ADJACENT_OFFSETS) {
-    const coord = fileRankToCoord(file + df, rank + dr, dimensions);
-    if (!coord) continue;
-    if (!getPieceAt(board, coord)) results.push(coord);
-  }
-  return results;
+  return emptyAdjacentCoords(board, from, dimensions);
 }
 
 /**

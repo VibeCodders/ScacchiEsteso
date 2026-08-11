@@ -1,7 +1,7 @@
 import type { ActionModalita, Move, Piece } from '../types';
 import { computePieceRangeSquares } from '../game/pieceInfo';
 import { pieces as ROSTER } from './pieces';
-import { allCoords, coordToFileRank, type Coord } from '../game/board';
+import { allCoords, coordToFileRank, isOffAxis, type Coord } from '../game/board';
 
 /**
  * Every square of the standard board, used to compute a piece's *exact* average mobility rather
@@ -29,14 +29,6 @@ interface EntryMobility {
    *  "similar" and "estimated price" stay aligned. */
   offAxisMoveCount: number;
   offAxisCaptureCount: number;
-}
-
-/** True when `coord` shares no rank, file or diagonal with the square at (fromFile, fromRank). */
-function isOffAxis(coord: string, fromFile: number, fromRank: number): boolean {
-  const { file, rank } = coordToFileRank(coord);
-  const df = Math.abs(file - fromFile);
-  const dr = Math.abs(rank - fromRank);
-  return df !== 0 && dr !== 0 && df !== dr;
 }
 
 /** Move vs. capture mobility contributed by a single Move entry, averaged across the sample

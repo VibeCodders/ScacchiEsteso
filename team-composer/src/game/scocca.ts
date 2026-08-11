@@ -11,16 +11,12 @@ import {
   type Owner,
 } from './board';
 import { isPathClear } from './lineOfSight';
-import { isShieldedByEgida, isSilenced } from './auras';
-import { isAdjacentToEnemyStunner } from './stun';
+import { isShieldedByEgida } from './auras';
+import { isActionBlocked } from './actionGuards';
+import { DIRECTIONS_8 } from './directions';
 import { getPieceDef } from './moveEngine';
 
 const SCOCCA_DISTANCES = [3, 4] as const;
-
-const ALL_DIRECTIONS: Array<{ df: number; dr: number }> = [
-  { df: 0, dr: 1 }, { df: 0, dr: -1 }, { df: 1, dr: 0 }, { df: -1, dr: 0 },
-  { df: 1, dr: 1 }, { df: -1, dr: 1 }, { df: 1, dr: -1 }, { df: -1, dr: -1 },
-];
 
 export function canUseScocca(pieceDef: Piece): boolean {
   return Boolean(pieceDef.scocca);
@@ -34,13 +30,12 @@ export function canUseScocca(pieceDef: Piece): boolean {
  * shielded by an (unsilenced) allied Paladino's egida are excluded (README §7).
  */
 export function getScoccaTargets(board: BoardState, from: Coord, owner: Owner, dimensions: BoardDimensions = DEFAULT_BOARD_DIMENSIONS): Coord[] {
-  if (isSilenced(board, from, owner, dimensions)) return [];
-  if (isAdjacentToEnemyStunner(board, from, owner, getPieceDef, dimensions)) return [];
+  if (isActionBlocked(board, from, owner, getPieceDef, dimensions)) return [];
 
   const { file, rank } = coordToFileRank(from);
   const results: Coord[] = [];
 
-  for (const vector of ALL_DIRECTIONS) {
+  for (const vector of DIRECTIONS_8) {
     for (const dist of SCOCCA_DISTANCES) {
       const coord = fileRankToCoord(file + vector.df * dist, rank + vector.dr * dist, dimensions);
       if (!coord) continue;

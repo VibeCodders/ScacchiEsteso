@@ -9,15 +9,9 @@ import {
   type Coord,
   type Owner,
 } from './board';
-import { isSilenced } from './auras';
-import { isAdjacentToEnemyStunner } from './stun';
+import { isActionBlocked } from './actionGuards';
+import { DIRECTIONS_8 } from './directions';
 import { getPieceDef } from './moveEngine';
-
-/** Distance-3 offsets in the same 8 directions as the other alternative-action modules. */
-const TELEPORT_OFFSETS: Array<{ df: number; dr: number }> = [
-  { df: 0, dr: 3 }, { df: 0, dr: -3 }, { df: 3, dr: 0 }, { df: -3, dr: 0 },
-  { df: 3, dr: 3 }, { df: -3, dr: 3 }, { df: 3, dr: -3 }, { df: -3, dr: -3 },
-];
 
 export function canTeleport(pieceDef: Piece): boolean {
   return Boolean(pieceDef.teletrasporto);
@@ -32,14 +26,14 @@ export function canTeleport(pieceDef: Piece): boolean {
  * an enemy Stunner's aura.
  */
 export function getTeleportTargets(board: BoardState, from: Coord, owner: Owner, dimensions: BoardDimensions = DEFAULT_BOARD_DIMENSIONS): Coord[] {
-  if (isSilenced(board, from, owner, dimensions)) return [];
-  if (isAdjacentToEnemyStunner(board, from, owner, getPieceDef, dimensions)) return [];
+  if (isActionBlocked(board, from, owner, getPieceDef, dimensions)) return [];
 
   const { file, rank } = coordToFileRank(from);
   const results: Coord[] = [];
 
-  for (const { df, dr } of TELEPORT_OFFSETS) {
-    const landing = fileRankToCoord(file + df, rank + dr, dimensions);
+  // distance-3 offsets in the same 8 directions as the other action modules
+  for (const { df, dr } of DIRECTIONS_8) {
+    const landing = fileRankToCoord(file + df * 3, rank + dr * 3, dimensions);
     if (!landing) continue; // off the board
     if (getPieceAt(board, landing)) continue; // the landing square must be empty
     results.push(landing);

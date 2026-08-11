@@ -201,6 +201,70 @@ export function createInitialGameState(board: BoardState, firstTurn: Owner = 'A'
 
 const GAME_OVER_STATUSES: ReadonlySet<GameStatus> = new Set(['checkmate', 'stalemate', 'anti_stalemate']);
 
+/**
+ * Shared preamble of every special-action turn (scocca, swap, repulse, teleport, ...): the game
+ * must be ongoing, no Berserker extra move / Coniglio chain may be pending, and `from` must hold
+ * the acting player's own piece. Returns the acting piece, or the rejection result to return
+ * as-is — every action function used to repeat these five checks inline.
+ */
+function beginAction(state: GameState, from: Coord): { piece: PieceInstance } | { error: ApplyTurnResult } {
+  if (GAME_OVER_STATUSES.has(state.status)) {
+    return { error: { ok: false, reason: 'La partita è terminata.' } };
+  }
+  if (state.pendingExtraMove) {
+    return { error: { ok: false, reason: 'Devi prima completare (o saltare) il movimento extra del Berserker.' } };
+  }
+  if (state.pendingRabbitChain) {
+    return { error: { ok: false, reason: 'Devi prima continuare (o fermare) la catena di salti del Coniglio.' } };
+  }
+
+  const piece = getPieceAt(state.board, from);
+  if (!piece) {
+    return { error: { ok: false, reason: `Nessun pezzo in ${from}.` } };
+  }
+  if (piece.owner !== state.turn) {
+    return { error: { ok: false, reason: 'Non è il turno di questo giocatore.' } };
+  }
+  return { piece };
+}
+
+/**
+ * Shared tail of every special-action turn: flips the turn, recomputes the game status, appends
+ * the history entry and builds the next state. All special actions are board-changing, so
+ * `turnsSinceProgress` resets to 0 unless overridden; `captured` is carried over unchanged unless
+ * the action itself changed it (scocca with a Bomba explosion, a revival drawing from the
+ * graveyard, ...). Previously every action function repeated this ~30-line block inline.
+ */
+function finishAction(
+  state: GameState,
+  piece: PieceInstance,
+  nextBoard: BoardState,
+  historyEntry: HistoryEntry,
+  opts: { captured?: Record<Owner, PieceInstance[]>; turnsSinceProgress?: number } = {},
+): ApplyTurnResult {
+  const nextTurn: Owner = piece.owner === 'A' ? 'B' : 'A';
+  const turnsSinceProgress = opts.turnsSinceProgress ?? 0; // a board-changing special action — always progress
+  const status = computeStatus(nextBoard, nextTurn, turnsSinceProgress, state.dimensions);
+
+  return {
+    ok: true,
+    state: {
+      board: nextBoard,
+      dimensions: state.dimensions,
+      turn: nextTurn,
+      turnNumber: state.turnNumber + 1,
+      history: [...state.history, historyEntry],
+      captured: opts.captured ?? state.captured,
+      status,
+      winner: resolveWinner(status, nextBoard, piece.owner, state.dimensions),
+      enPassantTarget: null,
+      pendingExtraMove: null,
+      pendingRabbitChain: null,
+      turnsSinceProgress,
+    },
+  };
+}
+
 /** README §6 — en passant is only between Pedoni (PE), not the checkers-style Pedone di Dama. */
 const EN_PASSANT_SIGLA = 'PE';
 
@@ -540,6 +604,10 @@ export function stopRabbitChain(state: GameState): ApplyTurnResult {
     }
   }
 
+  const nextTurn: Owner = piece.owner === 'A' ? 'B' : 'A';
+  const turnsSinceProgress = 0; // a capture — always progress
+  const status = computeStatus(nextBoard, nextTurn, turnsSinceProgress, state.dimensions);
+
   const historyEntry: HistoryEntry = {
     turnNumber: state.turnNumber,
     owner: piece.owner,
@@ -554,10 +622,6 @@ export function stopRabbitChain(state: GameState): ApplyTurnResult {
     isCloneCapture: isMirageClone(capturedPiece) ? true : undefined,
     dispelledClone: dispelledClone ? true : undefined,
   };
-
-  const nextTurn: Owner = piece.owner === 'A' ? 'B' : 'A';
-  const turnsSinceProgress = 0; // a capture — always progress
-  const status = computeStatus(nextBoard, nextTurn, turnsSinceProgress, state.dimensions);
 
   return {
     ok: true,
@@ -703,23 +767,9 @@ export function skipExtraMove(state: GameState): ApplyTurnResult {
  * it's rejected if it would leave the acting player's own King in check (README §3.2).
  */
 export function applyScocca(state: GameState, from: Coord, target: Coord): ApplyTurnResult {
-  if (GAME_OVER_STATUSES.has(state.status)) {
-    return { ok: false, reason: 'La partita è terminata.' };
-  }
-  if (state.pendingExtraMove) {
-    return { ok: false, reason: 'Devi prima completare (o saltare) il movimento extra del Berserker.' };
-  }
-  if (state.pendingRabbitChain) {
-    return { ok: false, reason: 'Devi prima continuare (o fermare) la catena di salti del Coniglio.' };
-  }
-
-  const piece = getPieceAt(state.board, from);
-  if (!piece) {
-    return { ok: false, reason: `Nessun pezzo in ${from}.` };
-  }
-  if (piece.owner !== state.turn) {
-    return { ok: false, reason: 'Non è il turno di questo giocatore.' };
-  }
+  const begun = beginAction(state, from);
+  if ('error' in begun) return begun.error;
+  const { piece } = begun;
 
   const pieceDef = getPieceDef(piece.sigla);
   if (!canUseScocca(pieceDef)) {
@@ -761,10 +811,6 @@ export function applyScocca(state: GameState, from: Coord, target: Coord): Apply
     }
   }
 
-  const nextTurn: Owner = piece.owner === 'A' ? 'B' : 'A';
-  const turnsSinceProgress = 0; // a capture — always progress
-  const status = computeStatus(nextBoard, nextTurn, turnsSinceProgress, state.dimensions);
-
   const historyEntry: HistoryEntry = {
     turnNumber: state.turnNumber,
     owner: piece.owner,
@@ -781,23 +827,7 @@ export function applyScocca(state: GameState, from: Coord, target: Coord): Apply
     dispelledClone: dispelledClone ? true : undefined,
   };
 
-  return {
-    ok: true,
-    state: {
-      board: nextBoard,
-      dimensions: state.dimensions,
-      turn: nextTurn,
-      turnNumber: state.turnNumber + 1,
-      history: [...state.history, historyEntry],
-      captured: nextCaptured,
-      status,
-      winner: resolveWinner(status, nextBoard, piece.owner, state.dimensions),
-      enPassantTarget: null,
-      pendingExtraMove: null,
-      pendingRabbitChain: null,
-      turnsSinceProgress,
-    },
-  };
+  return finishAction(state, piece, nextBoard, historyEntry, { captured: nextCaptured });
 }
 
 /**
@@ -806,23 +836,9 @@ export function applyScocca(state: GameState, from: Coord, target: Coord): Apply
  * rejected if it would leave the acting player's own King in check (README §3.2).
  */
 export function applySwap(state: GameState, from: Coord, target: Coord): ApplyTurnResult {
-  if (GAME_OVER_STATUSES.has(state.status)) {
-    return { ok: false, reason: 'La partita è terminata.' };
-  }
-  if (state.pendingExtraMove) {
-    return { ok: false, reason: 'Devi prima completare (o saltare) il movimento extra del Berserker.' };
-  }
-  if (state.pendingRabbitChain) {
-    return { ok: false, reason: 'Devi prima continuare (o fermare) la catena di salti del Coniglio.' };
-  }
-
-  const piece = getPieceAt(state.board, from);
-  if (!piece) {
-    return { ok: false, reason: `Nessun pezzo in ${from}.` };
-  }
-  if (piece.owner !== state.turn) {
-    return { ok: false, reason: 'Non è il turno di questo giocatore.' };
-  }
+  const begun = beginAction(state, from);
+  if ('error' in begun) return begun.error;
+  const { piece } = begun;
 
   const pieceDef = getPieceDef(piece.sigla);
   if (!canSwap(pieceDef)) {
@@ -840,10 +856,6 @@ export function applySwap(state: GameState, from: Coord, target: Coord): ApplyTu
     return { ok: false, reason: 'Questa azione lascerebbe il tuo Re sotto scacco.' };
   }
 
-  const nextTurn: Owner = piece.owner === 'A' ? 'B' : 'A';
-  const turnsSinceProgress = 0; // a swap — always progress, per the user's clarification
-  const status = computeStatus(nextBoard, nextTurn, turnsSinceProgress, state.dimensions);
-
   const historyEntry: HistoryEntry = {
     turnNumber: state.turnNumber,
     owner: piece.owner,
@@ -854,23 +866,7 @@ export function applySwap(state: GameState, from: Coord, target: Coord): ApplyTu
     isSwap: true,
   };
 
-  return {
-    ok: true,
-    state: {
-      board: nextBoard,
-      dimensions: state.dimensions,
-      turn: nextTurn,
-      turnNumber: state.turnNumber + 1,
-      history: [...state.history, historyEntry],
-      captured: state.captured,
-      status,
-      winner: resolveWinner(status, nextBoard, piece.owner, state.dimensions),
-      enPassantTarget: null,
-      pendingExtraMove: null,
-      pendingRabbitChain: null,
-      turnsSinceProgress,
-    },
-  };
+  return finishAction(state, piece, nextBoard, historyEntry);
 }
 
 /**
@@ -881,23 +877,9 @@ export function applySwap(state: GameState, from: Coord, target: Coord): ApplyTu
  * in check (README §3.2).
  */
 export function applySwapperSwap(state: GameState, from: Coord, squareA: Coord, squareB: Coord): ApplyTurnResult {
-  if (GAME_OVER_STATUSES.has(state.status)) {
-    return { ok: false, reason: 'La partita è terminata.' };
-  }
-  if (state.pendingExtraMove) {
-    return { ok: false, reason: 'Devi prima completare (o saltare) il movimento extra del Berserker.' };
-  }
-  if (state.pendingRabbitChain) {
-    return { ok: false, reason: 'Devi prima continuare (o fermare) la catena di salti del Coniglio.' };
-  }
-
-  const piece = getPieceAt(state.board, from);
-  if (!piece) {
-    return { ok: false, reason: `Nessun pezzo in ${from}.` };
-  }
-  if (piece.owner !== state.turn) {
-    return { ok: false, reason: 'Non è il turno di questo giocatore.' };
-  }
+  const begun = beginAction(state, from);
+  if ('error' in begun) return begun.error;
+  const { piece } = begun;
 
   const pieceDef = getPieceDef(piece.sigla);
   if (!canSwapperSwap(pieceDef)) {
@@ -918,10 +900,6 @@ export function applySwapperSwap(state: GameState, from: Coord, squareA: Coord, 
     return { ok: false, reason: 'Questa azione lascerebbe il tuo Re sotto scacco.' };
   }
 
-  const nextTurn: Owner = piece.owner === 'A' ? 'B' : 'A';
-  const turnsSinceProgress = 0; // a swap — always progress, per the user's clarification (mirrors applySwap)
-  const status = computeStatus(nextBoard, nextTurn, turnsSinceProgress, state.dimensions);
-
   const swappedPiece = getPieceAt(state.board, squareA)!;
   const historyEntry: HistoryEntry = {
     turnNumber: state.turnNumber,
@@ -934,23 +912,7 @@ export function applySwapperSwap(state: GameState, from: Coord, squareA: Coord, 
     swapSquares: [squareA, squareB],
   };
 
-  return {
-    ok: true,
-    state: {
-      board: nextBoard,
-      dimensions: state.dimensions,
-      turn: nextTurn,
-      turnNumber: state.turnNumber + 1,
-      history: [...state.history, historyEntry],
-      captured: state.captured,
-      status,
-      winner: resolveWinner(status, nextBoard, piece.owner, state.dimensions),
-      enPassantTarget: null,
-      pendingExtraMove: null,
-      pendingRabbitChain: null,
-      turnsSinceProgress,
-    },
-  };
+  return finishAction(state, piece, nextBoard, historyEntry);
 }
 
 /**
@@ -961,23 +923,9 @@ export function applySwapperSwap(state: GameState, from: Coord, squareA: Coord, 
  * shielding the King).
  */
 export function applyRepulse(state: GameState, from: Coord, target: Coord): ApplyTurnResult {
-  if (GAME_OVER_STATUSES.has(state.status)) {
-    return { ok: false, reason: 'La partita è terminata.' };
-  }
-  if (state.pendingExtraMove) {
-    return { ok: false, reason: 'Devi prima completare (o saltare) il movimento extra del Berserker.' };
-  }
-  if (state.pendingRabbitChain) {
-    return { ok: false, reason: 'Devi prima continuare (o fermare) la catena di salti del Coniglio.' };
-  }
-
-  const piece = getPieceAt(state.board, from);
-  if (!piece) {
-    return { ok: false, reason: `Nessun pezzo in ${from}.` };
-  }
-  if (piece.owner !== state.turn) {
-    return { ok: false, reason: 'Non è il turno di questo giocatore.' };
-  }
+  const begun = beginAction(state, from);
+  if ('error' in begun) return begun.error;
+  const { piece } = begun;
 
   const pieceDef = getPieceDef(piece.sigla);
   if (!canRepulse(pieceDef)) {
@@ -1008,10 +956,6 @@ export function applyRepulse(state: GameState, from: Coord, target: Coord): Appl
     return { ok: false, reason: 'Questa azione lascerebbe il tuo Re sotto scacco.' };
   }
 
-  const nextTurn: Owner = piece.owner === 'A' ? 'B' : 'A';
-  const turnsSinceProgress = 0; // a board-changing special action — always progress (mirrors applySwap/applyRevive)
-  const status = computeStatus(nextBoard, nextTurn, turnsSinceProgress, state.dimensions);
-
   const historyEntry: HistoryEntry = {
     turnNumber: state.turnNumber,
     owner: piece.owner,
@@ -1023,23 +967,7 @@ export function applyRepulse(state: GameState, from: Coord, target: Coord): Appl
     repulsedTo: landing,
   };
 
-  return {
-    ok: true,
-    state: {
-      board: nextBoard,
-      dimensions: state.dimensions,
-      turn: nextTurn,
-      turnNumber: state.turnNumber + 1,
-      history: [...state.history, historyEntry],
-      captured: state.captured,
-      status,
-      winner: resolveWinner(status, nextBoard, piece.owner, state.dimensions),
-      enPassantTarget: null,
-      pendingExtraMove: null,
-      pendingRabbitChain: null,
-      turnsSinceProgress,
-    },
-  };
+  return finishAction(state, piece, nextBoard, historyEntry);
 }
 
 /**
@@ -1050,23 +978,9 @@ export function applyRepulse(state: GameState, from: Coord, target: Coord): Appl
  * King in check (README §3.2 — leaving `from` can expose the King).
  */
 export function applyTeleport(state: GameState, from: Coord, to: Coord): ApplyTurnResult {
-  if (GAME_OVER_STATUSES.has(state.status)) {
-    return { ok: false, reason: 'La partita è terminata.' };
-  }
-  if (state.pendingExtraMove) {
-    return { ok: false, reason: 'Devi prima completare (o saltare) il movimento extra del Berserker.' };
-  }
-  if (state.pendingRabbitChain) {
-    return { ok: false, reason: 'Devi prima continuare (o fermare) la catena di salti del Coniglio.' };
-  }
-
-  const piece = getPieceAt(state.board, from);
-  if (!piece) {
-    return { ok: false, reason: `Nessun pezzo in ${from}.` };
-  }
-  if (piece.owner !== state.turn) {
-    return { ok: false, reason: 'Non è il turno di questo giocatore.' };
-  }
+  const begun = beginAction(state, from);
+  if ('error' in begun) return begun.error;
+  const { piece } = begun;
 
   const pieceDef = getPieceDef(piece.sigla);
   if (!canTeleport(pieceDef)) {
@@ -1083,10 +997,6 @@ export function applyTeleport(state: GameState, from: Coord, to: Coord): ApplyTu
     return { ok: false, reason: 'Questa azione lascerebbe il tuo Re sotto scacco.' };
   }
 
-  const nextTurn: Owner = piece.owner === 'A' ? 'B' : 'A';
-  const turnsSinceProgress = 0; // a board-changing special action — always progress
-  const status = computeStatus(nextBoard, nextTurn, turnsSinceProgress, state.dimensions);
-
   const historyEntry: HistoryEntry = {
     turnNumber: state.turnNumber,
     owner: piece.owner,
@@ -1097,23 +1007,7 @@ export function applyTeleport(state: GameState, from: Coord, to: Coord): ApplyTu
     isTeleport: true,
   };
 
-  return {
-    ok: true,
-    state: {
-      board: nextBoard,
-      dimensions: state.dimensions,
-      turn: nextTurn,
-      turnNumber: state.turnNumber + 1,
-      history: [...state.history, historyEntry],
-      captured: state.captured,
-      status,
-      winner: resolveWinner(status, nextBoard, piece.owner, state.dimensions),
-      enPassantTarget: null,
-      pendingExtraMove: null,
-      pendingRabbitChain: null,
-      turnsSinceProgress,
-    },
-  };
+  return finishAction(state, piece, nextBoard, historyEntry);
 }
 
 /**
@@ -1123,23 +1017,9 @@ export function applyTeleport(state: GameState, from: Coord, to: Coord): ApplyTu
  * rejected if it would leave the acting player's own King in check (README §3.2).
  */
 export function applyAttract(state: GameState, from: Coord, target: Coord): ApplyTurnResult {
-  if (GAME_OVER_STATUSES.has(state.status)) {
-    return { ok: false, reason: 'La partita è terminata.' };
-  }
-  if (state.pendingExtraMove) {
-    return { ok: false, reason: 'Devi prima completare (o saltare) il movimento extra del Berserker.' };
-  }
-  if (state.pendingRabbitChain) {
-    return { ok: false, reason: 'Devi prima continuare (o fermare) la catena di salti del Coniglio.' };
-  }
-
-  const piece = getPieceAt(state.board, from);
-  if (!piece) {
-    return { ok: false, reason: `Nessun pezzo in ${from}.` };
-  }
-  if (piece.owner !== state.turn) {
-    return { ok: false, reason: 'Non è il turno di questo giocatore.' };
-  }
+  const begun = beginAction(state, from);
+  if ('error' in begun) return begun.error;
+  const { piece } = begun;
 
   const pieceDef = getPieceDef(piece.sigla);
   if (!canAttract(pieceDef)) {
@@ -1169,10 +1049,6 @@ export function applyAttract(state: GameState, from: Coord, target: Coord): Appl
     return { ok: false, reason: 'Questa azione lascerebbe il tuo Re sotto scacco.' };
   }
 
-  const nextTurn: Owner = piece.owner === 'A' ? 'B' : 'A';
-  const turnsSinceProgress = 0; // a board-changing special action — always progress (mirrors applyRepulse/applyTeleport)
-  const status = computeStatus(nextBoard, nextTurn, turnsSinceProgress, state.dimensions);
-
   const historyEntry: HistoryEntry = {
     turnNumber: state.turnNumber,
     owner: piece.owner,
@@ -1184,23 +1060,7 @@ export function applyAttract(state: GameState, from: Coord, target: Coord): Appl
     attractedTo: landing,
   };
 
-  return {
-    ok: true,
-    state: {
-      board: nextBoard,
-      dimensions: state.dimensions,
-      turn: nextTurn,
-      turnNumber: state.turnNumber + 1,
-      history: [...state.history, historyEntry],
-      captured: state.captured,
-      status,
-      winner: resolveWinner(status, nextBoard, piece.owner, state.dimensions),
-      enPassantTarget: null,
-      pendingExtraMove: null,
-      pendingRabbitChain: null,
-      turnsSinceProgress,
-    },
-  };
+  return finishAction(state, piece, nextBoard, historyEntry);
 }
 
 /**
@@ -1210,23 +1070,9 @@ export function applyAttract(state: GameState, from: Coord, target: Coord): Appl
  * action, it's rejected if it would leave the acting player's own King in check (README §3.2).
  */
 export function applyRevive(state: GameState, from: Coord, target: Coord, sigla: string): ApplyTurnResult {
-  if (GAME_OVER_STATUSES.has(state.status)) {
-    return { ok: false, reason: 'La partita è terminata.' };
-  }
-  if (state.pendingExtraMove) {
-    return { ok: false, reason: 'Devi prima completare (o saltare) il movimento extra del Berserker.' };
-  }
-  if (state.pendingRabbitChain) {
-    return { ok: false, reason: 'Devi prima continuare (o fermare) la catena di salti del Coniglio.' };
-  }
-
-  const piece = getPieceAt(state.board, from);
-  if (!piece) {
-    return { ok: false, reason: `Nessun pezzo in ${from}.` };
-  }
-  if (piece.owner !== state.turn) {
-    return { ok: false, reason: 'Non è il turno di questo giocatore.' };
-  }
+  const begun = beginAction(state, from);
+  if ('error' in begun) return begun.error;
+  const { piece } = begun;
 
   const pieceDef = getPieceDef(piece.sigla);
   if (!canRevive(pieceDef)) {
@@ -1254,10 +1100,6 @@ export function applyRevive(state: GameState, from: Coord, target: Coord, sigla:
     return { ok: false, reason: 'Questa azione lascerebbe il tuo Re sotto scacco.' };
   }
 
-  const nextTurn: Owner = piece.owner === 'A' ? 'B' : 'A';
-  const turnsSinceProgress = 0; // a revival — always progress, per the user's clarification
-  const status = computeStatus(nextBoard, nextTurn, turnsSinceProgress, state.dimensions);
-
   const historyEntry: HistoryEntry = {
     turnNumber: state.turnNumber,
     owner: piece.owner,
@@ -1269,23 +1111,7 @@ export function applyRevive(state: GameState, from: Coord, target: Coord, sigla:
     revivedSigla: sigla,
   };
 
-  return {
-    ok: true,
-    state: {
-      board: nextBoard,
-      dimensions: state.dimensions,
-      turn: nextTurn,
-      turnNumber: state.turnNumber + 1,
-      history: [...state.history, historyEntry],
-      captured: nextCaptured,
-      status,
-      winner: resolveWinner(status, nextBoard, piece.owner, state.dimensions),
-      enPassantTarget: null,
-      pendingExtraMove: null,
-      pendingRabbitChain: null,
-      turnsSinceProgress,
-    },
-  };
+  return finishAction(state, piece, nextBoard, historyEntry, { captured: nextCaptured });
 }
 
 /**
@@ -1300,23 +1126,9 @@ export function applyRevive(state: GameState, from: Coord, target: Coord, sigla:
  * own King, so no king-safety filter applies here.
  */
 export function applySdoppiamento(state: GameState, from: Coord, cloneSquare: Coord, realSquare: Coord): ApplyTurnResult {
-  if (GAME_OVER_STATUSES.has(state.status)) {
-    return { ok: false, reason: 'La partita è terminata.' };
-  }
-  if (state.pendingExtraMove) {
-    return { ok: false, reason: 'Devi prima completare (o saltare) il movimento extra del Berserker.' };
-  }
-  if (state.pendingRabbitChain) {
-    return { ok: false, reason: 'Devi prima continuare (o fermare) la catena di salti del Coniglio.' };
-  }
-
-  const piece = getPieceAt(state.board, from);
-  if (!piece) {
-    return { ok: false, reason: `Nessun pezzo in ${from}.` };
-  }
-  if (piece.owner !== state.turn) {
-    return { ok: false, reason: 'Non è il turno di questo giocatore.' };
-  }
+  const begun = beginAction(state, from);
+  if ('error' in begun) return begun.error;
+  const { piece } = begun;
 
   const pieceDef = getPieceDef(piece.sigla);
   if (!canSdoppiare(pieceDef)) {
@@ -1339,10 +1151,6 @@ export function applySdoppiamento(state: GameState, from: Coord, cloneSquare: Co
   let nextBoard = setPieceAt(state.board, cloneSquare, { ...clonePiece, hasMoved: true, mirage: { id: piece.id, isClone: realStays } });
   nextBoard = setPieceAt(nextBoard, from, { ...piece, mirage: { id: piece.id, isClone: !realStays } });
 
-  const nextTurn: Owner = piece.owner === 'A' ? 'B' : 'A';
-  const turnsSinceProgress = 0; // a board-changing special action — always progress (mirrors applySwap/applyRevive)
-  const status = computeStatus(nextBoard, nextTurn, turnsSinceProgress, state.dimensions);
-
   const historyEntry: HistoryEntry = {
     turnNumber: state.turnNumber,
     owner: piece.owner,
@@ -1355,23 +1163,7 @@ export function applySdoppiamento(state: GameState, from: Coord, cloneSquare: Co
     realSquare,
   };
 
-  return {
-    ok: true,
-    state: {
-      board: nextBoard,
-      dimensions: state.dimensions,
-      turn: nextTurn,
-      turnNumber: state.turnNumber + 1,
-      history: [...state.history, historyEntry],
-      captured: state.captured,
-      status,
-      winner: resolveWinner(status, nextBoard, piece.owner, state.dimensions),
-      enPassantTarget: null,
-      pendingExtraMove: null,
-      pendingRabbitChain: null,
-      turnsSinceProgress,
-    },
-  };
+  return finishAction(state, piece, nextBoard, historyEntry);
 }
 
 /**
@@ -1385,23 +1177,9 @@ export function applySdoppiamento(state: GameState, from: Coord, cloneSquare: Co
  * rejected when it would leave the King in check (README §3.2).
  */
 export function applyRiunione(state: GameState, from: Coord, mergeSquare: Coord): ApplyTurnResult {
-  if (GAME_OVER_STATUSES.has(state.status)) {
-    return { ok: false, reason: 'La partita è terminata.' };
-  }
-  if (state.pendingExtraMove) {
-    return { ok: false, reason: 'Devi prima completare (o saltare) il movimento extra del Berserker.' };
-  }
-  if (state.pendingRabbitChain) {
-    return { ok: false, reason: 'Devi prima continuare (o fermare) la catena di salti del Coniglio.' };
-  }
-
-  const piece = getPieceAt(state.board, from);
-  if (!piece) {
-    return { ok: false, reason: `Nessun pezzo in ${from}.` };
-  }
-  if (piece.owner !== state.turn) {
-    return { ok: false, reason: 'Non è il turno di questo giocatore.' };
-  }
+  const begun = beginAction(state, from);
+  if ('error' in begun) return begun.error;
+  const { piece } = begun;
 
   const pieceDef = getPieceDef(piece.sigla);
   if (!canRiunire(pieceDef)) {
@@ -1431,10 +1209,6 @@ export function applyRiunione(state: GameState, from: Coord, mergeSquare: Coord)
     return { ok: false, reason: 'Questa azione lascerebbe il tuo Re sotto scacco.' };
   }
 
-  const nextTurn: Owner = piece.owner === 'A' ? 'B' : 'A';
-  const turnsSinceProgress = 0; // a board-changing special action — always progress (mirrors applySdoppiamento)
-  const status = computeStatus(nextBoard, nextTurn, turnsSinceProgress, state.dimensions);
-
   const historyEntry: HistoryEntry = {
     turnNumber: state.turnNumber,
     owner: piece.owner,
@@ -1445,21 +1219,5 @@ export function applyRiunione(state: GameState, from: Coord, mergeSquare: Coord)
     isMerge: true,
   };
 
-  return {
-    ok: true,
-    state: {
-      board: nextBoard,
-      dimensions: state.dimensions,
-      turn: nextTurn,
-      turnNumber: state.turnNumber + 1,
-      history: [...state.history, historyEntry],
-      captured: state.captured,
-      status,
-      winner: resolveWinner(status, nextBoard, piece.owner, state.dimensions),
-      enPassantTarget: null,
-      pendingExtraMove: null,
-      pendingRabbitChain: null,
-      turnsSinceProgress,
-    },
-  };
+  return finishAction(state, piece, nextBoard, historyEntry);
 }

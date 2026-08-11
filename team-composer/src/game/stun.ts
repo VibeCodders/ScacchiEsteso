@@ -1,6 +1,4 @@
 import {
-  coordToFileRank,
-  fileRankToCoord,
   getPieceAt,
   DEFAULT_BOARD_DIMENSIONS,
   type BoardDimensions,
@@ -8,11 +6,7 @@ import {
   type Coord,
   type Owner,
 } from './board';
-
-const ADJACENT_OFFSETS: Array<{ df: number; dr: number }> = [
-  { df: 0, dr: 1 }, { df: 0, dr: -1 }, { df: 1, dr: 0 }, { df: -1, dr: 0 },
-  { df: 1, dr: 1 }, { df: -1, dr: 1 }, { df: 1, dr: -1 }, { df: -1, dr: -1 },
-];
+import { adjacentCoords } from './directions';
 
 /**
  * True if `coord` (owned by `owner`) currently sits adjacent to an enemy Stunner (`stunAura`).
@@ -29,10 +23,7 @@ export function isAdjacentToEnemyStunner(
   getDef: (sigla: string) => { stunAura?: boolean },
   dimensions: BoardDimensions = DEFAULT_BOARD_DIMENSIONS,
 ): boolean {
-  const { file, rank } = coordToFileRank(coord);
-  for (const { df, dr } of ADJACENT_OFFSETS) {
-    const neighbor = fileRankToCoord(file + df, rank + dr, dimensions);
-    if (!neighbor) continue;
+  for (const neighbor of adjacentCoords(coord, dimensions)) {
     const occupant = getPieceAt(board, neighbor);
     if (occupant && occupant.owner !== owner && getDef(occupant.sigla).stunAura) return true;
   }

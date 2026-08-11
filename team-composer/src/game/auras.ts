@@ -1,6 +1,4 @@
 import {
-  coordToFileRank,
-  fileRankToCoord,
   getPieceAt,
   DEFAULT_BOARD_DIMENSIONS,
   type BoardDimensions,
@@ -9,11 +7,7 @@ import {
   type Owner,
 } from './board';
 import { getPieceDef } from './moveEngine';
-
-const ADJACENT_OFFSETS: Array<{ df: number; dr: number }> = [
-  { df: 0, dr: 1 }, { df: 0, dr: -1 }, { df: 1, dr: 0 }, { df: -1, dr: 0 },
-  { df: 1, dr: 1 }, { df: -1, dr: 1 }, { df: 1, dr: -1 }, { df: -1, dr: -1 },
-];
+import { adjacentCoords } from './directions';
 
 function hasAdjacentPieceMatching(
   board: BoardState,
@@ -21,10 +15,7 @@ function hasAdjacentPieceMatching(
   predicate: (occupantSigla: string, occupantOwner: Owner) => boolean,
   dimensions: BoardDimensions,
 ): boolean {
-  const { file, rank } = coordToFileRank(coord);
-  for (const { df, dr } of ADJACENT_OFFSETS) {
-    const neighbor = fileRankToCoord(file + df, rank + dr, dimensions);
-    if (!neighbor) continue;
+  for (const neighbor of adjacentCoords(coord, dimensions)) {
     const occupant = getPieceAt(board, neighbor);
     if (occupant && predicate(occupant.sigla, occupant.owner)) return true;
   }
@@ -49,10 +40,7 @@ export function isSilenced(board: BoardState, coord: Coord, owner: Owner, dimens
  * Inquisitore, in which case the Silenzio takes priority (README §7.3) and the shield lapses.
  */
 export function isShieldedByEgida(board: BoardState, coord: Coord, owner: Owner, dimensions: BoardDimensions = DEFAULT_BOARD_DIMENSIONS): boolean {
-  const { file, rank } = coordToFileRank(coord);
-  for (const { df, dr } of ADJACENT_OFFSETS) {
-    const neighbor = fileRankToCoord(file + df, rank + dr, dimensions);
-    if (!neighbor) continue;
+  for (const neighbor of adjacentCoords(coord, dimensions)) {
     const occupant = getPieceAt(board, neighbor);
     if (occupant && occupant.owner === owner && getPieceDef(occupant.sigla).egida && !isSilenced(board, neighbor, occupant.owner, dimensions)) {
       return true;

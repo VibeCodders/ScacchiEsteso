@@ -9,13 +9,9 @@ import {
   type Coord,
   type Owner,
 } from './board';
+import { isActionBlocked } from './actionGuards';
+import { DIRECTIONS_8 } from './directions';
 import { getPieceDef } from './moveEngine';
-import { isAdjacentToEnemyStunner } from './stun';
-
-const ADJACENT_OFFSETS: Array<{ df: number; dr: number }> = [
-  { df: 0, dr: 1 }, { df: 0, dr: -1 }, { df: 1, dr: 0 }, { df: -1, dr: 0 },
-  { df: 1, dr: 1 }, { df: -1, dr: 1 }, { df: 1, dr: -1 }, { df: -1, dr: -1 },
-];
 
 export function canSwapperSwap(pieceDef: Piece): boolean {
   return Boolean(pieceDef.scambioTraDueAlleati);
@@ -27,12 +23,12 @@ export function canSwapperSwap(pieceDef: Piece): boolean {
  * frozen by an enemy Stunner.
  */
 export function getSwapperCandidateSquares(board: BoardState, from: Coord, owner: Owner, dimensions: BoardDimensions = DEFAULT_BOARD_DIMENSIONS): Coord[] {
-  if (isAdjacentToEnemyStunner(board, from, owner, getPieceDef, dimensions)) return [];
+  if (isActionBlocked(board, from, owner, getPieceDef, dimensions, { silenced: false })) return [];
 
   const results: Coord[] = [from];
   const { file, rank } = coordToFileRank(from);
 
-  for (const { df, dr } of ADJACENT_OFFSETS) {
+  for (const { df, dr } of DIRECTIONS_8) {
     const coord = fileRankToCoord(file + df, rank + dr, dimensions);
     if (!coord) continue;
 

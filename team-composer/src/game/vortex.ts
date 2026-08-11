@@ -10,15 +10,9 @@ import {
   type Coord,
   type Owner,
 } from './board';
-import { isSilenced } from './auras';
-import { isAdjacentToEnemyStunner } from './stun';
+import { isActionBlocked } from './actionGuards';
+import { DIRECTIONS_8 } from './directions';
 import { getPieceDef } from './moveEngine';
-
-/** Same 8-direction table as the other alternative-action modules, duplicated per convention. */
-const ATTRACT_OFFSETS: Array<{ df: number; dr: number }> = [
-  { df: 0, dr: 1 }, { df: 0, dr: -1 }, { df: 1, dr: 0 }, { df: -1, dr: 0 },
-  { df: 1, dr: 1 }, { df: -1, dr: 1 }, { df: 1, dr: -1 }, { df: -1, dr: -1 },
-];
 
 export function canAttract(pieceDef: Piece): boolean {
   return Boolean(pieceDef.attiraNemici);
@@ -33,13 +27,12 @@ export function canAttract(pieceDef: Piece): boolean {
  * (README §7.3) or frozen by an enemy Stunner's aura.
  */
 export function getAttractTargets(board: BoardState, from: Coord, owner: Owner, dimensions: BoardDimensions = DEFAULT_BOARD_DIMENSIONS): Coord[] {
-  if (isSilenced(board, from, owner, dimensions)) return [];
-  if (isAdjacentToEnemyStunner(board, from, owner, getPieceDef, dimensions)) return [];
+  if (isActionBlocked(board, from, owner, getPieceDef, dimensions)) return [];
 
   const { file, rank } = coordToFileRank(from);
   const results: Coord[] = [];
 
-  for (const { df, dr } of ATTRACT_OFFSETS) {
+  for (const { df, dr } of DIRECTIONS_8) {
     const landing = fileRankToCoord(file + df, rank + dr, dimensions);
     if (!landing) continue; // off the board
     if (getPieceAt(board, landing)) continue; // the intermediate square must be empty

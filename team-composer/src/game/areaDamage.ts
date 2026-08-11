@@ -10,10 +10,7 @@ import {
   type Coord,
 } from './board';
 import type { GeneratedMove } from './moveEngine';
-
-const ORTHOGONAL_OFFSETS: Array<{ df: number; dr: number }> = [
-  { df: 0, dr: 1 }, { df: 0, dr: -1 }, { df: 1, dr: 0 }, { df: -1, dr: 0 },
-];
+import { DIRECTIONS_ORTHOGONAL } from './directions';
 
 /**
  * README §4/§7 — the Colosso's "danno ad area" triggers automatically after a successful melee
@@ -33,7 +30,7 @@ export function getAreaDamageVictims(board: BoardState, landingSquare: Coord, di
   const { file, rank } = coordToFileRank(landingSquare);
   const victims: Coord[] = [];
 
-  for (const { df, dr } of ORTHOGONAL_OFFSETS) {
+  for (const { df, dr } of DIRECTIONS_ORTHOGONAL) {
     const coord = fileRankToCoord(file + df, rank + dr, dimensions);
     if (!coord) continue;
     const occupant = getPieceAt(board, coord);

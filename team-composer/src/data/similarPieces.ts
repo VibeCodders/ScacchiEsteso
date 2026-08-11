@@ -1,5 +1,5 @@
 import { pieces as ROSTER } from './pieces';
-import { allCoords, coordToFileRank } from '../game/board';
+import { allCoords, coordToFileRank, isOffAxis } from '../game/board';
 import { computePieceRangeSquares } from '../game/pieceInfo';
 import type { Move, Piece } from '../types';
 
@@ -27,14 +27,6 @@ interface MobilityTotals {
    *  whose first (pivot) leg is never a landing and whose captures happen only on the second leg,
    *  this keeps the capture geometry independently measurable even when it mirrors the moves. */
   offAxisCapture: number;
-}
-
-/** True when `coord` shares no rank, file or diagonal with the square at (fromFile, fromRank). */
-function isOffAxis(coord: string, fromFile: number, fromRank: number): boolean {
-  const { file, rank } = coordToFileRank(coord);
-  const df = Math.abs(file - fromFile);
-  const dr = Math.abs(rank - fromRank);
-  return df !== 0 && dr !== 0 && df !== dr;
 }
 
 function mobilityOf(piece: Piece): MobilityTotals {

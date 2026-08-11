@@ -1,58 +1,20 @@
-import type { Direction, Move, Piece } from '../types';
+import type { Move, Piece } from '../types';
 import { coordToFileRank, fileRankToCoord, DEFAULT_BOARD_DIMENSIONS, type Coord, type Owner } from './board';
+import {
+  ABSOLUTE_DIRECTION_VECTORS,
+  KNIGHT_OFFSETS,
+  isPawnDiagonalCaptureOnly,
+  squareColorOf,
+  toAbsoluteDirection,
+  type DirectionOffset,
+} from './directions';
 
-interface Vector { df: number; dr: number }
-
-const ABSOLUTE_DIRECTION_VECTORS: Record<Direction, Vector> = {
-  n: { df: 0, dr: 1 },
-  s: { df: 0, dr: -1 },
-  e: { df: 1, dr: 0 },
-  w: { df: -1, dr: 0 },
-  ne: { df: 1, dr: 1 },
-  nw: { df: -1, dr: 1 },
-  se: { df: 1, dr: -1 },
-  sw: { df: -1, dr: -1 },
-};
-
-// Same owner-relative mirroring as moveEngine.ts — kept in sync deliberately rather than shared,
-// since this module intentionally ignores board occupancy (moveEngine's version doesn't).
-const OWNER_B_DIRECTION_MIRROR: Record<Direction, Direction> = {
-  n: 's', s: 'n',
-  ne: 'se', se: 'ne',
-  nw: 'sw', sw: 'nw',
-  e: 'e', w: 'w',
-};
-
-function toAbsoluteDirection(direction: Direction, owner: Owner): Direction {
-  return owner === 'A' ? direction : OWNER_B_DIRECTION_MIRROR[direction];
-}
-
-const KNIGHT_OFFSETS: Vector[] = [
-  { df: 1, dr: 2 }, { df: 2, dr: 1 }, { df: 2, dr: -1 }, { df: 1, dr: -2 },
-  { df: -1, dr: -2 }, { df: -2, dr: -1 }, { df: -2, dr: 1 }, { df: -1, dr: 2 },
-];
-
-const DIAGONAL_DIRECTIONS: readonly Direction[] = ['ne', 'nw', 'se', 'sw'];
-
-function squareColorOf(coord: Coord): 'chiara' | 'scura' {
-  const { file, rank } = coordToFileRank(coord);
-  return (file + rank) % 2 === 0 ? 'chiara' : 'scura';
-}
+type Vector = DirectionOffset;
 
 function passesColorRestriction(moveEntry: Move, from: Coord): boolean {
   if (moveEntry.colorRestriction === 'chiare') return squareColorOf(from) === 'chiara';
   if (moveEntry.colorRestriction === 'scure') return squareColorOf(from) === 'scura';
   return true;
-}
-
-/** Same heuristic as moveEngine.ts's isPawnDiagonalCaptureOnly, duplicated for the same reason as the direction mirror above. */
-function isPawnDiagonalCaptureOnly(pieceDef: Piece, moveEntry: Move): boolean {
-  return (
-    pieceDef.categoria === 'pedone' &&
-    moveEntry.capture &&
-    moveEntry.directions.length > 0 &&
-    moveEntry.directions.every((d) => DIAGONAL_DIRECTIONS.includes(d))
-  );
 }
 
 function offsetCoord(from: Coord, df: number, dr: number): Coord | null {

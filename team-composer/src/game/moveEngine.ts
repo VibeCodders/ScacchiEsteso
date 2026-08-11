@@ -15,6 +15,14 @@ import {
 import { castRay } from './lineOfSight';
 import { isAdjacentToEnemyStunner } from './stun';
 import { removeWithMirageFallout } from './mirage';
+import {
+  ABSOLUTE_DIRECTION_VECTORS,
+  KNIGHT_OFFSETS,
+  isPawnDiagonalCaptureOnly,
+  squareColorOf,
+  toAbsoluteDirection,
+  type DirectionOffset,
+} from './directions';
 
 const PIECE_BY_SIGLA = new Map(PIECE_DEFS.map((p) => [p.sigla, p]));
 
@@ -34,49 +42,7 @@ export interface GeneratedMove {
   movementType: Move['movementType'];
 }
 
-interface Vector {
-  df: number; // file delta
-  dr: number; // rank delta
-}
-
-const ABSOLUTE_DIRECTION_VECTORS: Record<Direction, Vector> = {
-  n: { df: 0, dr: 1 },
-  s: { df: 0, dr: -1 },
-  e: { df: 1, dr: 0 },
-  w: { df: -1, dr: 0 },
-  ne: { df: 1, dr: 1 },
-  nw: { df: -1, dr: 1 },
-  se: { df: 1, dr: -1 },
-  sw: { df: -1, dr: -1 },
-};
-
-/**
- * Directions in piece data are relative to the owner ("n" = forward, toward the opponent).
- * Player B sits on rank 8 and faces the opposite way, so their forward direction is a vertical
- * mirror of Player A's: only the rank component flips, the file component (left/right) does not —
- * the same reason Black's pawns capture diagonally "downward" in standard chess.
- */
-const OWNER_B_DIRECTION_MIRROR: Record<Direction, Direction> = {
-  n: 's', s: 'n',
-  ne: 'se', se: 'ne',
-  nw: 'sw', sw: 'nw',
-  e: 'e', w: 'w',
-};
-
-function toAbsoluteDirection(direction: Direction, owner: Owner): Direction {
-  return owner === 'A' ? direction : OWNER_B_DIRECTION_MIRROR[direction];
-}
-
-const KNIGHT_OFFSETS: Vector[] = [
-  { df: 1, dr: 2 }, { df: 2, dr: 1 }, { df: 2, dr: -1 }, { df: 1, dr: -2 },
-  { df: -1, dr: -2 }, { df: -2, dr: -1 }, { df: -2, dr: 1 }, { df: -1, dr: 2 },
-];
-
-/** Matches Board.tsx's square coloring: a1 is dark, h1 is light, as in standard chess. */
-function squareColorOf(coord: Coord): 'chiara' | 'scura' {
-  const { file, rank } = coordToFileRank(coord);
-  return (file + rank) % 2 === 0 ? 'chiara' : 'scura';
-}
+type Vector = DirectionOffset; // file/rank delta — see directions.ts
 
 function passesColorRestriction(moveEntry: Move, from: Coord): boolean {
   if (moveEntry.colorRestriction === 'chiare') return squareColorOf(from) === 'chiara';
@@ -287,24 +253,6 @@ export function getRabbitKingStepMoves(board: BoardState, from: Coord, owner: Ow
     movementType: 'step',
   };
   return generateStepOrSlideMoves(board, from, owner, kingStepEntry, 1, false, dimensions);
-}
-
-const DIAGONAL_DIRECTIONS: readonly Direction[] = ['ne', 'nw', 'se', 'sw'];
-
-/**
- * Standard chess convention (not an explicit field in pieces.json): a pawn-category piece's
- * diagonal move entry is capture-only — it cannot step onto an empty diagonal square. Every
- * other capturing entry in the data (King, Rook, ...) can land on an empty square as a normal
- * move, so this only applies where the piece is a pawn (categoria "pedone") and the entry's
- * directions are purely diagonal.
- */
-function isPawnDiagonalCaptureOnly(pieceDef: Piece, moveEntry: Move): boolean {
-  return (
-    pieceDef.categoria === 'pedone' &&
-    moveEntry.capture &&
-    moveEntry.directions.length > 0 &&
-    moveEntry.directions.every((d) => DIAGONAL_DIRECTIONS.includes(d))
-  );
 }
 
 /** Mirrors a diagonal Vector across whichever axis is being flipped by a bounce. */
