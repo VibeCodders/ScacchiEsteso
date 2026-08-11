@@ -280,6 +280,15 @@
         },
         "esplodeSeCatturato": {
           "type": "boolean"
+        },
+        "congelaDirezione": {
+          "type": "boolean"
+        },
+        "scambioConNemico": {
+          "type": "boolean"
+        },
+        "fulmine": {
+          "type": "boolean"
         }
       },
       "additionalProperties": false

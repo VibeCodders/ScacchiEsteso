@@ -13,7 +13,7 @@ import {
   type PieceInstance,
 } from './board';
 import { castRay } from './lineOfSight';
-import { isAdjacentToEnemyStunner } from './stun';
+import { isFrozenByEnemyAura } from './stun';
 import { removeWithMirageFallout } from './mirage';
 import {
   ABSOLUTE_DIRECTION_VECTORS,
@@ -513,12 +513,14 @@ export function generatePseudoLegalMoves(
     }
   }
 
-  const isFrozen = pieceDef.sigla !== KING_SIGLA && isAdjacentToEnemyStunner(board, from, piece.owner, getPieceDef, dimensions);
+  const isFrozen = pieceDef.sigla !== KING_SIGLA && isFrozenByEnemyAura(board, from, piece.owner, getPieceDef, dimensions);
   if (isFrozen) {
     return moves.filter((m) => {
       if (!m.isCapture || !m.capturedCoord) return false;
       const captured = getPieceAt(board, m.capturedCoord);
-      return Boolean(captured && getPieceDef(captured.sigla).stunAura);
+      // a frozen piece may still capture the freezer itself: the adjacent Stunner or the
+      // Basilisco whose gaze covers it (mirrors the classic "capture the guard" escape).
+      return Boolean(captured && (getPieceDef(captured.sigla).stunAura || getPieceDef(captured.sigla).congelaDirezione));
     });
   }
 

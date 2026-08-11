@@ -141,6 +141,7 @@ function GameOverScreen() {
                   {entry.isExtraMove && ' (movimento extra)'}
                   {entry.isRangedAttack && ' (scocca)'}
                   {entry.isSwap && ' (scambio)'}
+                  {entry.isSostituzione && ` (sostituzione: ${entry.sostituitoCon})`}
                   {entry.isSwapperSwap && ` (scambio: ${entry.swapSquares?.join(' ↔ ')})`}
                   {entry.isRepulse && ` (respingi: ${entry.repulsedTo})`}
                   {entry.isTeleport && ' (teletrasporto)'}

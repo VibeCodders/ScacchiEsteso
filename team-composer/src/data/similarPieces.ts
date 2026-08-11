@@ -107,6 +107,7 @@ const SPECIAL_MECHANIC_FLAGS = [
   'silenzioAttacchiADistanza', 'armatura', 'scambiaPosizioneConAlleato', 'scocca', 'egida',
   'catenaSaltiConCatturaFinale', 'rimbalzoUnico', 'gryphon', 'manticora', 'scambioTraDueAlleati',
   'stunAura', 'respingeNemici', 'teletrasporto', 'attiraNemici', 'esplodeSeCatturato',
+  'congelaDirezione', 'scambioConNemico', 'fulmine',
   'saltaInterposizioni',
 ] as const;
 

@@ -118,6 +118,22 @@ export interface Piece {
    *  is always immune to the blast. Collateral area-damage victims never trigger it.
    *  Enforced by the capture resolution in turnManager. */
   esplodeSeCatturato?: boolean;
+  /** True only for Basilisco (BS): its petrifying gaze freezes every enemy piece (never the King,
+   *  which is always immune) standing on the 3 squares directly in front of it (owner-relative
+   *  forward, toward the opponent) — the gaze pierces through pieces in between. A frozen piece
+   *  has no moves and no special actions, except the one move that would capture the Basilisco
+   *  itself (mirroring the Stunner's stunAura, but directional). Checked by stun.ts's
+   *  isInEnemyBasiliskGaze via the shared freeze path (moveEngine + every action module). */
+  congelaDirezione?: boolean;
+  /** True only for Brigante (BR): in addition to a King-style move, may "sostituirsi" — instead
+   *  of moving, it swaps squares with an ADJACENT ENEMY (never the King), capturing nothing: a
+   *  pure exchange of position. Drives getSostituzioneTargets / applySostituzione. */
+  scambioConNemico?: boolean;
+  /** True only for Lampo (LP): "fulmine" — after a successful leap capture (its dabbaba jump), it
+   *  may immediately make one more NON-capturing 2-square jump, mirroring the Berserker's Furia
+   *  bellica but for leaps (the Berserker's extra move only triggers on melee captures). Drives
+   *  turnManager's triggersExtraMove via the pendingExtraMove flow. */
+  fulmine?: boolean;
 }
 
 export interface MirageMarker {

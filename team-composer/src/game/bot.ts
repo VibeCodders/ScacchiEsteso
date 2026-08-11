@@ -7,6 +7,7 @@ import { canRepulse, getRepulseTargets } from './repulse';
 import { canTeleport, getTeleportTargets } from './teleport';
 import { canAttract, getAttractTargets } from './vortex';
 import { canSwap, getSwapTargets } from './swap';
+import { canSostituire, getSostituzioneTargets } from './sostituzione';
 import { canSwapperSwap, getSwapperCandidatePairs } from './swapper';
 import { canRevive, getRevivalSquares, getRevivableSiglas } from './necromancy';
 import { canMimic, getOrphanThreats } from './orphan';
@@ -19,6 +20,7 @@ import {
   applyTeleport,
   applyAttract,
   applySwap,
+  applySostituzione,
   applySwapperSwap,
   applyRevive,
   applySdoppiamento,
@@ -89,6 +91,7 @@ export type BotAction =
   | { kind: 'teleport'; from: Coord; to: Coord }
   | { kind: 'attract'; from: Coord; target: Coord }
   | { kind: 'swap'; from: Coord; target: Coord }
+  | { kind: 'sostituzione'; from: Coord; target: Coord }
   | { kind: 'swapperSwap'; from: Coord; squareA: Coord; squareB: Coord }
   | { kind: 'revive'; from: Coord; target: Coord; sigla: string }
   | { kind: 'sdoppiamento'; from: Coord; cloneSquare: Coord; realSquare: Coord }
@@ -110,6 +113,8 @@ export function applyBotAction(state: GameState, action: BotAction): ApplyTurnRe
       return applyAttract(state, action.from, action.target);
     case 'swap':
       return applySwap(state, action.from, action.target);
+    case 'sostituzione':
+      return applySostituzione(state, action.from, action.target);
     case 'swapperSwap':
       return applySwapperSwap(state, action.from, action.squareA, action.squareB);
     case 'revive':
@@ -201,6 +206,12 @@ export function generateBotActions(state: GameState, owner: Owner): BotAction[] 
     if (canSwap(pieceDef)) {
       for (const target of getSwapTargets(state.board, from, owner, state.dimensions)) {
         actions.push({ kind: 'swap', from, target });
+      }
+    }
+
+    if (canSostituire(pieceDef)) {
+      for (const target of getSostituzioneTargets(state.board, from, owner, state.dimensions)) {
+        actions.push({ kind: 'sostituzione', from, target });
       }
     }
 
@@ -321,6 +332,7 @@ export function actionKey(action: BotAction): string {
     case 'teleport': return `teleport:${action.from}:${action.to}`;
     case 'attract': return `attract:${action.from}:${action.target}`;
     case 'swap': return `swap:${action.from}:${action.target}`;
+    case 'sostituzione': return `sostituzione:${action.from}:${action.target}`;
     case 'swapperSwap': return `swapperSwap:${action.squareA}:${action.squareB}`;
     case 'revive': return `revive:${action.from}:${action.target}:${action.sigla}`;
     case 'sdoppiamento': return `sdoppiamento:${action.from}:${action.cloneSquare}:${action.realSquare}`;

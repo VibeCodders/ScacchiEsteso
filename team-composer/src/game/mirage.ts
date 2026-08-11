@@ -9,7 +9,7 @@ import {
   type Owner,
   type PieceInstance,
 } from './board';
-import { isAdjacentToEnemyStunner } from './stun';
+import { isFrozenByEnemyAura } from './stun';
 import { emptyAdjacentCoords } from './directions';
 
 export function canSdoppiare(pieceDef: Piece): boolean {
@@ -79,7 +79,7 @@ export function getSdoppiamentoSquares(
   if (!piece) return [];
   if (isMirageClone(piece)) return []; // a clone is only ever a decoy, never a source
   if (hasLivingClone(board, piece)) return [];
-  if (isAdjacentToEnemyStunner(board, from, owner, getDef, dimensions)) return [];
+  if (isFrozenByEnemyAura(board, from, owner, getDef, dimensions)) return [];
 
   return emptyAdjacentCoords(board, from, dimensions);
 }
@@ -102,7 +102,7 @@ export function getRiunioneSquares(
 ): Coord[] {
   const piece = getPieceAt(board, from);
   if (!piece || !piece.mirage) return []; // only a split Miraggio can merge
-  if (isAdjacentToEnemyStunner(board, from, owner, getDef, dimensions)) return [];
+  if (isFrozenByEnemyAura(board, from, owner, getDef, dimensions)) return [];
 
   const partner = piece.mirage.isClone ? findRealOf(board, piece.mirage.id) : findCloneOf(board, piece.mirage.id);
   if (!partner) return []; // the other half is gone — nothing to merge

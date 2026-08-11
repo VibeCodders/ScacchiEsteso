@@ -150,6 +150,7 @@ Paladino con 51). Le sezioni §9 e §10 approfondiscono Miraggio e pezzi a ginoc
 | OR | Orfano | 26 | 4 | Copia poteri |
 | DM | Damone | 25 | 4 | diagonale 1 · cattura a salto (solo via promozione) |
 | VZ | Vortice | 24 | 5 | passo Re · Attira |
+| BR | Brigante | 24 | 5 | passo Re · Sostituzione |
 | TT | Teletrasporto | 22 | 5 | passo Re · Teletrasporto |
 | BO | Bomba | 21 | 6 | passo Re · Esplode se catturata |
 | CV | Cavalletta | 20 | 5 | salto sopra un pezzo (Grasshopper) |
@@ -157,7 +158,9 @@ Paladino con 51). Le sezioni §9 e §10 approfondiscono Miraggio e pezzi a ginoc
 | CA | Cavallo | 15 | 5 | salto a "L" |
 | RE | Re | 15 (gratis) | 1 (obbligatorio) | passo Re |
 | SP | Spettro | 15 | 5 | ≤2 diagonale, ignora le interposizioni |
+| LP | Lampo | 16 | 5 | salto esattamente 2 ortogonale (dabbaba) |
 | CR | Corriere | 14 | 5 | ≤2 ortogonale |
+| BS | Basilisco | 14 | 5 | passo Re · Sguardo pietrificante |
 | RI | Ricognitore | 12 | 5 | ≤2 diagonale |
 | CT | Catapulta | 11 | 5 | 1–2 orizzontale, ignora le interposizioni |
 | DA | Pedone di Dama | 11 | 5 | pedina di Dama · promuove a Damone |
@@ -230,6 +233,15 @@ Paladino con 51). Le sezioni §9 e §10 approfondiscono Miraggio e pezzi a ginoc
 - **ST — Stunner (28 pt):** muove come il Re. **Congelamento:** ogni pezzo nemico adiacente (mai il
   Re avversario) è completamente congelato: nessuna mossa né azione, tranne l'unica mossa che
   catturerebbe lo Stunner.
+- **BS — Basilisco (14 pt):** muove come il Re. **Sguardo pietrificante:** versione direzionale dello
+  Stunner — congela ogni pezzo nemico (mai il Re) che si trova nelle **3 caselle direttamente di
+  fronte** a lui, in direzione dell'avversario; lo sguardo attraversa i pezzi in mezzo. Come per lo
+  Stunner, un pezzo congelato non ha mosse né azioni, tranne l'unica mossa che catturerebbe il
+  Basilisco. È aggirabile di fianco.
+- **BR — Brigante (24 pt):** muove come il Re. **Sostituzione:** in alternativa al movimento, scambia
+  di posto con un **nemico adiacente** (mai il Re) senza catturarlo — l'unico pezzo del roster che
+  scambia posizione con un nemico (Mistico e Swapper scambiano solo alleati). Rifiutata se
+  lascerebbe il proprio Re sotto scacco.
 - **MG — Miraggio (27 pt):** muove come il Re; **Sdoppiamento** e **Riunione** (§9). Massimo 1 per
   composizione.
 - **RP — Repulsore (10 pt):** muove come il Re, cattura in mischia. **Respingere:** in alternativa
@@ -256,6 +268,11 @@ Paladino con 51). Le sezioni §9 e §10 approfondiscono Miraggio e pezzi a ginoc
 - **GR — Grifone (32 pt):** mossa a ginocchio (§10.1).
 - **MA — Manticora (26 pt):** mossa a ginocchio (§10.2).
 - **DR — Drago (45 pt):** Torre + Cavallo (§10.3).
+- **LP — Lampo (16 pt):** salto **dabbaba** — atterra sempre a **esattamente 2 caselle** in
+  orizzontale o verticale (N/S/E/O), ignorando i pezzi in mezzo; cattura in salto il nemico che
+  trova sulla casella di arrivo. L'unico pezzo del roster senza mosse da 1 o 3 caselle.
+  **Fulmine:** dopo una cattura in salto riuscita può compiere subito un secondo salto
+  non-catturante di 2 caselle (come la Furia bellica del Berserker, ma per i salti).
 - **CN — Coniglio (41 pt):** se non ha salti disponibili si muove come il Re (1 casella, cattura in
   mischia); se ha un nemico adiacente con la casella successiva libera può saltarlo e continuare a
   saltare (catena); quando si ferma cattura solo l'ultimo nemico saltato, gli altri restano in gioco.

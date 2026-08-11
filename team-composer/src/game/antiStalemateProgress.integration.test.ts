@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  applyAttract, applyRepulse, applyRevive, applyRiunione, applySdoppiamento, applySwap,
-  applySwapperSwap, applyTeleport, applyTurn, createInitialGameState,
+  applyAttract, applyRepulse, applyRevive, applyRiunione, applySdoppiamento, applySostituzione,
+  applySwap, applySwapperSwap, applyTeleport, applyTurn, createInitialGameState,
   type ApplyTurnResult, type GameState, type HistoryEntry,
 } from './turnManager';
 import { createEmptyBoard, createPieceInstance, setPieceAt, type BoardState, type Coord } from './board';
@@ -11,6 +11,7 @@ import { getRepulseTargets } from './repulse';
 import { getSwapperCandidatePairs } from './swapper';
 import { getRevivalSquares } from './necromancy';
 import { getSwapTargets } from './swap';
+import { getSostituzioneTargets } from './sostituzione';
 import { getSdoppiamentoSquares, getRiunioneSquares } from './mirage';
 import { getPieceDef } from './moveEngine';
 import { computeMaterialScore, resolveAntiStalemateWinner, ANTI_STALEMATE_TURN_LIMIT } from './antiStalemate';
@@ -25,6 +26,7 @@ const SW = 28;
 const NE = 28;
 const MI = 37;
 const MG = 27;
+const BR = 24;
 
 function place(board: BoardState, coord: Coord, sigla: string, owner: 'A' | 'B' = 'A'): BoardState {
   return setPieceAt(board, coord, createPieceInstance(sigla, owner));
@@ -153,6 +155,23 @@ const CASES: ProgressCase[] = [
       expect(s.board.get('d4')?.sigla).toBe('PE');
     },
     materialAfter: [RE + MI + PE, RE + PE],
+  },
+  {
+    name: "the Brigante's sostituzione",
+    setup: () => {
+      // The BR's subject PE must sit ADJACENT at d5 (the swap exchanges them).
+      const board = place(baseBoard('d5'), 'd4', 'BR', 'A');
+      return createInitialGameState(board, 'A');
+    },
+    offered: (s) => getSostituzioneTargets(s.board, 'd4', 'A', s.dimensions).includes('d5'),
+    act: (s) => applySostituzione(s, 'd4', 'd5'),
+    assertHistory: (e) => expect(e).toMatchObject({ sigla: 'BR', from: 'd4', to: 'd5', isSostituzione: true, sostituitoCon: 'd5' }),
+    assertAfter: (s) => {
+      expect(s.board.get('d5')?.sigla).toBe('BR');
+      expect(s.board.get('d4')?.sigla).toBe('PE');
+      expect(s.board.get('d4')?.owner).toBe('B');
+    },
+    materialAfter: [RE + BR, RE + PE],
   },
   {
     name: "the Miraggio's sdoppiamento",

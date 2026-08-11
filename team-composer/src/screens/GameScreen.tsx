@@ -10,11 +10,12 @@ import { canRepulse, getRepulseTargets } from '../game/repulse';
 import { canTeleport, getTeleportTargets } from '../game/teleport';
 import { canAttract, getAttractTargets } from '../game/vortex';
 import { canSwap, getSwapTargets } from '../game/swap';
+import { canSostituire, getSostituzioneTargets } from '../game/sostituzione';
 import { canSwapperSwap, getSwapperCandidateSquares } from '../game/swapper';
 import { canRevive, getRevivalSquares, getRevivableSiglas } from '../game/necromancy';
 import { canMimic, getOrphanThreats } from '../game/orphan';
 import { canSdoppiare, canRiunire, getSdoppiamentoSquares, getRiunioneSquares, isRealMirage } from '../game/mirage';
-import { createInitialGameState, applyTurn, applyScocca, applyRepulse, applyTeleport, applyAttract, applySwap, applySwapperSwap, applyRevive, applySdoppiamento, applyRiunione, getLegalMovesForTurn, skipExtraMove, stopRabbitChain, type GameState } from '../game/turnManager';
+import { createInitialGameState, applyTurn, applyScocca, applyRepulse, applyTeleport, applyAttract, applySwap, applySostituzione, applySwapperSwap, applyRevive, applySdoppiamento, applyRiunione, getLegalMovesForTurn, skipExtraMove, stopRabbitChain, type GameState } from '../game/turnManager';
 import { chooseBotAction, applyBotAction, formatMovesAhead, BOT_DIFFICULTY_MAX } from '../game/bot';
 import { sortSiglasByPunti } from '../data/pieces';
 import type { Coord, Owner } from '../game/board';
@@ -63,7 +64,7 @@ function GameScreen() {
   const [pendingRevival, setPendingRevival] = useState<PendingRevival | null>(null);
   const [pendingMimicChoice, setPendingMimicChoice] = useState<PendingMimicChoice | null>(null);
   const [orphanMimicSource, setOrphanMimicSource] = useState<Coord | null>(null);
-  const [actionMode, setActionMode] = useState<'scocca' | 'repulse' | 'teleport' | 'attract' | 'swap' | 'revive' | 'swapperSwap' | 'sdoppiamento' | 'riunione' | null>(null);
+  const [actionMode, setActionMode] = useState<'scocca' | 'repulse' | 'teleport' | 'attract' | 'swap' | 'sostituzione' | 'revive' | 'swapperSwap' | 'sdoppiamento' | 'riunione' | null>(null);
   const [swapperFirstSquare, setSwapperFirstSquare] = useState<Coord | null>(null);
   const [pendingSdoppiamento, setPendingSdoppiamento] = useState<PendingSdoppiamento | null>(null);
   const [revealRealMirage, setRevealRealMirage] = useState(false);
@@ -111,6 +112,9 @@ function GameScreen() {
     }
     if (actionMode === 'swap') {
       return mover ? getSwapTargets(gameState.board, effectiveSelected, mover.owner) : [];
+    }
+    if (actionMode === 'sostituzione') {
+      return mover ? getSostituzioneTargets(gameState.board, effectiveSelected, mover.owner) : [];
     }
     if (actionMode === 'revive') {
       return mover ? getRevivalSquares(gameState.board, effectiveSelected, mover.owner) : [];
@@ -327,6 +331,20 @@ function GameScreen() {
     }
   };
 
+  const commitSostituzione = (from: Coord, target: Coord) => {
+    const result = applySostituzione(gameState, from, target);
+    if (result.ok) {
+      setGameState(result.state);
+      setOrientation(result.state.turn);
+      setSelected(null);
+      setActionMode(null);
+      setSwapperFirstSquare(null);
+      setError(null);
+    } else {
+      setError(result.reason);
+    }
+  };
+
   const commitSwapperSwap = (from: Coord, squareA: Coord, squareB: Coord) => {
     const result = applySwapperSwap(gameState, from, squareA, squareB);
     if (result.ok) {
@@ -432,6 +450,7 @@ function GameScreen() {
         else if (actionMode === 'teleport') commitTeleport(selected, coord);
         else if (actionMode === 'attract') commitAttract(selected, coord);
         else if (actionMode === 'swap') commitSwap(selected, coord);
+        else if (actionMode === 'sostituzione') commitSostituzione(selected, coord);
         else if (actionMode === 'sdoppiamento') setPendingSdoppiamento({ from: selected, cloneSquare: coord });
         else if (actionMode === 'riunione') commitRiunione(selected, coord);
         else attemptRevive(selected, coord);
@@ -589,6 +608,12 @@ function GameScreen() {
               {actionMode === 'swap' ? '↩️ Annulla Scambio' : '🔀 Scambia posizione'}
             </Button>
           )}
+          {selected && selectedPiece && !gameState.pendingExtraMove && !gameState.pendingRabbitChain && canSostituire(getPieceDef(selectedPiece.sigla))
+            && getSostituzioneTargets(gameState.board, selected, selectedPiece.owner).length > 0 && (
+            <Button variant="auto" onClick={() => setActionMode((m) => (m === 'sostituzione' ? null : 'sostituzione'))}>
+              {actionMode === 'sostituzione' ? '↩️ Annulla Sostituzione' : '🥷 Sostituzione'}
+            </Button>
+          )}
           {selected && selectedPiece && !gameState.pendingExtraMove && !gameState.pendingRabbitChain && canSwapperSwap(getPieceDef(selectedPiece.sigla))
             && getSwapperCandidateSquares(gameState.board, selected, selectedPiece.owner).length > 1 && (
             <Button variant="auto" onClick={() => { setActionMode((m) => (m === 'swapperSwap' ? null : 'swapperSwap')); setSwapperFirstSquare(null); }}>
@@ -621,6 +646,7 @@ function GameScreen() {
         {actionMode === 'teleport' && <p className="text-sm text-slate-600 dark:text-slate-400">🌀 Modalità Teletrasporto: scegli una casella vuota a esattamente 3 caselle in linea retta (salta sopra i pezzi).</p>}
         {actionMode === 'attract' && <p className="text-sm text-slate-600 dark:text-slate-400">🧲 Modalità Attira: seleziona un nemico a esattamente 2 caselle in linea retta da trascinare sulla casella vuota in mezzo (mai il Re).</p>}
         {actionMode === 'swap' && <p className="text-sm text-slate-600 dark:text-slate-400">🔀 Modalità Scambio: seleziona un alleato in linea di vista libera (riga, colonna o diagonale).</p>}
+        {actionMode === 'sostituzione' && <p className="text-sm text-slate-600 dark:text-slate-400">🥷 Modalità Sostituzione: seleziona un nemico adiacente con cui scambiare di posto (mai il Re).</p>}
         {actionMode === 'revive' && <p className="text-sm text-slate-600 dark:text-slate-400">🧟 Modalità Rianimazione: seleziona una casella vuota adiacente.</p>}
         {actionMode === 'swapperSwap' && !swapperFirstSquare && <p className="text-sm text-slate-600 dark:text-slate-400">🔁 Scambio: seleziona la prima casella (un alleato adiacente, o lo Swapper stesso).</p>}
         {actionMode === 'swapperSwap' && swapperFirstSquare && <p className="text-sm text-slate-600 dark:text-slate-400">🔁 Scambio: seleziona la seconda casella da scambiare con {swapperFirstSquare}.</p>}
@@ -803,6 +829,7 @@ function GameScreen() {
                   {entry.isExtraMove && ' (movimento extra)'}
                   {entry.isRangedAttack && ' (scocca)'}
                   {entry.isSwap && ' (scambio)'}
+                  {entry.isSostituzione && ` (sostituzione: ${entry.sostituitoCon})`}
                   {entry.isRevival && ` (rianimato ${entry.revivedSigla})`}
                   {entry.isSdoppiamento && ` (sdoppiamento: vero in ${entry.realSquare}, clone in ${entry.cloneSquare})`}
                   {entry.isMerge && ' (riunione)'}

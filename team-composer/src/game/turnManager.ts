@@ -22,6 +22,7 @@ import { canRepulse, getRepulseTargets } from './repulse';
 import { canTeleport, getTeleportTargets } from './teleport';
 import { canAttract, getAttractTargets } from './vortex';
 import { canSwap, getSwapTargets } from './swap';
+import { canSostituire, getSostituzioneTargets } from './sostituzione';
 import { canSwapperSwap, getSwapperCandidateSquares } from './swapper';
 import { canRevive, getRevivalSquares, getRevivableSiglas } from './necromancy';
 import { getAreaDamageVictims, triggersAreaDamage } from './areaDamage';
@@ -60,6 +61,12 @@ export interface HistoryEntry {
   isRangedAttack?: boolean;
   /** True for a Mistico's "scambio di posizione" with an adjacent ally. */
   isSwap?: boolean;
+  /** True for a Brigante's "sostituzione": it swaps squares with an adjacent ENEMY (never the
+   *  King) — no capture, a pure exchange of position. `to` is the enemy's original square (where
+   *  the Brigante lands) and `sostituitoCon` is that same square, kept explicit for symmetry
+   *  with isRepulse/isAttract (which also name the displaced piece's landing square). */
+  isSostituzione?: boolean;
+  sostituitoCon?: Coord;
   /** True for a Repulsore's "respingi": it pushes an adjacent enemy one square directly away
    *  from itself, onto an empty square — `to` is the pushed piece's ORIGINAL square, and
    *  `repulsedTo` is where it lands. The Repulsore itself never moves. */
@@ -178,6 +185,7 @@ function isProgressEntry(entry: HistoryEntry): boolean {
   if (entry.isAttract) return true;
   if (entry.isRevival) return true;
   if (entry.isSwapperSwap) return true;
+  if (entry.isSostituzione) return true; // a board-changing special action, like swap/revival
   if (entry.isSdoppiamento) return true; // board-changing special actions, like swap/revival
   if (entry.isMerge) return true;
   return getPieceDef(entry.sigla).categoria === 'pedone';
@@ -531,7 +539,11 @@ function enterExtraMovePhase(state: GameState, piece: PieceInstance, outcome: Mo
 }
 
 function triggersExtraMove(pieceDef: ReturnType<typeof getPieceDef>, move: GeneratedMove): boolean {
-  return Boolean(pieceDef.secondoMovimentoPostCattura) && move.isCapture && move.captureMode === 'melee';
+  // Furia bellica (Berserker): a melee capture grants a bonus non-capturing move. Fulmine
+  // (Lampo): the same, but for the dabbaba's LEAP captures — never both on one piece.
+  if (pieceDef.secondoMovimentoPostCattura && move.isCapture && move.captureMode === 'melee') return true;
+  if (pieceDef.fulmine && move.isCapture && move.captureMode === 'leap') return true;
+  return false;
 }
 
 /** A Coniglio move is a hop (rather than its King-step fallback) exactly when it came from
@@ -864,6 +876,46 @@ export function applySwap(state: GameState, from: Coord, target: Coord): ApplyTu
     sigla: piece.sigla,
     isCapture: false,
     isSwap: true,
+  };
+
+  return finishAction(state, piece, nextBoard, historyEntry);
+}
+
+/**
+ * Plays a Brigante's "sostituzione" as the turn's action: instead of moving, the Brigante swaps
+ * squares with an adjacent ENEMY (never the King) — no capture, a pure exchange of position (the
+ * only piece in the roster that swaps with an enemy; Mistico and Swapper only swap allies). Like
+ * any action, it's rejected if it would leave the acting player's own King in check (README §3.2).
+ */
+export function applySostituzione(state: GameState, from: Coord, target: Coord): ApplyTurnResult {
+  const begun = beginAction(state, from);
+  if ('error' in begun) return begun.error;
+  const { piece } = begun;
+
+  const pieceDef = getPieceDef(piece.sigla);
+  if (!canSostituire(pieceDef)) {
+    return { ok: false, reason: 'Questo pezzo non può sostituirsi a un nemico.' };
+  }
+
+  const targets = getSostituzioneTargets(state.board, from, piece.owner, state.dimensions);
+  if (!targets.includes(target)) {
+    return { ok: false, reason: `Sostituzione non valida: ${target}.` };
+  }
+
+  const nextBoard = swapPieces(state.board, from, target);
+  if (isKingInCheck(nextBoard, piece.owner, state.dimensions)) {
+    return { ok: false, reason: 'Questa azione lascerebbe il tuo Re sotto scacco.' };
+  }
+
+  const historyEntry: HistoryEntry = {
+    turnNumber: state.turnNumber,
+    owner: piece.owner,
+    from,
+    to: target,
+    sigla: piece.sigla,
+    isCapture: false,
+    isSostituzione: true,
+    sostituitoCon: target,
   };
 
   return finishAction(state, piece, nextBoard, historyEntry);

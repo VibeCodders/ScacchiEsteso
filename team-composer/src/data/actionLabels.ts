@@ -4,6 +4,7 @@
  *  call site. */
 export const ACTION_LABELS: Record<string, string> = {
   furia_bellica: 'Furia bellica',
+  fulmine: 'Fulmine',
   rianimazione_pedone: 'Rianimazione',
   silenzio_aura: 'Silenzio',
   scambio_posizione: 'Scambio di posizione',
@@ -17,6 +18,8 @@ export const ACTION_LABELS: Record<string, string> = {
   attira: 'Attira',
   esplosione: 'Esplosione',
   scambio_due_alleati: 'Scambio di due alleati',
+  sostituzione: 'Sostituzione',
+  sguardo_pietrificante: 'Sguardo pietrificante',
   sdoppiamento: 'Sdoppiamento',
   riunione: 'Riunione',
 };

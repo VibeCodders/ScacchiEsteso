@@ -688,5 +688,60 @@
       { "type": "attira", "modalita": "alternativa", "params": { "distanza": 2, "target": "nemico_a_distanza_2", "direzioni": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "senzaCattura": true, "reEscluso": true } }
     ],
     "attiraNemici": true
+  },
+  {
+    "sigla": "BS",
+    "descrizione": "Basilisco",
+    "punti": 14,
+    "categoria": "base",
+    "classico": false,
+    "regole": "Si muove di una casella in qualsiasi direzione. Cattura in mischia. Il suo sguardo pietrificante congela ogni pezzo nemico (tranne il Re avversario, sempre immune) che si trova nelle 3 caselle direttamente di fronte a lui, in direzione dell'avversario: lo sguardo attraversa i pezzi in mezzo. Come per lo Stunner, un pezzo congelato non ha alcuna mossa né azione speciale disponibile, tranne l'unica mossa che catturerebbe il Basilisco stesso. È una versione direzionale dello Stunner: aggirabile di fianco.",
+    "moves": [
+      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step" }
+    ],
+    "movimentoTipo": "step",
+    "resistance": 0,
+    "immunityTypes": [],
+    "alternativeActions": [
+      { "type": "sguardo_pietrificante", "modalita": "passiva", "params": { "raggio": 3, "direzioni": ["n"], "condizioni": ["non_re"], "effetto": "blocca_tutte_le_azioni_tranne_cattura_del_basilisco" } }
+    ],
+    "congelaDirezione": true
+  },
+  {
+    "sigla": "BR",
+    "descrizione": "Brigante",
+    "punti": 24,
+    "categoria": "base",
+    "classico": false,
+    "regole": "Si muove di una casella in qualsiasi direzione. Cattura in mischia. In alternativa al movimento, può \"sostituirsi\" a un nemico adiacente (mai il Re): i due pezzi si scambiano di posto, senza cattura — il nemico viene spostato ma non eliminato — purché il proprio Re non resti esposto allo scacco. È l'unico pezzo del roster che scambia posizione con un nemico (Mistico e Swapper scambiano solo alleati).",
+    "moves": [
+      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step" }
+    ],
+    "movimentoTipo": "step",
+    "resistance": 0,
+    "immunityTypes": [],
+    "alternativeActions": [
+      { "type": "sostituzione", "modalita": "alternativa", "params": { "target": "nemico_adiacente", "raggio": 1, "esclusi": ["re"], "senzaCattura": true } }
+    ],
+    "scambioConNemico": true
+  },
+  {
+    "sigla": "LP",
+    "descrizione": "Lampo",
+    "punti": 16,
+    "categoria": "base",
+    "classico": false,
+    "regole": "Salta esattamente 2 caselle in orizzontale o verticale (N, S, E, O), ignorando i pezzi in mezzo: è il salto \"dabbaba\", l'unico pezzo del roster che atterra sempre a esattamente 2 caselle di distanza. Se sulla casella di arrivo c'è un nemico, lo cattura in salto; se c'è un alleato, non può atterrarci. Non ha mai mosse da 1 o 3 caselle. Fulmine: dopo una cattura in salto riuscita, può immediatamente compiere un secondo salto non-catturante di 2 caselle (come la Furia bellica del Berserker, ma per i salti).",
+    "moves": [
+      { "directions": ["n", "s", "e", "w"], "minSteps": 2, "maxSteps": 2, "capture": true, "captureMode": "leap", "movementType": "leap", "jump": true }
+    ],
+    "movimentoTipo": "leap",
+    "resistance": 0,
+    "immunityTypes": [],
+    "alternativeActions": [
+      { "type": "fulmine", "modalita": "sul_cattura", "params": { "senzaCattura": true, "effetto": "secondo_salto_non_catturante" } }
+    ],
+    "fulmine": true,
+    "saltaInterposizioni": true
   }
 ]
