@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { GameSetupProvider } from '../context/GameSetupContext';
 import { useGameSetup, type MatchResult, type GameMode } from '../context/gameSetup';
 import { ThemeProvider } from '../context/ThemeContext';
@@ -154,6 +154,59 @@ describe('GameOverScreen — dedicated results page', () => {
     expect(screen.getByText(/Stallo — partita patta/i)).toBeInTheDocument();
     expect(screen.getByText(/🤝 Punti rimasti pari — nessun vincitore morale/i)).toBeInTheDocument();
     expect(screen.queryByText(/🏅 vincitore morale/i)).not.toBeInTheDocument();
+  });
+
+  it('replays with the same lineup and bot difficulty via the Rigioca button', () => {
+    function BootstrapReplay() {
+      const { setMode, setHumanOwner, setBotDifficulty, setDeployedBoard, setMatchResult } = useGameSetup();
+      useEffect(() => {
+        setMode('pvc');
+        setHumanOwner('B');
+        setBotDifficulty(-3); // negative difficulty — must survive the replay
+        setDeployedBoard(place(createEmptyBoard(), 'a1', 'RE', 'A'));
+        setMatchResult({ status: 'anti_stalemate', winner: 'A', finalState: stalemateSnapshot('anti_stalemate', 'A') });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, []);
+      return null;
+    }
+    // Probes the context as seen by a freshly mounted /game screen after the replay.
+    function ReplayProbe() {
+      const { mode, humanOwner, botDifficulty, deployedBoard, matchResult } = useGameSetup();
+      return (
+        <div>
+          <span data-testid="probe-mode">{mode ?? 'null'}</span>
+          <span data-testid="probe-human">{humanOwner}</span>
+          <span data-testid="probe-difficulty">{botDifficulty}</span>
+          <span data-testid="probe-board">{deployedBoard ? deployedBoard.size : 0}</span>
+          <span data-testid="probe-result">{matchResult ? 'set' : 'null'}</span>
+        </div>
+      );
+    }
+    render(
+      <MemoryRouter initialEntries={['/game-over']}>
+        <GameSetupProvider>
+          <ThemeProvider>
+            <BootstrapReplay />
+            <Routes>
+              <Route path="/" element={<div>HOME</div>} />
+              <Route path="/game-over" element={<GameOverScreen />} />
+              <Route path="/game" element={<ReplayProbe />} />
+            </Routes>
+          </ThemeProvider>
+        </GameSetupProvider>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText('🔄 Rigioca')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('🔄 Rigioca'));
+
+    // We landed on /game with everything preserved — mode, owner, (negative) difficulty, board —
+    // and the finished result cleared so the new game starts from scratch.
+    expect(screen.getByTestId('probe-mode')).toHaveTextContent('pvc');
+    expect(screen.getByTestId('probe-human')).toHaveTextContent('B');
+    expect(screen.getByTestId('probe-difficulty')).toHaveTextContent('-3');
+    expect(screen.getByTestId('probe-board')).toHaveTextContent('1');
+    expect(screen.getByTestId('probe-result')).toHaveTextContent('null');
   });
 
   it('falls back gracefully and can return home when no result is available', () => {

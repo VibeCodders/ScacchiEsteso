@@ -46,7 +46,7 @@ export interface GameSetupContextValue extends GameSetupState {
   setTeamA: (team: TeamMap) => void;
   setTeamB: (team: TeamMap) => void;
   setDeployedBoard: (board: BoardState) => void;
-  setMatchResult: (result: MatchResult) => void;
+  setMatchResult: (result: MatchResult | null) => void; // null clears the stored result (e.g. before a replay)
   setHumanOwner: (owner: Owner) => void;
   setBotDifficulty: (difficulty: BotDifficulty) => void;
   setMaxDistinctSpecialTypes: (limit: number | null) => void;

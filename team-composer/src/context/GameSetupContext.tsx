@@ -21,7 +21,7 @@ export function GameSetupProvider({ children }: { children: ReactNode }) {
   const setTeamA = useCallback((team: TeamMap) => setTeamAState(team), []);
   const setTeamB = useCallback((team: TeamMap) => setTeamBState(team), []);
   const setDeployedBoard = useCallback((board: BoardState) => setDeployedBoardState(board), []);
-  const setMatchResult = useCallback((result: MatchResult) => setMatchResultState(result), []);
+  const setMatchResult = useCallback((result: MatchResult | null) => setMatchResultState(result), []);
   const setHumanOwner = useCallback((owner: Owner) => setHumanOwnerState(owner), []);
   const setBotDifficulty = useCallback((difficulty: BotDifficulty) => setBotDifficultyState(difficulty), []);
   const setMaxDistinctSpecialTypes = useCallback((limit: number | null) => setMaxDistinctSpecialTypesState(limit), []);

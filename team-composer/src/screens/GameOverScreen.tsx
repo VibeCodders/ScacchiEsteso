@@ -19,12 +19,19 @@ function outcomeDescription(result: MatchResult, ownerLabel: (owner: Owner) => s
 
 function GameOverScreen() {
   const navigate = useNavigate();
-  const { mode, humanOwner, matchResult, reset } = useGameSetup();
+  const { mode, humanOwner, matchResult, reset, setMatchResult } = useGameSetup();
   const ownerLabel = (owner: Owner) => playerLabel(owner, mode, humanOwner);
 
   const backToHome = () => {
     reset();
     navigate('/');
+  };
+
+  // Replay: keep the deployed board, mode, human/bot assignment and bot difficulty exactly as they
+  // are, clear the finished result, and mount a brand-new game from the same lineup (/game).
+  const playAgain = () => {
+    setMatchResult(null);
+    navigate('/game');
   };
 
   if (!matchResult) {
@@ -145,8 +152,9 @@ function GameOverScreen() {
         </div>
       </Panel>
 
-      <div className="flex justify-center pt-4">
-        <Button variant="primary" onClick={backToHome}>Torna alla Home</Button>
+      <div className="flex flex-wrap justify-center gap-3 pt-4">
+        <Button variant="primary" onClick={playAgain}>🔄 Rigioca</Button>
+        <Button variant="ghost" onClick={backToHome}>Torna alla Home</Button>
       </div>
     </PageShell>
   );
