@@ -172,6 +172,18 @@ function GameScreen() {
       .map(([coord]) => coord);
   }, [gameState, revealRealMirage]);
 
+  // The end-of-match dialog is gone: as soon as the game reaches a terminal status, the match
+  // result (with the final position snapshot) is recorded and the dedicated results page opens.
+  useEffect(() => {
+    if (!gameState) return;
+    if (gameState.status === 'checkmate' || gameState.status === 'stalemate' || gameState.status === 'anti_stalemate') {
+      setMatchResult({ status: gameState.status, winner: gameState.winner, finalState: gameState });
+      navigate('/game-over');
+    }
+    // setMatchResult is useCallback-stable and navigate is stable for the router's lifetime,
+    // so these deps never re-trigger the effect on their own.
+  }, [gameState, setMatchResult, navigate]);
+
   if (!deployedBoard || !gameState) {
     return (
       <PageShell title="♟️ Partita" layout="center">
@@ -489,16 +501,6 @@ function GameScreen() {
       setError(result.reason);
     }
   };
-
-  // The end-of-match dialog is gone: as soon as the game reaches a terminal status, the match
-  // result (with the final position snapshot) is recorded and the dedicated results page opens.
-  useEffect(() => {
-    if (!gameState) return;
-    if (gameState.status === 'checkmate' || gameState.status === 'stalemate' || gameState.status === 'anti_stalemate') {
-      setMatchResult({ status: gameState.status, winner: gameState.winner, finalState: gameState });
-      navigate('/game-over');
-    }
-  }, [gameState?.status]);
 
   const selectedPiece = selected ? gameState.board.get(selected) : undefined;
 
