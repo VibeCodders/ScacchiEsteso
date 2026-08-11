@@ -39,6 +39,15 @@ export function sortByPunti<T extends { punti: number; sigla: string }>(items: T
   return [...items].sort((a, b) => a.punti - b.punti || a.sigla.localeCompare(b.sigla));
 }
 
+/** Comparators for sorting piece lists/grids with the shared sortTable infrastructure — the
+ *  'price' key matches sortByPunti (punti ascending, sigla as tie-breaker), the default order
+ *  every piece grid in the app starts from. */
+export const PIECE_SORT_COMPARATORS: Record<string, (a: Piece, b: Piece) => number> = {
+  price: (a, b) => a.punti - b.punti || a.sigla.localeCompare(b.sigla),
+  name: (a, b) => a.descrizione.localeCompare(b.descrizione) || a.sigla.localeCompare(b.sigla),
+  sigla: (a, b) => a.sigla.localeCompare(b.sigla),
+};
+
 const PIECE_BY_SIGLA = new Map(pieces.map((p) => [p.sigla, p]));
 
 /** Same ordering as sortByPunti, for lists that only carry a sigla (e.g. promotion/revival choices). */

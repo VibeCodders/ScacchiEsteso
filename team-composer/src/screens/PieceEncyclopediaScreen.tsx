@@ -1,16 +1,21 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { pieces, sortByPunti } from '../data/pieces';
+import { pieces, PIECE_SORT_COMPARATORS } from '../data/pieces';
 import Button from '../components/ui/Button';
 import PageShell from '../components/ui/PageShell';
 import Panel from '../components/ui/Panel';
 import PieceCard from '../components/ui/PieceCard';
 import PieceDetail from '../components/ui/PieceDetail';
+import { useSortState, sortTable } from '../lib/sort';
+import { SortButtons } from '../components/ui/sortable';
 
 function PieceEncyclopediaScreen() {
   const navigate = useNavigate();
   const [selectedSigla, setSelectedSigla] = useState<string | null>(null);
   const selectedPiece = selectedSigla ? (pieces.find((p) => p.sigla === selectedSigla) ?? null) : null;
+
+  const sort = useSortState('price');
+  const sortedPieces = useMemo(() => sortTable(pieces, sort.key, sort.dir, PIECE_SORT_COMPARATORS), [sort.key, sort.dir]);
 
   return (
     <PageShell
@@ -19,8 +24,18 @@ function PieceEncyclopediaScreen() {
       actions={<Button variant="secondary" onClick={() => navigate('/')}>← Torna alla Home</Button>}
     >
       <Panel>
+        <div className="mb-3 flex justify-end">
+          <SortButtons
+            options={[
+              { key: 'price', label: 'Prezzo' },
+              { key: 'name', label: 'Nome' },
+              { key: 'sigla', label: 'Sigla' },
+            ]}
+            sort={sort}
+          />
+        </div>
         <div className="piece-grid grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-2.5">
-          {sortByPunti(pieces).map((piece) => (
+          {sortedPieces.map((piece) => (
             <PieceCard
               key={piece.sigla}
               piece={piece}

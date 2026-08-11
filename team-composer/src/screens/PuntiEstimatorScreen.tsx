@@ -21,6 +21,8 @@ import PageShell from '../components/ui/PageShell';
 import Panel from '../components/ui/Panel';
 import { cn } from '../lib/cn';
 import { inputClass } from '../components/ui/Field';
+import { useSortState, sortTable, type RowComparator } from '../lib/sort';
+import { SortableHeader } from '../components/ui/sortable';
 
 /** How close is "close enough" before a suggestion counts as a meaningful over/under estimate. */
 const CLOSE_ENOUGH_ABS_DIFF = 3;
@@ -225,38 +227,6 @@ function formatDiff(actual: number, suggested: number): string {
   return diff > 0 ? `+${diff}` : `${diff}`;
 }
 
-type SortDir = 'asc' | 'desc';
-
-/** Shared sorting state for any table on the page: clicking a new column sorts it ascending,
- *  clicking the active column again flips the direction. */
-function useSortState(initialKey: string, initialDir: SortDir = 'asc'): {
-  key: string;
-  dir: SortDir;
-  toggle: (key: string) => void;
-} {
-  const [key, setKey] = useState(initialKey);
-  const [dir, setDir] = useState<SortDir>(initialDir);
-  const toggle = (next: string) => {
-    if (next === key) {
-      setDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-    } else {
-      setKey(next);
-      setDir('asc');
-    }
-  };
-  return { key, dir, toggle };
-}
-
-type RowComparator<T> = (a: T, b: T) => number;
-
-/** Sorts a copy of `rows` with the comparator registered for `key` (falling back to the input order
- *  if a column has no comparator — e.g. an action-only column). */
-function sortTable<T>(rows: T[], key: string, dir: SortDir, comparators: Record<string, RowComparator<T>>): T[] {
-  const sign = dir === 'asc' ? 1 : -1;
-  const compare = comparators[key];
-  return [...rows].sort((a, b) => (compare ? sign * compare(a, b) : 0));
-}
-
 interface Row {
   piece: Piece;
   estimate: PuntiEstimate;
@@ -270,33 +240,6 @@ const ROW_COMPARATORS: Record<string, RowComparator<Row>> = {
   diff: (a, b) =>
     Math.abs(a.estimate.suggestedPunti - a.piece.punti) - Math.abs(b.estimate.suggestedPunti - b.piece.punti),
 };
-
-function SortableHeader({
-  label,
-  sortKey,
-  activeKey,
-  dir,
-  onSort,
-  compact = false,
-}: {
-  label: string;
-  sortKey: string;
-  activeKey: string;
-  dir: SortDir;
-  onSort: (key: string) => void;
-  /** Tighter padding for the transparency-panel tables (small text, dense layout). */
-  compact?: boolean;
-}) {
-  const isActive = sortKey === activeKey;
-  const base = 'cursor-pointer select-none whitespace-nowrap border-b border-slate-300 dark:border-slate-700 text-left font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100';
-  const padding = compact ? 'px-2 py-1' : 'px-2.5 py-2';
-  return (
-    <th className={`${base} ${padding}`} onClick={() => onSort(sortKey)}>
-      {label}
-      {isActive && <span className="text-blue-600 dark:text-blue-400">{dir === 'asc' ? ' ▲' : ' ▼'}</span>}
-    </th>
-  );
-}
 
 /**
  * Scatter chart plotting each piece's real punti (x) against its suggested punti (y), with a

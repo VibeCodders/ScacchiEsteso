@@ -12,12 +12,15 @@ import {
   type DeploymentState,
 } from '../game/deployment';
 import { allCoords, coordToFileRank, type Owner } from '../game/board';
-import { pieces, sortSiglasByPunti } from '../data/pieces';
+import { pieces, PIECE_SORT_COMPARATORS } from '../data/pieces';
 import Button from '../components/ui/Button';
 import PageShell from '../components/ui/PageShell';
 import Panel from '../components/ui/Panel';
 import PieceCard from '../components/ui/PieceCard';
+import { useSortState, sortTable } from '../lib/sort';
+import { SortButtons } from '../components/ui/sortable';
 import { useShowNames } from '../lib/useShowNames';
+import type { Piece } from '../types';
 
 function pickCoinToss(): Owner {
   return Math.random() < 0.5 ? 'A' : 'B';
@@ -32,6 +35,8 @@ function DeploymentScreen() {
   const [orientation, setOrientation] = useState<Owner>('A');
   const [error, setError] = useState<string | null>(null);
   const { showNames, namesToggled, setNamesToggled, namesKeyHeld } = useShowNames();
+
+  const sort = useSortState('price');
 
   const teamAResolved = teamA ?? emptyTeam();
   const teamBResolved = teamB ?? emptyTeam();
@@ -148,11 +153,27 @@ function DeploymentScreen() {
                 ⚡ Piazza automaticamente entrambi gli eserciti
               </Button>
             </div>
+            <div className="mb-3 flex justify-end">
+              <SortButtons
+                options={[
+                  { key: 'price', label: 'Prezzo' },
+                  { key: 'name', label: 'Nome' },
+                  { key: 'sigla', label: 'Sigla' },
+                ]}
+                sort={sort}
+              />
+            </div>
             <div className="piece-grid grid grid-cols-1 gap-2.5">
-              {sortSiglasByPunti([...currentRoster.keys()]).map((sigla) => {
+              {sortTable(
+                [...currentRoster.keys()]
+                  .map((sigla) => pieces.find((p) => p.sigla === sigla))
+                  .filter((p): p is Piece => Boolean(p)),
+                sort.key,
+                sort.dir,
+                PIECE_SORT_COMPARATORS,
+              ).map((pieceDef) => {
+                const sigla = pieceDef.sigla;
                 const count = currentRoster.get(sigla)!;
-                const pieceDef = pieces.find((p) => p.sigla === sigla);
-                if (!pieceDef) return null;
                 return (
                   <PieceCard
                     key={sigla}

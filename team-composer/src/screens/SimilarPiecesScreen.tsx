@@ -1,11 +1,19 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { findSimilarPiecePairs, DEFAULT_SIMILARITY_THRESHOLD } from '../data/similarPieces';
+import { findSimilarPiecePairs, DEFAULT_SIMILARITY_THRESHOLD, type SimilarPiecePair } from '../data/similarPieces';
 import PieceIcon from '../assets/pieces/pieceIcons';
 import Button from '../components/ui/Button';
 import PageShell from '../components/ui/PageShell';
 import Panel from '../components/ui/Panel';
+import { useSortState, sortTable, type RowComparator } from '../lib/sort';
+import { SortButtons } from '../components/ui/sortable';
 import { cn } from '../lib/cn';
+
+const PAIR_COMPARATORS: Record<string, RowComparator<SimilarPiecePair>> = {
+  distance: (a, b) => a.distance - b.distance,
+  cost: (a, b) => (a.a.punti + a.b.punti) - (b.a.punti + b.b.punti) || a.a.sigla.localeCompare(b.a.sigla),
+  sigla: (a, b) => `${a.a.sigla}~${a.b.sigla}`.localeCompare(`${b.a.sigla}~${b.b.sigla}`),
+};
 
 function formatDiff(diff: number, siglaA: string, siglaB: string): string {
   const sign = diff > 0 ? '+' : '';
@@ -21,6 +29,12 @@ function SimilarPiecesScreen() {
   const flagged = useMemo(() => pairs.filter((p) => p.distance <= threshold), [pairs, threshold]);
   const showingFallback = flagged.length === 0;
   const visiblePairs = showingFallback ? pairs.slice(0, 10) : flagged;
+
+  const sort = useSortState('distance');
+  const sortedVisible = useMemo(
+    () => sortTable(visiblePairs, sort.key, sort.dir, PAIR_COMPARATORS),
+    [visiblePairs, sort.key, sort.dir],
+  );
 
   return (
     <PageShell
@@ -55,10 +69,20 @@ function SimilarPiecesScreen() {
               ? `Nessuna coppia sotto la soglia — mostro le 10 coppie più simili in assoluto (su ${pairs.length} coppie confrontate, ${comparedPieceCount} pezzi).`
               : `${flagged.length} coppie sotto soglia su ${pairs.length} confrontate (${comparedPieceCount} pezzi, Re escluso).`}
           </span>
+          <span className="ml-auto">
+            <SortButtons
+              options={[
+                { key: 'distance', label: 'Distanza' },
+                { key: 'cost', label: 'Costo coppia' },
+                { key: 'sigla', label: 'Sigla' },
+              ]}
+              sort={sort}
+            />
+          </span>
         </div>
 
         <div className="flex flex-col gap-2.5">
-          {visiblePairs.map(({ a, b, distance, featureDiffs, differingMechanicTypes }) => (
+          {sortedVisible.map(({ a, b, distance, featureDiffs, differingMechanicTypes }) => (
             <div key={`${a.sigla}-${b.sigla}`} className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5">
               <div className="flex flex-wrap items-center justify-between gap-2.5">
                 <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-slate-800 dark:text-slate-200">
