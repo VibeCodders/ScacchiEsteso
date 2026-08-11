@@ -83,6 +83,9 @@ export interface HistoryEntry {
   revivedSigla?: string;
   /** Squares destroyed by a Colosso's "danno ad area" triggered by this capture, if any. */
   areaDamageCoords?: Coord[];
+  /** The pieces destroyed by that area damage, with their owners — needed to track material over
+   *  time (README: the blast hits allies and enemies alike, so ownership is per victim). */
+  areaDamage?: Array<{ sigla: string; owner: Owner }>;
   /** True for a Swapper's two-ally swap; `swapSquares` holds the two squares swapped (order not
    *  meaningful) since — unlike Mistico's `isSwap` — neither is guaranteed to be the acting
    *  piece's own `from` square. */
@@ -364,6 +367,7 @@ function resolveMove(state: GameState, piece: PieceInstance, move: GeneratedMove
   }
 
   let areaDamageCoords: Coord[] | undefined;
+  let areaDamage: Array<{ sigla: string; owner: Owner }> | undefined;
   const pieceDef = getPieceDef(piece.sigla);
   // A Colosso destroyed by the blast is gone: no area damage fires from its empty square.
   if (!explodedAt && triggersAreaDamage(pieceDef, move) && !isSilenced(nextBoard, move.to, piece.owner, state.dimensions)) {
@@ -383,6 +387,9 @@ function resolveMove(state: GameState, piece: PieceInstance, move: GeneratedMove
         }
       }
       areaDamageCoords = [...removalSet.keys()];
+      areaDamage = [...removalSet.values()]
+        .filter((v) => !isMirageClone(v))
+        .map((v) => ({ sigla: v.sigla, owner: v.owner }));
       for (const [coord, victim] of removalSet) {
         nextBoard = removePieceAt(nextBoard, coord);
         if (!isMirageClone(victim)) {
@@ -404,6 +411,7 @@ function resolveMove(state: GameState, piece: PieceInstance, move: GeneratedMove
     promotedTo: promotionChoice,
     isExtraMove: isExtraMove || undefined,
     areaDamageCoords,
+    areaDamage,
     isExplosion: explodedAt ? true : undefined,
     explodedAt,
     isCloneCapture: capturedPiece && isMirageClone(capturedPiece) ? true : undefined,

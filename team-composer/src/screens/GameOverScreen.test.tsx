@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { GameSetupProvider } from '../context/GameSetupContext';
 import { useGameSetup, type MatchResult, type GameMode } from '../context/gameSetup';
 import { ThemeProvider } from '../context/ThemeContext';
@@ -76,13 +76,17 @@ describe('GameOverScreen — dedicated results page', () => {
     });
 
     expect(screen.getByText(/Scacco matto — vince Giocatore 2/i)).toBeInTheDocument();
-    // Stats panel: moves played and total captures.
-    expect(screen.getByText(/Mosse giocate:/i)).toBeInTheDocument();
-    expect(screen.getAllByText('2')).toHaveLength(2); // history length + total captured pieces (1+1)
-    // Remaining material per player (numbers are bolded in nested <strong>, so assert separately).
+    // Stats panel: moves played and total captures (scoped to the summary line — the chart's
+    // x-axis labels are also plain numbers like "2").
+    const statsSummary = screen.getByText(/Mosse giocate:/i).closest('p')!;
+    expect(statsSummary.textContent).toContain('Mosse giocate: 2');
+    expect(statsSummary.textContent).toContain('catturati totali: 2');
+    // Remaining material per player (scoped to the stats panel — the chart's y-axis labels reuse
+    // the same numbers, e.g. a "57" tick).
     expect(screen.getAllByText(/Punti rimasti sulla scacchiera:/i)).toHaveLength(2);
-    expect(screen.getByText('57')).toBeInTheDocument();
-    expect(screen.getByText('30')).toBeInTheDocument();
+    const statsPanel = screen.getAllByText(/Punti rimasti sulla scacchiera:/i)[0].closest('section')!;
+    expect(within(statsPanel).getByText('57')).toBeInTheDocument();
+    expect(within(statsPanel).getByText('30')).toBeInTheDocument();
     // One captured pawn each.
     expect(screen.getAllByText(/Catturati all'avversario:/i)).toHaveLength(2);
     expect(screen.getAllByText('7 pt')).toHaveLength(2); // each side captured one 7pt pawn
@@ -125,6 +129,19 @@ describe('GameOverScreen — dedicated results page', () => {
     // All 8 moves are listed (scoped to the history panel — the stats panel has its own lists).
     const historyPanel = screen.getByText('📜 Cronologia mosse').closest('section')!;
     expect(historyPanel.querySelectorAll('li')).toHaveLength(8);
+  });
+
+  it('renders the material trend chart with a line per player', () => {
+    renderResult({ status: 'checkmate', winner: 'B', finalState: stalemateSnapshot('checkmate', 'B') });
+
+    expect(screen.getByText('📈 Andamento materiale')).toBeInTheDocument();
+    const chart = screen.getByTestId('material-trend-chart');
+    expect(chart.getAttribute('aria-label')).toContain('Andamento del materiale');
+    expect(chart.querySelector('[data-testid="trend-line-a"]')).not.toBeNull();
+    expect(chart.querySelector('[data-testid="trend-line-b"]')).not.toBeNull();
+    // Legend mentions both players (the stats panel headers already do too).
+    expect(screen.getAllByText('Giocatore 1')).toHaveLength(2);
+    expect(screen.getAllByText('Giocatore 2')).toHaveLength(2);
   });
 
   it('declares a moral winner from the remaining points on an anti-stalemate', () => {

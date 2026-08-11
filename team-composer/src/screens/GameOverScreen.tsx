@@ -1,11 +1,13 @@
 import { useNavigate } from 'react-router-dom';
 import { playerLabel, useGameSetup, type MatchResult } from '../context/gameSetup';
 import { computeMaterialScore } from '../game/antiStalemate';
+import { computeMaterialTrend } from '../game/materialTrend';
 import { getPieceDef } from '../game/moveEngine';
 import type { Owner } from '../game/board';
 import Button from '../components/ui/Button';
 import PageShell from '../components/ui/PageShell';
 import Panel from '../components/ui/Panel';
+import MaterialTrendChart from './MaterialTrendChart';
 import { cn } from '../lib/cn';
 
 function outcomeDescription(result: MatchResult, ownerLabel: (owner: Owner) => string): string {
@@ -118,6 +120,10 @@ function GameOverScreen() {
               : '🤝 Punti rimasti pari — nessun vincitore morale.'}
           </p>
         )}
+      </Panel>
+
+      <Panel title="📈 Andamento materiale">
+        <MaterialTrendChart points={computeMaterialTrend(finalState)} ownerLabel={ownerLabel} />
       </Panel>
 
       <Panel title="📜 Cronologia mosse">

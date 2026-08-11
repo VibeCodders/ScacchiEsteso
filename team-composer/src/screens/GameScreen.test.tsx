@@ -984,10 +984,12 @@ describe('GameScreen — anti-stalemate (20 turns without progress)', () => {
     expect(screen.getByText(/Fine Partita/i)).toBeInTheDocument();
     expect(screen.getByText(/Limite di 20 turni senza progressi — vince Giocatore 1 per punteggio/i)).toBeInTheDocument();
     // The results page reports the remaining material per player and the moral winner (A: 57 pt vs B: 30).
-    // (Numbers are bolded in nested <strong> tags, so assert the label and the values separately.)
+    // (Numbers are bolded in nested <strong> tags and the chart's axis labels reuse them, so scope
+    // the value assertions to the stats panel.)
     expect(screen.getAllByText(/Punti rimasti sulla scacchiera:/i)).toHaveLength(2);
-    expect(screen.getByText('57')).toBeInTheDocument();
-    expect(screen.getByText('30')).toBeInTheDocument();
+    const statsPanel = screen.getAllByText(/Punti rimasti sulla scacchiera:/i)[0].closest('section')!;
+    expect(within(statsPanel).getByText('57')).toBeInTheDocument();
+    expect(within(statsPanel).getByText('30')).toBeInTheDocument();
     expect(screen.getByText(/Vincitore morale: Giocatore 1 — 57 pt rimasti contro 30/i)).toBeInTheDocument();
   });
 });
