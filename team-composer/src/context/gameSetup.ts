@@ -1,7 +1,7 @@
 import { createContext, useContext } from 'react';
 import { KING_SIGLA } from '../data/pieces';
 import type { BoardDimensions, BoardState, Owner } from '../game/board';
-import type { GameStatus } from '../game/turnManager';
+import type { GameState, GameStatus } from '../game/turnManager';
 import type { BotDifficulty } from '../game/bot';
 
 export type GameMode = 'pvp' | 'pvc';
@@ -21,6 +21,9 @@ export function emptyTeam(): TeamMap {
 export interface MatchResult {
   status: Extract<GameStatus, 'checkmate' | 'stalemate' | 'anti_stalemate'>;
   winner?: Owner;
+  /** Snapshot of the final position — lets the results page show statistics (moves played,
+   *  captures, remaining points per player, moral winner in drawn outcomes). */
+  finalState: GameState;
 }
 
 export interface GameSetupState {

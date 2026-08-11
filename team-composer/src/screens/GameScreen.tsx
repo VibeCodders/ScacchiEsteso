@@ -490,12 +490,15 @@ function GameScreen() {
     }
   };
 
-  const handleContinueToResult = () => {
+  // The end-of-match dialog is gone: as soon as the game reaches a terminal status, the match
+  // result (with the final position snapshot) is recorded and the dedicated results page opens.
+  useEffect(() => {
+    if (!gameState) return;
     if (gameState.status === 'checkmate' || gameState.status === 'stalemate' || gameState.status === 'anti_stalemate') {
-      setMatchResult({ status: gameState.status, winner: gameState.winner });
+      setMatchResult({ status: gameState.status, winner: gameState.winner, finalState: gameState });
+      navigate('/game-over');
     }
-    navigate('/game-over');
-  };
+  }, [gameState?.status]);
 
   const selectedPiece = selected ? gameState.board.get(selected) : undefined;
 
@@ -719,22 +722,6 @@ function GameScreen() {
           </Modal>
         )}
 
-        {/* The end-of-match dialog is deliberately non-dismissible: the only action is seeing the result. */}
-        {gameOver && (
-          <Modal
-            title={
-              gameState.status === 'checkmate'
-                ? `🏆 Scacco matto! Vince ${ownerLabel(gameState.winner!)}`
-                : gameState.status === 'stalemate'
-                  ? '🤝 Stallo — Patta'
-                  : gameState.winner
-                    ? `⏱️ Limite di 20 turni senza progressi — vince ${ownerLabel(gameState.winner)} per punteggio`
-                    : '⏱️ Limite di 20 turni senza progressi — Patta per punteggio pari'
-            }
-          >
-            <Button variant="primary" onClick={handleContinueToResult}>Vedi risultato →</Button>
-          </Modal>
-        )}
       </Panel>
 
       <Panel title="♟️ Pezzi in gioco">

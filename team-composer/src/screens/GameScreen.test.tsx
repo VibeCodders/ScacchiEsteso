@@ -245,20 +245,8 @@ describe('GameScreen — show-names mode (hold H / toggle button)', () => {
   });
 });
 
-describe('GameScreen — game over banner', () => {
-  it('shows a checkmate banner instead of allowing further moves, with a button to see the result', () => {
-    let board = place(createEmptyBoard(), 'h1', KING_SIGLA, 'B');
-    board = place(board, 'a1', KING_SIGLA, 'A');
-    board = place(board, 'a8', 'TO', 'B');
-    board = place(board, 'b8', 'TO', 'B');
-    renderGame(board);
-
-    // It is Player A's turn and A is already checkmated by the two rooks — the banner should show immediately.
-    expect(screen.getByText(/Scacco matto/i)).toBeInTheDocument();
-    expect(screen.getByText(/Vedi risultato/i)).toBeInTheDocument();
-  });
-
-  it('navigates onward when "Vedi risultato" is clicked', () => {
+describe('GameScreen — game over', () => {
+  it('a checkmated position opens the dedicated results page automatically (no modal, no click)', () => {
     let board = place(createEmptyBoard(), 'h1', KING_SIGLA, 'B');
     board = place(board, 'a1', KING_SIGLA, 'A');
     board = place(board, 'a8', 'TO', 'B');
@@ -277,7 +265,7 @@ describe('GameScreen — game over banner', () => {
       </MemoryRouter>,
     );
 
-    fireEvent.click(screen.getByText(/Vedi risultato/i));
+    // A is already checkmated on mount — the game-over modal is gone, the results page replaces it.
     expect(screen.getByText(/Fine Partita/i)).toBeInTheDocument();
     expect(screen.getByText(/Scacco matto — vince Giocatore 2/i)).toBeInTheDocument();
   });
@@ -992,11 +980,15 @@ describe('GameScreen — anti-stalemate (20 turns without progress)', () => {
       fireEvent.click(document.querySelector(`[data-coord="${to}"]`)!);
     }
 
-    expect(screen.getByText(/Limite di 20 turni senza progressi — vince Giocatore 1 per punteggio/i)).toBeInTheDocument();
-
-    fireEvent.click(screen.getByText(/Vedi risultato/i));
+    // No modal, no click: the 20th quiet ply lands on the dedicated results page automatically.
     expect(screen.getByText(/Fine Partita/i)).toBeInTheDocument();
     expect(screen.getByText(/Limite di 20 turni senza progressi — vince Giocatore 1 per punteggio/i)).toBeInTheDocument();
+    // The results page reports the remaining material per player and the moral winner (A: 57 pt vs B: 30).
+    // (Numbers are bolded in nested <strong> tags, so assert the label and the values separately.)
+    expect(screen.getAllByText(/Punti rimasti sulla scacchiera:/i)).toHaveLength(2);
+    expect(screen.getByText('57')).toBeInTheDocument();
+    expect(screen.getByText('30')).toBeInTheDocument();
+    expect(screen.getByText(/Vincitore morale: Giocatore 1 — 57 pt rimasti contro 30/i)).toBeInTheDocument();
   });
 });
 
@@ -1015,10 +1007,13 @@ function BootstrapPvc({ board, humanOwner }: { board: BoardState; humanOwner: 'A
 
 function renderPvcGame(board: BoardState, humanOwner: 'A' | 'B') {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={['/game']}>
       <GameSetupProvider>
         <ThemeProvider>
-          <BootstrapPvc board={board} humanOwner={humanOwner} />
+          <Routes>
+            <Route path="/game" element={<BootstrapPvc board={board} humanOwner={humanOwner} />} />
+            <Route path="/game-over" element={<GameOverScreen />} />
+          </Routes>
         </ThemeProvider>
       </GameSetupProvider>
     </MemoryRouter>,
@@ -1109,11 +1104,12 @@ describe('GameScreen — PvC complete game: the bot repulses with the Repulsore'
     expect(screen.getByText(/Turno: Giocatore 1/i)).toBeInTheDocument();
 
     // 3) Human mates: c4 → c2# — the c2 Queen boxes the King on the back rank (protected by the e4
-    // Queen, and every escape square covered). The match ends with the human's win.
+    // Queen, and every escape square covered). The match ends and the results page opens on its own.
     fireEvent.click(document.querySelector('[data-coord="c4"]')!);
     fireEvent.click(document.querySelector('[data-coord="c2"]')!);
 
-    expect(screen.getByText(/Scacco matto! Vince Giocatore 1/i)).toBeInTheDocument();
+    expect(screen.getByText(/Fine Partita/i)).toBeInTheDocument();
+    expect(screen.getByText(/Scacco matto — vince Giocatore 1/i)).toBeInTheDocument();
   });
 });
 
