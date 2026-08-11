@@ -1,5 +1,9 @@
 # Scacchi Esteso
 
+[![CI](https://img.shields.io/github/actions/workflow/status/VibeCodders/ScacchiEsteso/ci.yml?branch=main&label=CI)](https://github.com/VibeCodders/ScacchiEsteso/actions/workflows/ci.yml)
+
+Regole del gioco e della composizione degli eserciti. L'app (composizione team, schieramento, partita) è in [`team-composer/`](team-composer/).
+
 ## 1. Costi e limitazioni dell'esercito
 
 - **Budget punti disponibili:** 154, come tetto massimo — è consentito spendere meno del budget
