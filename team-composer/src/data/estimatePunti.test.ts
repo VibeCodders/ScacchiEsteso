@@ -174,8 +174,9 @@ describe('mechanicBonusSummary — empirical-Bayes shrinkage on single-example m
 describe('stage2ModelSummary — parametric mechanic-bonus model', () => {
   it('exposes one coefficient per stage-2 feature', () => {
     const summary = stage2ModelSummary();
-    // Intercept + radius + directionCount + intensity + targetsAllies + isPassive + isDefensive + isOnCapture.
-    expect(summary.features).toHaveLength(8);
+    // Intercept + radius + directionCount + intensity + targetsAllies + isPassive + isDefensive
+    // + isOnCapture + destinationConstraint.
+    expect(summary.features).toHaveLength(9);
     expect(summary.features.every((f) => Number.isFinite(f.coefficient))).toBe(true);
     expect(Number.isFinite(summary.lambda)).toBe(true);
     expect(Number.isFinite(summary.shrinkageK)).toBe(true);
@@ -251,6 +252,23 @@ describe('estimatePunti — every special effect on a piece is considered (no si
     expect(estimatePunti(bomba).suggestedPunti).toBeGreaterThanOrEqual(
       estimatePunti(withoutExplosion).suggestedPunti,
     );
+  });
+
+  it('the Repulsore is not priced by the bare "generic mechanic" intercept — respingi carries an empty-destination restriction', () => {
+    const summary = stage2ModelSummary();
+    expect(summary.features.map((f) => f.name)).toContain('Destinazione vincolata');
+    const dest = summary.features.find((f) => f.name === 'Destinazione vincolata')!;
+    // A destination that must be empty is a genuine restriction — the coefficient must never add value.
+    expect(dest.coefficient).toBeLessThanOrEqual(0);
+
+    // sostituzione (Brigante) and respingi (Repulsore) share every param except the destination
+    // restriction: once the model can see it, the Repulsore stays near its honest 17pt while the
+    // Brigante keeps its ~23pt — previously both were predicted by the same bare intercept.
+    const rp = estimatePunti(getPieceDef('RP')).suggestedPunti;
+    const br = estimatePunti(getPieceDef('BR')).suggestedPunti;
+    expect(rp).toBeGreaterThanOrEqual(16);
+    expect(rp).toBeLessThanOrEqual(19);
+    expect(br - rp).toBeGreaterThanOrEqual(2);
   });
 });
 

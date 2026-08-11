@@ -438,6 +438,7 @@ interface MechanicFeatures {
   isPassive: number;
   isDefensive: number;
   isOnCapture: number;
+  destinationConstraint: number;
 }
 
 /** Mechanic types that protect the owner rather than threatening the opponent — `armatura`
@@ -456,6 +457,7 @@ const MECHANIC_FEATURE_NAMES = [
   'Passiva',
   'Difensiva',
   'Su cattura',
+  'Destinazione vincolata',
 ] as const;
 
 /** Index of the 'Difensiva' feature in `MECHANIC_FEATURE_NAMES` / `mechanicFeatureVector`. Its
@@ -501,6 +503,22 @@ function firstNumericParamMatching(params: Record<string, unknown>, pattern: Reg
  * feature but the `modalita`-derived ones at 0) rather than crashing or producing NaN — a
  * reasonable floor, not a silently wrong answer.
  */
+/** 1 when the mechanic's params constrain the DESTINATION to be empty/free — either an explicit
+ *  `destinazione` value like `"vuota"` (Repulsore's respingi: the landing square must be free) or
+ *  a `target` naming a free square (`casella_vuota_a_distanza_3` Teletrasporto,
+ *  `casella_adiacente_vuota` sdoppiamento). A destination that must be empty is a genuine
+ *  restriction — the action simply fails on crowded boards — so it's priced as a discount.
+ *  Deliberately keyed on `destinazione`/`target` only: unrelated "liber*" wording such as
+ *  `traiettoriaLibera` (Scocca) means the opposite (a constraint RELAXATION) and must not match.
+ */
+function hasEmptyDestinationConstraint(params: Record<string, unknown>): number {
+  const dest = params.destinazione;
+  if (typeof dest === 'string' && /vuot|liber/i.test(dest)) return 1;
+  const target = params.target;
+  if (typeof target === 'string' && /vuota|libera/.test(target)) return 1;
+  return 0;
+}
+
 function mechanicFeaturesOf(action: MechanicActionInput): MechanicFeatures {
   const { params, modalita } = action;
   const target = params.target;
@@ -512,11 +530,12 @@ function mechanicFeaturesOf(action: MechanicActionInput): MechanicFeatures {
     isPassive: modalita === 'passiva' ? 1 : 0,
     isDefensive: DEFENSIVE_MECHANIC_TYPES.has(action.type) ? 1 : 0,
     isOnCapture: modalita === 'sul_cattura' ? 1 : 0,
+    destinationConstraint: hasEmptyDestinationConstraint(params),
   };
 }
 
 function mechanicFeatureVector(f: MechanicFeatures): number[] {
-  return [1, f.radius, f.directionCount, f.intensityValue, f.targetsAllies, f.isPassive, f.isDefensive, f.isOnCapture];
+  return [1, f.radius, f.directionCount, f.intensityValue, f.targetsAllies, f.isPassive, f.isDefensive, f.isOnCapture, f.destinationConstraint];
 }
 
 interface MechanicTrainingRow {

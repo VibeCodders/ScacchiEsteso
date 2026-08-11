@@ -78,6 +78,7 @@ const MECHANIC_FEATURE_EXPLANATIONS: Record<string, string> = {
   'Coinvolge alleati': 'Vale 1 se la meccanica colpisce/protegge/coinvolge anche pezzi alleati, non solo nemici.',
   'Passiva': 'Vale 1 se la meccanica è sempre attiva (non richiede di scegliere un\'azione), altrimenti 0.',
   'Su cattura': 'Vale 1 se la meccanica si attiva solo a seguito di una cattura, altrimenti 0.',
+  'Destinazione vincolata': "Vale 1 se la meccanica richiede che la casella di arrivo sia vuota (es. il respingi del Repulsore, il teletrasporto, lo sdoppiamento) — una destinazione obbligatoriamente libera è una restrizione reale: l'azione fallisce sulle scacchiere affollate, quindi il modello la sconta.",
 };
 
 /**

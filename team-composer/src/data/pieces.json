@@ -631,7 +631,7 @@
     "resistance": 0,
     "immunityTypes": [],
     "alternativeActions": [
-      { "type": "respingi", "modalita": "alternativa", "params": { "raggio": 1, "target": "nemico_adiacente", "esclusi": ["re"], "senzaCattura": true } }
+      { "type": "respingi", "modalita": "alternativa", "params": { "raggio": 1, "target": "nemico_adiacente", "direzioni": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "destinazione": "vuota", "esclusi": ["re"], "senzaCattura": true } }
     ],
     "respingeNemici": true
   },
