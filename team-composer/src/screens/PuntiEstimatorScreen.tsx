@@ -8,6 +8,7 @@ import {
   stage2ModelSummary,
   mechanicBonusSummary,
   confidenceForSampleCount,
+  type MechanicBonusEntry,
   type PuntiEstimate,
 } from '../data/estimatePunti';
 import type { Piece } from '../types';
@@ -48,6 +49,9 @@ const CONFIDENCE_LABEL: Record<'low' | 'medium' | 'high', string> = {
   high: 'alta',
 };
 
+/** Numeric rank of each confidence tier — lets the "Confidenza" column sort low → high. */
+const CONFIDENCE_RANK: Record<'low' | 'medium' | 'high', number> = { low: 0, medium: 1, high: 2 };
+
 /** Plain-language explanation for each stage-1 feature name, shown as a hover/focus tooltip next to
  *  the feature in `ModelTransparencyPanel` — the coefficient table alone doesn't say what a feature
  *  actually measures. Keyed by the same strings `stage1ModelSummary()` returns. */
@@ -87,10 +91,44 @@ const MECHANIC_FEATURE_EXPLANATIONS: Record<string, string> = {
  * coefficients plus the empirical-Bayes shrinkage constant K, both chosen by cross-validation) —
  * makes the model's reasoning inspectable instead of only its final numbers.
  */
+type FeatureRow = { name: string; coefficient: number };
+
+const FEATURE_COMPARATORS: Record<string, RowComparator<FeatureRow>> = {
+  feature: (a, b) => a.name.localeCompare(b.name),
+  coefficient: (a, b) => a.coefficient - b.coefficient,
+};
+
+interface BonusRow {
+  type: string;
+  entry: MechanicBonusEntry;
+}
+
+const BONUS_COMPARATORS: Record<string, RowComparator<BonusRow>> = {
+  type: (a, b) => a.type.localeCompare(b.type),
+  raw: (a, b) => a.entry.rawValue - b.entry.rawValue,
+  pred: (a, b) => a.entry.predictedValue - b.entry.predictedValue,
+  value: (a, b) => a.entry.value - b.entry.value,
+  samples: (a, b) => a.entry.sampleCount - b.entry.sampleCount,
+  confidence: (a, b) =>
+    CONFIDENCE_RANK[confidenceForSampleCount(a.entry.sampleCount)] -
+    CONFIDENCE_RANK[confidenceForSampleCount(b.entry.sampleCount)],
+};
+
 function ModelTransparencyPanel() {
   const summary = useMemo(() => stage1ModelSummary(), []);
   const mechanicModel = useMemo(() => stage2ModelSummary(), []);
   const mechanicTable = useMemo(() => mechanicBonusSummary(), []);
+
+  const stage1Sort = useSortState('feature');
+  const stage2Sort = useSortState('feature');
+  const bonusSort = useSortState('type');
+
+  const stage1Rows = useMemo(() => summary.features, [summary]);
+  const stage2Rows = useMemo(() => mechanicModel.features, [mechanicModel]);
+  const bonusRows = useMemo<BonusRow[]>(
+    () => Object.entries(mechanicTable).map(([type, entry]) => ({ type, entry })),
+    [mechanicTable],
+  );
 
   return (
     <details className="mb-5 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-3">
@@ -107,12 +145,12 @@ function ModelTransparencyPanel() {
           <table className="w-full border-collapse text-[0.78rem]">
             <thead>
               <tr>
-                <th className="border-b border-slate-300 dark:border-slate-700 px-2 py-1 text-left font-semibold text-slate-600 dark:text-slate-400">Feature</th>
-                <th className="border-b border-slate-300 dark:border-slate-700 px-2 py-1 text-left font-semibold text-slate-600 dark:text-slate-400">Coefficiente</th>
+                <SortableHeader compact label="Feature" sortKey="feature" activeKey={stage1Sort.key} dir={stage1Sort.dir} onSort={stage1Sort.toggle} />
+                <SortableHeader compact label="Coefficiente" sortKey="coefficient" activeKey={stage1Sort.key} dir={stage1Sort.dir} onSort={stage1Sort.toggle} />
               </tr>
             </thead>
             <tbody>
-              {summary.features.map((f) => (
+              {sortTable(stage1Rows, stage1Sort.key, stage1Sort.dir, FEATURE_COMPARATORS).map((f) => (
                 <tr key={f.name}>
                   <td className="border-b border-slate-300 dark:border-slate-800 px-2 py-1 text-slate-700 dark:text-slate-300">{f.name} <InfoTooltip text={STAGE1_FEATURE_EXPLANATIONS[f.name] ?? ''} /></td>
                   <td className="border-b border-slate-300 dark:border-slate-800 px-2 py-1 text-slate-700 dark:text-slate-300">{f.coefficient.toFixed(2)}</td>
@@ -136,12 +174,12 @@ function ModelTransparencyPanel() {
           <table className="w-full border-collapse text-[0.78rem]">
             <thead>
               <tr>
-                <th className="border-b border-slate-300 dark:border-slate-700 px-2 py-1 text-left font-semibold text-slate-600 dark:text-slate-400">Feature</th>
-                <th className="border-b border-slate-300 dark:border-slate-700 px-2 py-1 text-left font-semibold text-slate-600 dark:text-slate-400">Coefficiente</th>
+                <SortableHeader compact label="Feature" sortKey="feature" activeKey={stage2Sort.key} dir={stage2Sort.dir} onSort={stage2Sort.toggle} />
+                <SortableHeader compact label="Coefficiente" sortKey="coefficient" activeKey={stage2Sort.key} dir={stage2Sort.dir} onSort={stage2Sort.toggle} />
               </tr>
             </thead>
             <tbody>
-              {mechanicModel.features.map((f) => (
+              {sortTable(stage2Rows, stage2Sort.key, stage2Sort.dir, FEATURE_COMPARATORS).map((f) => (
                 <tr key={f.name}>
                   <td className="border-b border-slate-300 dark:border-slate-800 px-2 py-1 text-slate-700 dark:text-slate-300">{f.name} <InfoTooltip text={MECHANIC_FEATURE_EXPLANATIONS[f.name] ?? ''} /></td>
                   <td className="border-b border-slate-300 dark:border-slate-800 px-2 py-1 text-slate-700 dark:text-slate-300">{f.coefficient.toFixed(2)}</td>
@@ -154,16 +192,16 @@ function ModelTransparencyPanel() {
           <table className="w-full border-collapse text-[0.78rem]">
             <thead>
               <tr>
-                <th className="border-b border-slate-300 dark:border-slate-700 px-2 py-1 text-left font-semibold text-slate-600 dark:text-slate-400">Meccanica</th>
-                <th className="border-b border-slate-300 dark:border-slate-700 px-2 py-1 text-left font-semibold text-slate-600 dark:text-slate-400">Bonus grezzo</th>
-                <th className="border-b border-slate-300 dark:border-slate-700 px-2 py-1 text-left font-semibold text-slate-600 dark:text-slate-400">Predetto dal modello</th>
-                <th className="border-b border-slate-300 dark:border-slate-700 px-2 py-1 text-left font-semibold text-slate-600 dark:text-slate-400">Bonus applicato</th>
-                <th className="border-b border-slate-300 dark:border-slate-700 px-2 py-1 text-left font-semibold text-slate-600 dark:text-slate-400">Esempi</th>
-                <th className="border-b border-slate-300 dark:border-slate-700 px-2 py-1 text-left font-semibold text-slate-600 dark:text-slate-400">Confidenza</th>
+                <SortableHeader compact label="Meccanica" sortKey="type" activeKey={bonusSort.key} dir={bonusSort.dir} onSort={bonusSort.toggle} />
+                <SortableHeader compact label="Bonus grezzo" sortKey="raw" activeKey={bonusSort.key} dir={bonusSort.dir} onSort={bonusSort.toggle} />
+                <SortableHeader compact label="Predetto dal modello" sortKey="pred" activeKey={bonusSort.key} dir={bonusSort.dir} onSort={bonusSort.toggle} />
+                <SortableHeader compact label="Bonus applicato" sortKey="value" activeKey={bonusSort.key} dir={bonusSort.dir} onSort={bonusSort.toggle} />
+                <SortableHeader compact label="Esempi" sortKey="samples" activeKey={bonusSort.key} dir={bonusSort.dir} onSort={bonusSort.toggle} />
+                <SortableHeader compact label="Confidenza" sortKey="confidence" activeKey={bonusSort.key} dir={bonusSort.dir} onSort={bonusSort.toggle} />
               </tr>
             </thead>
             <tbody>
-              {Object.entries(mechanicTable).map(([type, entry]) => (
+              {sortTable(bonusRows, bonusSort.key, bonusSort.dir, BONUS_COMPARATORS).map(({ type, entry }) => (
                 <tr key={type}>
                   <td className="border-b border-slate-300 dark:border-slate-800 px-2 py-1 text-slate-700 dark:text-slate-300">{type}</td>
                   <td className="border-b border-slate-300 dark:border-slate-800 px-2 py-1 text-slate-700 dark:text-slate-300">{entry.rawValue > 0 ? '+' : ''}{entry.rawValue.toFixed(1)}</td>
@@ -187,23 +225,51 @@ function formatDiff(actual: number, suggested: number): string {
   return diff > 0 ? `+${diff}` : `${diff}`;
 }
 
-type SortKey = 'sigla' | 'actual' | 'diff';
+type SortDir = 'asc' | 'desc';
+
+/** Shared sorting state for any table on the page: clicking a new column sorts it ascending,
+ *  clicking the active column again flips the direction. */
+function useSortState(initialKey: string, initialDir: SortDir = 'asc'): {
+  key: string;
+  dir: SortDir;
+  toggle: (key: string) => void;
+} {
+  const [key, setKey] = useState(initialKey);
+  const [dir, setDir] = useState<SortDir>(initialDir);
+  const toggle = (next: string) => {
+    if (next === key) {
+      setDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setKey(next);
+      setDir('asc');
+    }
+  };
+  return { key, dir, toggle };
+}
+
+type RowComparator<T> = (a: T, b: T) => number;
+
+/** Sorts a copy of `rows` with the comparator registered for `key` (falling back to the input order
+ *  if a column has no comparator — e.g. an action-only column). */
+function sortTable<T>(rows: T[], key: string, dir: SortDir, comparators: Record<string, RowComparator<T>>): T[] {
+  const sign = dir === 'asc' ? 1 : -1;
+  const compare = comparators[key];
+  return [...rows].sort((a, b) => (compare ? sign * compare(a, b) : 0));
+}
 
 interface Row {
   piece: Piece;
   estimate: PuntiEstimate;
 }
 
-function sortRows(rows: Row[], key: SortKey, dir: 'asc' | 'desc'): Row[] {
-  const sign = dir === 'asc' ? 1 : -1;
-  return [...rows].sort((a, b) => {
-    if (key === 'sigla') return sign * a.piece.sigla.localeCompare(b.piece.sigla);
-    if (key === 'actual') return sign * (a.piece.punti - b.piece.punti);
-    const diffA = Math.abs(a.estimate.suggestedPunti - a.piece.punti);
-    const diffB = Math.abs(b.estimate.suggestedPunti - b.piece.punti);
-    return sign * (diffA - diffB);
-  });
-}
+const ROW_COMPARATORS: Record<string, RowComparator<Row>> = {
+  sigla: (a, b) => a.piece.sigla.localeCompare(b.piece.sigla),
+  name: (a, b) => a.piece.descrizione.localeCompare(b.piece.descrizione),
+  actual: (a, b) => a.piece.punti - b.piece.punti,
+  suggested: (a, b) => a.estimate.suggestedPunti - b.estimate.suggestedPunti,
+  diff: (a, b) =>
+    Math.abs(a.estimate.suggestedPunti - a.piece.punti) - Math.abs(b.estimate.suggestedPunti - b.piece.punti),
+};
 
 function SortableHeader({
   label,
@@ -211,16 +277,21 @@ function SortableHeader({
   activeKey,
   dir,
   onSort,
+  compact = false,
 }: {
   label: string;
-  sortKey: SortKey;
-  activeKey: SortKey;
-  dir: 'asc' | 'desc';
-  onSort: (key: SortKey) => void;
+  sortKey: string;
+  activeKey: string;
+  dir: SortDir;
+  onSort: (key: string) => void;
+  /** Tighter padding for the transparency-panel tables (small text, dense layout). */
+  compact?: boolean;
 }) {
   const isActive = sortKey === activeKey;
+  const base = 'cursor-pointer select-none whitespace-nowrap border-b border-slate-300 dark:border-slate-700 text-left font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100';
+  const padding = compact ? 'px-2 py-1' : 'px-2.5 py-2';
   return (
-    <th className="cursor-pointer select-none whitespace-nowrap border-b border-slate-300 dark:border-slate-700 px-2.5 py-2 text-left font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100" onClick={() => onSort(sortKey)}>
+    <th className={`${base} ${padding}`} onClick={() => onSort(sortKey)}>
       {label}
       {isActive && <span className="text-blue-600 dark:text-blue-400">{dir === 'asc' ? ' ▲' : ' ▼'}</span>}
     </th>
@@ -349,8 +420,7 @@ function PuntiEstimatorScreen() {
   const navigate = useNavigate();
   const quality = estimatorFitQuality();
 
-  const [sortKey, setSortKey] = useState<SortKey>('sigla');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const sort = useSortState('sigla');
   const [filterText, setFilterText] = useState('');
   const [lowConfidenceOnly, setLowConfidenceOnly] = useState(false);
   const [expandedSigla, setExpandedSigla] = useState<string | null>(null);
@@ -367,17 +437,8 @@ function PuntiEstimatorScreen() {
       if (query === '') return true;
       return piece.sigla.toLowerCase().includes(query) || piece.descrizione.toLowerCase().includes(query);
     });
-    return sortRows(filtered, sortKey, sortDir);
-  }, [allRows, filterText, lowConfidenceOnly, sortKey, sortDir]);
-
-  const handleSort = (key: SortKey) => {
-    if (key === sortKey) {
-      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-    } else {
-      setSortKey(key);
-      setSortDir('asc');
-    }
-  };
+    return sortTable(filtered, sort.key, sort.dir, ROW_COMPARATORS);
+  }, [allRows, filterText, lowConfidenceOnly, sort.key, sort.dir]);
 
   return (
     <PageShell
@@ -430,11 +491,11 @@ function PuntiEstimatorScreen() {
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr>
-                <SortableHeader label="Sigla" sortKey="sigla" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
-                <th className="whitespace-nowrap border-b border-slate-300 dark:border-slate-700 px-2.5 py-2 text-left font-semibold text-slate-600 dark:text-slate-400">Nome</th>
-                <SortableHeader label="Punti reali" sortKey="actual" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
-                <th className="whitespace-nowrap border-b border-slate-300 dark:border-slate-700 px-2.5 py-2 text-left font-semibold text-slate-600 dark:text-slate-400">Punti stimati</th>
-                <SortableHeader label="Differenza" sortKey="diff" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+                <SortableHeader label="Sigla" sortKey="sigla" activeKey={sort.key} dir={sort.dir} onSort={sort.toggle} />
+                <SortableHeader label="Nome" sortKey="name" activeKey={sort.key} dir={sort.dir} onSort={sort.toggle} />
+                <SortableHeader label="Punti reali" sortKey="actual" activeKey={sort.key} dir={sort.dir} onSort={sort.toggle} />
+                <SortableHeader label="Punti stimati" sortKey="suggested" activeKey={sort.key} dir={sort.dir} onSort={sort.toggle} />
+                <SortableHeader label="Differenza" sortKey="diff" activeKey={sort.key} dir={sort.dir} onSort={sort.toggle} />
                 <th className="whitespace-nowrap border-b border-slate-300 dark:border-slate-700 px-2.5 py-2 text-left font-semibold text-slate-600 dark:text-slate-400">Dettaglio stima</th>
               </tr>
             </thead>
