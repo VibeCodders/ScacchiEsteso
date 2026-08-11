@@ -149,6 +149,9 @@ Paladino con 51). Le sezioni §9 e §10 approfondiscono Miraggio e pezzi a ginoc
 | MA | Manticora | 26 | 4 | a ginocchio (→ §10.2) |
 | OR | Orfano | 26 | 4 | Copia poteri |
 | DM | Damone | 25 | 4 | diagonale 1 · cattura a salto (solo via promozione) |
+| VZ | Vortice | 24 | 5 | passo Re · Attira |
+| TT | Teletrasporto | 22 | 5 | passo Re · Teletrasporto |
+| BO | Bomba | 21 | 6 | passo Re · Esplode se catturata |
 | CV | Cavalletta | 20 | 5 | salto sopra un pezzo (Grasshopper) |
 | AL | Alfiere | 19 | 5 | illimitato diagonale |
 | CA | Cavallo | 15 | 5 | salto a "L" |
@@ -232,6 +235,16 @@ Paladino con 51). Le sezioni §9 e §10 approfondiscono Miraggio e pezzi a ginoc
 - **RP — Repulsore (10 pt):** muove come il Re, cattura in mischia. **Respingere:** in alternativa
   al movimento, spinge un nemico adiacente (mai il Re) di una casella direttamente lontano da sé,
   purché la casella di arrivo sia vuota, senza catturarlo.
+- **TT — Teletrasporto (22 pt):** muove come il Re, cattura in mischia. **Teletrasporto:** in
+  alternativa al movimento, si sposta su una casella vuota a esattamente 3 caselle in linea retta,
+  saltando sopra qualsiasi pezzo, senza catturare nulla all'arrivo.
+- **VZ — Vortice (24 pt):** muove come il Re, cattura in mischia. **Attira:** in alternativa al
+  movimento, trascina un nemico a esattamente 2 caselle in linea retta (mai il Re) sulla casella
+  vuota in mezzo, avvicinandolo di 1 casella senza catturarlo.
+- **BO — Bomba (21 pt):** muove come il Re, cattura in mischia. **Esplosione:** quando viene
+  catturata (con qualsiasi cattura: mischia, salto, distanza o catena), esplode e distrugge anche
+  il pezzo che l'ha catturata — il Re è sempre immune e l'esplosione non scatta mai se lascerebbe
+  sotto scacco il Re di chi cattura.
 
 ### 11.5 Pezzi ibridi e movimenti speciali
 
