@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { estimatePunti, estimatorFitQuality, mechanicBonusSummary, predictMechanicBonus, stage2ModelSummary } from './estimatePunti';
+import { estimatePunti, estimatorFitQuality, mechanicBonusSummary, predictMechanicBonus, stage1ModelSummary, stage2ModelSummary } from './estimatePunti';
 import { getPieceDef } from '../game/moveEngine';
 import { pieces as ROSTER } from './pieces';
 
@@ -128,19 +128,21 @@ describe('estimatePunti — durability/utility features are no longer ignored', 
 describe('estimatorFitQuality — measures the model\'s real accuracy against the roster', () => {
   it('mean absolute percent error stays within a documented bound, catching silent regressions', () => {
     const quality = estimatorFitQuality();
-    // Verified empirically (~29% at the time this was written) — a generous ceiling so ordinary
-    // roster growth doesn't make this flaky, while still catching an actual regression in the fit.
-    expect(quality.meanAbsolutePercentError).toBeLessThan(0.45);
+    // Verified empirically (~3% after adding stage-1 features for the special effects that
+    // previously had no representation — see the "every special effect is considered" suite) — a
+    // generous ceiling so ordinary roster growth doesn't make this flaky, while still catching an
+    // actual regression in the fit (the pre-feature fit sat around 9%).
+    expect(quality.meanAbsolutePercentError).toBeLessThan(0.15);
   });
 
   it('reports a leave-one-out cross-validated error, the honest generalization measure', () => {
     const quality = estimatorFitQuality();
     // LOO error is expected to run a bit higher than in-sample error (it's evaluated on pieces
-    // excluded from their own fit) — verified empirically (~7.2 punti at the time this was
-    // written) against a ~24-piece stage-1 training set; a generous ceiling so ordinary roster
-    // growth doesn't make this flaky, while still catching a real regression.
+    // excluded from their own fit) — verified empirically (~0.7 punti) against the ~24-piece
+    // stage-1 training set; a generous ceiling so ordinary roster growth doesn't make this
+    // flaky, while still catching a real regression.
     expect(quality.looMeanAbsoluteError).toBeGreaterThan(0);
-    expect(quality.looMeanAbsoluteError).toBeLessThan(12);
+    expect(quality.looMeanAbsoluteError).toBeLessThan(5);
   });
 
   it('reports the worst-fitting pieces for visibility, not just a single aggregate number', () => {
@@ -199,6 +201,38 @@ describe('predictMechanicBonus — extrapolation to mechanic types outside the r
   it('produces a finite bonus even for an action with no recognizable params', () => {
     const bonus = predictMechanicBonus({ type: 'altro_tipo_ignoto', modalita: 'alternativa', params: {} });
     expect(Number.isFinite(bonus)).toBe(true);
+  });
+});
+
+describe('estimatePunti — every special effect on a piece is considered (no silent gaps)', () => {
+  it('the stage-1 model exposes features for the special effects with no alternativeActions entry: promotion and the special-movement flags', () => {
+    const summary = stage1ModelSummary();
+    const names = summary.features.map((f) => f.name);
+    // catenaSaltiConCatturaFinale (Coniglio), rimbalzoUnico (Rimbalzatore), gryphon/manticora
+    // (Grifone/Manticora) and promotable (Pedone, Pedone di Dama) have no `alternativeActions`, so
+    // stage 2 never sees them — they must be represented in the stage-1 model instead.
+    expect(names).toContain('Promozione');
+    expect(names).toContain('Flag movimento speciale (ginocchio/rimbalzo/catena)');
+    expect(summary.features.every((f) => Number.isFinite(f.coefficient))).toBe(true);
+  });
+
+  it('a promotable piece is never priced below the identical non-promotable piece', () => {
+    const pedone = getPieceDef('PE');
+    const withoutPromotion = { ...pedone, promotable: false };
+    expect(estimatePunti(pedone).suggestedPunti).toBeGreaterThanOrEqual(
+      estimatePunti(withoutPromotion).suggestedPunti,
+    );
+  });
+
+  it('the Grifone is priced for its bent-slide movement, not as a plain diagonal slider', () => {
+    const grifone = getPieceDef('GR');
+    // Without the gryphon flag the 'speciale' move entry falls back to a generic slide with the
+    // same directions (an Alfiere-like piece, ~18pt) — with it, the mobility sampler routes the
+    // entry through the bent-slide generator and the estimate reflects the real reach (32pt).
+    const plainSlider = { ...grifone, gryphon: false };
+    expect(estimatePunti(grifone).suggestedPunti).toBeGreaterThan(
+      estimatePunti(plainSlider).suggestedPunti,
+    );
   });
 });
 

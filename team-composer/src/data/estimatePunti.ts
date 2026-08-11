@@ -50,6 +50,8 @@ interface Stage1Features {
   rangedCapture: number;
   meleeOnlyCapture: number;
   extraActionFlags: number;
+  specialMovementFlags: number;
+  promotable: number;
 }
 
 /** Count of minor "advantageous" boolean flags not already represented by `alternativeActions` —
@@ -60,12 +62,29 @@ function extraActionFlagsOf(piece: Piece): number {
     .filter(Boolean).length;
 }
 
-/** Purely structural features used for the mobility-only ("stage 1") regression — no notion of
- *  special mechanics here, those are handled separately in stage 2 (see `specialMechanicBonus`).
- *  Mobility counts are passed through `sqrt` before being used as model inputs (see
- *  `stage1FeatureVector`) to approximate diminishing returns — going from 8 to 16 reachable
- *  squares is not worth the same as going from 16 to 24, the same intuition behind why a rook and
- *  a queen aren't simply "2x the squares = 2x the value" in real chess valuation. */
+/** Count of special-movement mechanics that live as bare booleans on `Piece` (no
+ *  `alternativeActions` entry, so stage 2 never sees them) and are not already counted by
+ *  `extraActionFlagsOf` — pieces whose movement needs dedicated engine handling: the bent slides
+ *  of the Grifone/Manticora (`gryphon`/`manticora`), the Rimbalzatore's bounce (`rimbalzoUnico`)
+ *  and the Coniglio's deferred-capture jump chain (`catenaSaltiConCatturaFinale`). Their
+ *  *mobility* is already counted exactly by the range-square sampler (`computePieceRangeSquares`
+ *  dispatches to the special generators), but without this flag the model would treat them as
+ *  plain sliders/leapers and never learn the special shape itself is worth anything. Aggregated
+ *  into one feature for the same parameter-count reason as `extraActionFlagsOf`. */
+function specialMovementFlagsOf(piece: Piece): number {
+  return [piece.catenaSaltiConCatturaFinale, piece.rimbalzoUnico, piece.gryphon, piece.manticora]
+    .filter(Boolean).length;
+}
+
+/** Purely structural features used for the mobility-first ("stage 1") regression. Special
+ *  mechanics that live in `alternativeActions` (or `armatura`) are handled separately in stage 2
+ *  (see `specialMechanicBonus`); the handful of mechanic booleans with no `alternativeActions`
+ *  entry are folded in here as flags (`extraActionFlags`, `specialMovementFlags`, `promotable`) so
+ *  *every* special effect on a piece influences the estimate. Mobility counts are passed through
+ *  `sqrt` before being used as model inputs (see `stage1FeatureVector`) to approximate diminishing
+ *  returns — going from 8 to 16 reachable squares is not worth the same as going from 16 to 24,
+ *  the same intuition behind why a rook and a queen aren't simply "2x the squares = 2x the value"
+ *  in real chess valuation. */
 function stage1FeaturesOf(piece: Piece): Stage1Features {
   let stepSlideMoveMobility = 0;
   let stepSlideCaptureMobility = 0;
@@ -93,6 +112,8 @@ function stage1FeaturesOf(piece: Piece): Stage1Features {
     rangedCapture: piece.catturaADistanza ? 1 : 0,
     meleeOnlyCapture: piece.catturaSoloInMischia ? 1 : 0,
     extraActionFlags: extraActionFlagsOf(piece),
+    specialMovementFlags: specialMovementFlagsOf(piece),
+    promotable: piece.promotable ? 1 : 0,
   };
 }
 
@@ -112,6 +133,8 @@ function stage1FeatureVector(f: Stage1Features): number[] {
     f.rangedCapture,
     f.meleeOnlyCapture,
     f.extraActionFlags,
+    f.specialMovementFlags,
+    f.promotable,
   ];
 }
 
@@ -128,6 +151,8 @@ const STAGE1_FEATURE_NAMES = [
   'Cattura a distanza',
   'Cattura solo in mischia',
   'Flag azione minori',
+  'Flag movimento speciale (ginocchio/rimbalzo/catena)',
+  'Promozione',
 ] as const;
 
 /**
