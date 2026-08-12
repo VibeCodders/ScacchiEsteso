@@ -88,23 +88,27 @@ describe('applyLoot — sciacallaggio', () => {
     const state = lootGame();
     expect(applyLoot(state, 'd4', 'c4', 'TO').ok).toBe(false); // 27 > 20
     expect(applyLoot(state, 'd4', 'c4', 'CA').ok).toBe(false); // never lost by A
-    expect(applyLoot(state, 'd4', 'd5', 'PE').ok).toBe(false); // occupied square
+
+    // An OCCUPIED adjacent square is not lootable: add an enemy piece on d5, next to the Sciacallo.
+    const withOccupied = gameWith([['d4', 'SC', 'B'], ['d5', 'PE', 'A']]);
+    const occupiedState: GameState = {
+      ...withOccupied,
+      captured: { A: [createPieceInstance('PE', 'A')], B: [] },
+    };
+    expect(applyLoot(occupiedState, 'd4', 'd5', 'PE').ok).toBe(false); // occupied square
   });
 
-  it('rejects when the acting piece is not a Sciacallo, and when the loot would expose its own King', () => {
-    const noSc = gameWith([['d4', 'NE', 'B'], ['d5', 'PE', 'A']]);
-    expect(applyLoot(noSc, 'd4', 'c4', 'PE').ok).toBe(false);
+  it('rejects when the acting piece is not a Sciacallo, and accepts a loot that does not expose its own King', () => {
+    const noSc = gameWith([['d4', 'NE', 'B']]);
+    const noScState: GameState = { ...noSc, captured: { A: [createPieceInstance('PE', 'A')], B: [] } };
+    expect(applyLoot(noScState, 'd4', 'c4', 'PE').ok).toBe(false);
 
-    // A's King guards a1's file up to c1 — looting onto a square that would leave B's King in check
-    // is rejected (B's King at h8 is far away, so this guards the king-safety filter instead).
-    let board = place(createEmptyBoard(), 'a1', 'RE', 'A');
-    board = place(board, 'h8', 'RE', 'B');
-    board = place(board, 'd4', 'SC', 'B');
-    board = place(board, 'h2', 'PE', 'A');
-    const state = createInitialGameState(board, 'B');
-    // Loot the PE onto h7, adjacent to B's King at h8: no self-check, so it must succeed — the
-    // king-safety filter only rejects when the acting player's own King would be exposed.
-    const okResult = applyLoot(state, 'd4', 'h7', 'PE');
+    // B's King at h8, Sciacallo at d4 — looting A's fallen PE onto h7 (empty, adjacent to the
+    // Sciacallo) exposes nothing: the king-safety filter only rejects when the acting player's
+    // own King would be left in check, so the loot must succeed.
+    const state = gameWith([['d4', 'SC', 'B']]);
+    const seeded: GameState = { ...state, captured: { A: [createPieceInstance('PE', 'A')], B: [] } };
+    const okResult = applyLoot(seeded, 'd4', 'h7', 'PE');
     expect(okResult.ok).toBe(true);
   });
 
