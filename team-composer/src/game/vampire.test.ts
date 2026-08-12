@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { GHOUL_SIGLA, canConvertOnCapture, getGhoulPlacementSquares } from './vampire';
 import { getPieceDef } from './moveEngine';
-import { createEmptyBoard, createPieceInstance, getPieceAt, setPieceAt, type BoardState, type PieceInstance } from './board';
+import { createEmptyBoard, createPieceInstance, getPieceAt, setPieceAt, type BoardState } from './board';
 import { createInitialGameState, applyTurn, type GameState } from './turnManager';
 import { computeMaterialTrend } from './materialTrend';
 import { pickablePieces } from '../data/pieces';
