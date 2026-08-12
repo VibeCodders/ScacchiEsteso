@@ -16,8 +16,17 @@ const BONUS_MOVE_DISMISSALS: Array<[RegExp, string]> = [
   [/Catena di salti del Coniglio/, 'Ferma la catena e cattura'],
 ];
 
-/** Overlay used by promotion / revival / mimic / mirage / game-over choices (the shared Modal). */
+/** Overlay used by promotion / revival / mimic / mirage / ghoul-placement / game-over choices (the shared Modal). */
 const OVERLAY_SELECTOR = '[role="dialog"]';
+
+/** The Vampiro Lunare's conversion opens a placement dialog AFTER a capture (unlike Orfano/Miraggio,
+ *  which open one on selection). A bot-like first choice keeps the happy path moving. */
+async function dismissGhoulPlacement(page: Page) {
+  const dialog = page.locator(OVERLAY_SELECTOR).filter({ hasText: 'Dove materializzare il Ghoul' });
+  if ((await dialog.count()) > 0) {
+    await dialog.getByRole('button').first().click();
+  }
+}
 
 /** Reads the "Turno: …" badge, e.g. "Turno: Giocatore 1" or "Turno: PC". */
 export async function currentTurnLabel(page: Page): Promise<string> {
@@ -70,6 +79,7 @@ export async function playMove(page: Page, opts: { ariaOwner?: string } = {}): P
     if (overlayOpen === 0 && (await highlights.count()) > 0) {
       const target = await highlights.first().getAttribute('data-coord');
       await page.locator(`[data-coord="${target}"]`).click();
+      await dismissGhoulPlacement(page); // a VL conversion may ask where to place the Ghoul
       await dismissBonusTurns(page);
       return `${coord}->${target}`;
     }
