@@ -982,6 +982,37 @@ describe('GameScreen — Miraggio sdoppiamento', () => {
     expect(screen.queryByText(/I Miraggi veri del giocatore di turno/i)).not.toBeInTheDocument();
   });
 
+  it('turns the reveal off automatically when the Miraggio clone is captured (real half left alone)', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'e6', 'TO', 'B'); // rook that can reach the clone at e4
+    board = place(board, 'd4', 'MG', 'A');
+    renderGame(board);
+
+    // A splits (real stays at d4, clone at e4); the turn passes to B.
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    fireEvent.click(screen.getByText(/🌫️ Sdoppia/i));
+    fireEvent.click(document.querySelector('[data-coord="e4"]')!);
+    fireEvent.click(screen.getByText(/Il vero resta in d4/));
+
+    // B shuffles; back on A's turn, A reveals the real half.
+    fireEvent.click(document.querySelector('[data-coord="e8"]')!);
+    fireEvent.click(document.querySelector('[data-coord="f8"]')!);
+    fireEvent.click(screen.getByText(/Vedi i Miraggi veri/i));
+    expect(screen.getByText(/I Miraggi veri del giocatore di turno/i)).toBeInTheDocument();
+    expect(document.querySelector('[data-coord="d4"] .board-mirage-real-marker')).not.toBeNull();
+
+    // A shuffles away; B captures the clone at e4 — the real is left alone, nothing to reveal.
+    fireEvent.click(document.querySelector('[data-coord="e1"]')!);
+    fireEvent.click(document.querySelector('[data-coord="f1"]')!);
+    fireEvent.click(document.querySelector('[data-coord="e6"]')!);
+    fireEvent.click(document.querySelector('[data-coord="e4"]')!);
+    expect(screen.queryByText(/I Miraggi veri del giocatore di turno/i)).not.toBeInTheDocument();
+
+    // Back on A's turn, the lone real half no longer counts as a split pair: no button either.
+    expect(screen.queryByText(/Vedi i Miraggi veri/i)).not.toBeInTheDocument();
+  });
+
   it('turns the reveal off automatically once the Miraggio merges back (riunione)', () => {
     let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
     board = place(board, 'e8', KING_SIGLA, 'B');

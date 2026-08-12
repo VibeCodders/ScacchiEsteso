@@ -18,7 +18,7 @@ import { canSdoppiare, canRiunire, getSdoppiamentoSquares, getRiunioneSquares, i
 import { createInitialGameState, applyTurn, applyScocca, applyRepulse, applyTeleport, applyAttract, applySwap, applySostituzione, applySwapperSwap, applyRevive, applySdoppiamento, applyRiunione, getLegalMovesForTurn, skipExtraMove, stopRabbitChain, type GameState } from '../game/turnManager';
 import { chooseBotAction, applyBotAction, formatMovesAhead, BOT_DIFFICULTY_MAX } from '../game/bot';
 import { sortSiglasByPunti } from '../data/pieces';
-import type { Coord, Owner } from '../game/board';
+import type { BoardState, Coord, Owner } from '../game/board';
 import { pieceDescription } from '../lib/pieceFormat';
 import { cn } from '../lib/cn';
 import { useShowNames } from '../lib/useShowNames';
@@ -49,6 +49,19 @@ interface PendingMimicChoice {
 interface PendingSdoppiamento {
   from: Coord;
   cloneSquare: Coord;
+}
+
+/** Group ids of Miraggio pairs with BOTH halves on the board (real + living clone) — only those
+ *  are "split" in the sense the reveal cares about: a lone real half whose clone was captured has
+ *  nothing left to distinguish. Shared by the button-visibility check and the auto-reset effect. */
+function splitMirageGroupIds(board: BoardState): Set<string> {
+  const reals = new Set<string>();
+  const clones = new Set<string>();
+  for (const piece of board.values()) {
+    if (!piece.mirage) continue;
+    (piece.mirage.isClone ? clones : reals).add(piece.mirage.id);
+  }
+  return new Set([...reals].filter((id) => clones.has(id)));
 }
 
 function GameScreen() {
@@ -176,29 +189,33 @@ function GameScreen() {
       .map(([coord]) => coord);
   }, [gameState, revealRealMirage]);
 
-  /** True while the player to move has a split Miraggio on the board (real half, so with a living
-   *  clone) — the "Vedi i Miraggi veri" toggle only reveals the current player's real half, so the
-   *  button is shown only when there is actually something to reveal. */
-  const currentPlayerHasRealMirage = useMemo(() => {
+  /** True while the player to move has a split Miraggio on the board — i.e. a real half with its
+   *  living clone — the "Vedi i Miraggi veri" toggle only reveals the current player's real half,
+   *  so the button is shown only when there is actually something to reveal (a lone real half whose
+   *  clone was captured has nothing left to distinguish). */
+  const currentPlayerHasSplitMirage = useMemo(() => {
     if (!gameState) return false;
-    return [...gameState.board.values()].some((p) => p.owner === gameState.turn && isRealMirage(p));
+    const splitIds = splitMirageGroupIds(gameState.board);
+    return [...gameState.board.values()].some(
+      (p) => p.owner === gameState.turn && isRealMirage(p) && splitIds.has(p.mirage!.id),
+    );
   }, [gameState]);
 
-  /** Ids of the real Miraggio halves on the previous board — lets the effect below notice when a
-   *  split Miraggio is gone without resetting the reveal on ordinary turn changes. */
-  const previousRealMirageIdsRef = useRef<Set<string> | null>(null);
+  /** Ids of the complete split Miraggio pairs (real + living clone) on the previous board — lets
+   *  the effect below notice when a split pair is gone without resetting the reveal on ordinary
+   *  turn changes. */
+  const previousSplitMirageIdsRef = useRef<Set<string> | null>(null);
 
-  // The reveal marks the current player's real Miraggio halves; when a real half leaves the board
-  // (captured) or stops being split (riunione clears its marker), there is nothing left to reveal
-  // — turn the toggle off automatically. Quiet turns (that keep the split pair alive) don't reset
-  // it, so each player's reveal survives the opponent's move and their own ordinary plays.
+  // The reveal marks the current player's real Miraggio halves; when a split pair is broken — the
+  // real is captured, the clone is captured (leaving the real alone), or the pair merges back
+  // (riunione clears the marker) — there is nothing left to reveal: turn the toggle off
+  // automatically. Quiet turns (that keep the split pair alive) don't reset it, so each player's
+  // reveal survives the opponent's move and their own ordinary plays.
   useEffect(() => {
-    const previousIds = previousRealMirageIdsRef.current;
-    previousRealMirageIdsRef.current = gameState
-      ? new Set([...gameState.board.values()].filter((p) => isRealMirage(p)).map((p) => p.id))
-      : null;
+    const previousIds = previousSplitMirageIdsRef.current;
+    previousSplitMirageIdsRef.current = gameState ? splitMirageGroupIds(gameState.board) : null;
     if (!gameState || !revealRealMirage || !previousIds) return;
-    const currentIds = previousRealMirageIdsRef.current!;
+    const currentIds = previousSplitMirageIdsRef.current!;
     if ([...previousIds].some((id) => !currentIds.has(id))) {
       setRevealRealMirage(false);
     }
@@ -603,7 +620,7 @@ function GameScreen() {
           <Button variant="improve" onClick={() => setNamesToggled((v) => !v)}>
             {namesToggled ? '🙈 Nascondi i nomi' : '🏷 Mostra i nomi (tieni H)'}
           </Button>
-          {currentPlayerHasRealMirage && (
+          {currentPlayerHasSplitMirage && (
             <Button variant="improve" onClick={() => setRevealRealMirage((r) => !r)}>
               {revealRealMirage ? '🙈 Nascondi Miraggi veri' : '👁 Vedi i Miraggi veri (tuo turno)'}
             </Button>
