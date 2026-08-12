@@ -1013,6 +1013,37 @@ describe('GameScreen — Miraggio sdoppiamento', () => {
     expect(screen.queryByText(/Vedi i Miraggi veri/i)).not.toBeInTheDocument();
   });
 
+  it('turns the reveal off automatically when the real Miraggio is destroyed by a Bomba explosion', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd5', 'BO', 'A'); // Bomba: explodes when captured
+    board = place(board, 'd4', 'MG', 'B');
+    renderGame(board);
+
+    // A shuffles; B splits (real stays at d4, clone at e4); A shuffles again.
+    fireEvent.click(document.querySelector('[data-coord="e1"]')!);
+    fireEvent.click(document.querySelector('[data-coord="f1"]')!);
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    fireEvent.click(screen.getByText(/🌫️ Sdoppia/i));
+    fireEvent.click(document.querySelector('[data-coord="e4"]')!);
+    fireEvent.click(screen.getByText(/Il vero resta in d4/));
+    fireEvent.click(document.querySelector('[data-coord="f1"]')!);
+    fireEvent.click(document.querySelector('[data-coord="g1"]')!);
+
+    // On B's turn, B reveals the real half, then the real captures the Bomba at d5.
+    fireEvent.click(screen.getByText(/Vedi i Miraggi veri/i));
+    expect(screen.getByText(/I Miraggi veri del giocatore di turno/i)).toBeInTheDocument();
+    expect(document.querySelector('[data-coord="d4"] .board-mirage-real-marker')).not.toBeNull();
+
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!); // select the real half
+    fireEvent.click(document.querySelector('[data-coord="d5"]')!); // capture the Bomba
+
+    // The blast destroys the real half: the reveal resets and the clone dissolves too.
+    expect(screen.queryByText(/I Miraggi veri del giocatore di turno/i)).not.toBeInTheDocument();
+    expect(document.querySelector('[data-coord="d4"]')?.querySelector('svg')).toBeNull(); // real destroyed by the blast
+    expect(document.querySelector('[data-coord="e4"]')?.querySelector('svg')).toBeNull(); // clone dissolved as fallout
+  });
+
   it('turns the reveal off automatically when the real Miraggio is destroyed by a Scoccare', () => {
     let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
     board = place(board, 'e8', KING_SIGLA, 'B');

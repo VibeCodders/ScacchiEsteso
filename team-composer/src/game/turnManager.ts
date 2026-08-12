@@ -435,6 +435,12 @@ function resolveMove(state: GameState, piece: PieceInstance, move: GeneratedMove
       if (explosion.explodedCapturer && !isMirageClone(explosion.explodedCapturer)) {
         nextCaptured[explosion.explodedCapturer.owner] = [...nextCaptured[explosion.explodedCapturer.owner], explosion.explodedCapturer];
       }
+      // A real Miraggio destroyed by the blast takes its clone with it (README §9: the illusion
+      // cannot outlive its source — a lone clone must never be left on the board).
+      if (explosion.explodedCapturer && isRealMirage(explosion.explodedCapturer)) {
+        const clone = findCloneOf(explosion.board, explosion.explodedCapturer.mirage!.id);
+        if (clone) nextBoard = removePieceAt(nextBoard, clone.coord);
+      }
     }
   }
 
