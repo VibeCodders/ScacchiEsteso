@@ -5,6 +5,8 @@ import tailwindcss from '@tailwindcss/vite'
 
 // https://vite.dev/config/
 export default defineConfig({
+  // GitHub Pages serves this project as https://<user>.github.io/ScacchiEsteso/
+  base: '/ScacchiEsteso/',
   plugins: [react(), tailwindcss()],
   test: {
     environment: 'jsdom',
