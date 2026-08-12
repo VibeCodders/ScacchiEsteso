@@ -189,4 +189,36 @@ describe('mirage interactions', () => {
     expect(next.captured.B).toEqual([]);
     expect(next.history[next.history.length - 1].isExplosion).toBeUndefined();
   });
+
+  it('a real Miraggio destroyed by the blast takes its clone with it (fallout)', () => {
+    let board = place(createEmptyBoard(), 'a1', 'RE', 'A');
+    board = place(board, 'd4', 'BO', 'A');
+    board = place(board, 'h8', 'RE', 'B');
+    board = place(board, 'e4', 'MG', 'B');
+    board = place(board, 'f4', 'MG', 'B');
+    // Mark the pair: real on e4, clone on f4.
+    const state0 = createInitialGameState(board, 'B');
+    const real = getPieceAt(state0.board, 'e4')!;
+    const clone = getPieceAt(state0.board, 'f4')!;
+    real.mirage = { id: 'm1', isClone: false };
+    clone.mirage = { id: 'm1', isClone: true };
+
+    // The real MG's e4→d4 capture is legal (the blast is a consequence, not a refusal).
+    expect(getLegalMovesForTurn(state0, 'e4').some((m) => m.to === 'd4')).toBe(true);
+
+    const result = applyTurn(state0, 'e4', 'd4');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const next = result.state;
+
+    expect(getPieceAt(next.board, 'd4')).toBeUndefined(); // BO gone (captured)
+    expect(getPieceAt(next.board, 'e4')).toBeUndefined(); // real MG gone too (blast)
+    expect(getPieceAt(next.board, 'f4')).toBeUndefined(); // clone dissolved as fallout — never left alone
+    expect(next.captured.A.map((p) => p.sigla)).toEqual(['BO']);
+    expect(next.captured.B.map((p) => p.sigla)).toEqual(['MG']); // only the real — the clone is an illusion
+
+    const entry = next.history[next.history.length - 1];
+    expect(entry.isExplosion).toBe(true);
+    expect(entry.explodedAt).toBe('d4');
+  });
 });
