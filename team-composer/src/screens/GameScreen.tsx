@@ -19,7 +19,7 @@ import { canConvertOnCapture, getGhoulPlacementSquares } from '../game/vampire';
 import { createInitialGameState, applyTurn, applyScocca, applyRepulse, applyTeleport, applyAttract, applySwap, applySostituzione, applySwapperSwap, applyRevive, applySdoppiamento, applyRiunione, getLegalMovesForTurn, skipExtraMove, stopRabbitChain, type GameState } from '../game/turnManager';
 import { chooseBotAction, applyBotAction, formatMovesAhead, BOT_DIFFICULTY_MAX } from '../game/bot';
 import { sortSiglasByPunti } from '../data/pieces';
-import type { BoardState, Coord, Owner } from '../game/board';
+import { movePiece, removePieceAt, type BoardState, type Coord, type Owner } from '../game/board';
 import { pieceDescription } from '../lib/pieceFormat';
 import { cn } from '../lib/cn';
 import { useShowNames } from '../lib/useShowNames';
