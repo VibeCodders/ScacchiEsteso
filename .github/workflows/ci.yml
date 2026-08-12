@@ -36,8 +36,8 @@ jobs:
       - name: Typecheck (tsc -b)
         run: npm run typecheck
 
-      # `npm run build` runs `tsc -b && vite build` — the typecheck is part of it.
-      - name: Typecheck & build
+      # `npm run build` is pure `vite build` — typechecking is the dedicated step above.
+      - name: Build
         run: npm run build
 
       - name: Unit tests

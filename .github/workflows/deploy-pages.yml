@@ -39,6 +39,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # `npm run build` is pure `vite build` — typecheck explicitly first, as the checks job does.
+      - name: Typecheck
+        run: npm run typecheck
+
       - name: Build
         run: npm run build
 
