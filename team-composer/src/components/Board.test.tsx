@@ -155,7 +155,7 @@ describe('Board — show-names mode', () => {
     expect(reLabel.textContent).toContain('15 pt');
     const mgLabel = document.querySelector('[data-coord="d5"] .board-piece-name')!;
     expect(mgLabel.textContent).toContain('Miraggio');
-    expect(mgLabel.textContent).toContain('27 pt');
+    expect(mgLabel.textContent).toContain('28 pt');
     expect(document.querySelector('[data-coord="e5"] .board-piece-name')).toBeNull();
   });
 });

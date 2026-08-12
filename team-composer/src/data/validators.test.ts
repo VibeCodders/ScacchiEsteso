@@ -272,7 +272,7 @@ describe('getEffectiveMaxIdentical — the formula and the existing limits both 
 
   it('never relaxes an existing per-piece cap (Miraggio stays at 1 despite a formula cap of 4)', () => {
     const mirage = pieces.find((p) => p.sigla === 'MG')!;
-    expect(getFormulaMaxIdentical(mirage, pieces)).toBe(4); // 27pt with d=51: (51/27)² ≈ 3.57 → 4
+    expect(getFormulaMaxIdentical(mirage, pieces)).toBe(3); // 28pt with d=51: (51/28)² ≈ 3.32 → 3
     expect(getEffectiveMaxIdentical(mirage, pieces, rules)).toBe(1);
     expect(getMaxIdenticalBySigla('MG', pieces, rules)).toBe(1);
   });

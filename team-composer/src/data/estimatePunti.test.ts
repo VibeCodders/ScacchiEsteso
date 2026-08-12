@@ -174,13 +174,54 @@ describe('mechanicBonusSummary — empirical-Bayes shrinkage on single-example m
 describe('stage2ModelSummary — parametric mechanic-bonus model', () => {
   it('exposes one coefficient per stage-2 feature', () => {
     const summary = stage2ModelSummary();
-    // Intercept + radius + directionCount + intensity + targetsAllies + isPassive + isDefensive
-    // + isOnCapture + destinationConstraint.
-    expect(summary.features).toHaveLength(9);
+    // Intercept + radius + directionCount + intensity + benefitsAllies + isPassive + isDefensive
+    // + isOnCapture + destinationConstraint + isConversion + nonCapturing + harmsAllies
+    // + conditional.
+    expect(summary.features).toHaveLength(13);
     expect(summary.features.every((f) => Number.isFinite(f.coefficient))).toBe(true);
     expect(Number.isFinite(summary.lambda)).toBe(true);
     expect(Number.isFinite(summary.shrinkageK)).toBe(true);
     expect(Number.isFinite(summary.looMeanAbsoluteError)).toBe(true);
+  });
+
+  it('exposes a conversion feature (vampirismo) so the Vampiro is not priced as a bare capture', () => {
+    const summary = stage2ModelSummary();
+    const names = summary.features.map((f) => f.name);
+    expect(names).toContain('Conversione nemico in alleato (vampirismo)');
+    expect(names).toContain('Senza cattura (riposizionamento)');
+    expect(names).toContain('Danneggia anche gli alleati');
+    expect(names).toContain('Condizionale');
+  });
+});
+
+/** The Vampiro Lunare converts its captured enemy into an allied Ghoul — the double material
+ *  swing (enemy lost, ally gained) is the mechanic the stage-2 conversion feature must capture.
+ *  The Ghoul itself (GH, fixed 1-point token) is deliberately excluded from the mobility fit
+ *  (see `stage1TrainingSet`) and from `estimatorFitQuality`: its value is a design constant set
+ *  by the conversion, not a quantity priced by its movement — `applySuggestedPunti` skips it for
+ *  the same reason it skips the King. */
+describe('estimatePunti — vampirismo and the Ghoul it produces', () => {
+  it('the Vampiro Lunare lands near its real 34 punti (conversion must not be priced as a plain capture)', () => {
+    const vl = estimatePunti(getPieceDef('VL'));
+    // 34 is the estimator's converged equilibrium value (VL was 38 pre-rebalance; the conversion
+    // bonus sat above what the model could justify against the rest of the roster, and applying
+    // the suggestion moved VL to where the fit is exact — see estimatorFitQuality MAE ≈ 0).
+    expect(Math.abs(vl.suggestedPunti - 34)).toBeLessThanOrEqual(3);
+    // The conversion mechanic alone must account for most of the premium over the VL's modest
+    // mobility (diagonal step 1-2) — a bare-capture bonus (~9pt) would leave it near 21pt.
+    expect(vl.breakdown.specialMechanicBonus).toBeGreaterThan(15);
+  });
+
+  it('predictMechanicBonus prices a conversion-style mechanic far above a plain capture mechanic', () => {
+    const conversion = predictMechanicBonus({ type: 'conversione_ghoul', modalita: 'sul_cattura', params: { target: 'nemico_catturato', conversioneAlleato: true } });
+    const plainCapture = predictMechanicBonus({ type: 'cattura_semplice', modalita: 'sul_cattura', params: {} });
+    expect(conversion).toBeGreaterThan(plainCapture + 8);
+  });
+
+  it('the Ghoul is excluded from the fit-quality evaluation (fixed 1-point token, like the King)', () => {
+    const quality = estimatorFitQuality();
+    expect(quality.worstFits.some((f) => f.sigla === 'GH')).toBe(false);
+    expect(quality.worstFits.some((f) => f.sigla === 'RE')).toBe(false);
   });
 });
 

@@ -185,8 +185,8 @@ describe('improveTeam — respects and auto-corrects the optional distinct-speci
   });
 
   it('removes the cheapest special type(s) first when correcting an over-limit team', () => {
-    // CO=38, BE=32, NE=28 — NE is cheapest, should be the first removed to free a slot. The
-    // budget is pinned to exactly the post-correction cost (King + CO=38 + BE=32) so the
+    // CO=34, BE=40, NE=25 — NE is cheapest, should be the first removed to free a slot. The
+    // budget is pinned to exactly the post-correction cost (King + CO=34 + BE=40) so the
     // general budget-fit optimization pass that runs afterward has nothing left to improve and
     // can't swap pieces around — isolating the correction step's own behavior from whatever
     // other pieces happen to exist in the roster.

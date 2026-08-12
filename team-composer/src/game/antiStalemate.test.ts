@@ -26,9 +26,9 @@ describe('computeMaterialScore', () => {
 
   it('counts a Miraggio clone as worthless material (only the real half has punti)', () => {
     let board = place(createEmptyBoard(), 'e1', 'RE', 'A'); // 15pt
-    board = setPieceAt(board, 'd4', { ...createPieceInstance('MG', 'A'), mirage: { id: 'm1', isClone: false } }); // real half, 27pt
+    board = setPieceAt(board, 'd4', { ...createPieceInstance('MG', 'A'), mirage: { id: 'm1', isClone: false } }); // real half, 28pt
     board = setPieceAt(board, 'e5', { ...createPieceInstance('MG', 'A'), mirage: { id: 'm1', isClone: true } }); // clone — an illusion, 0pt
-    expect(computeMaterialScore(board, 'A')).toBe(42); // 15 + 27 — the clone adds nothing
+    expect(computeMaterialScore(board, 'A')).toBe(43); // 15 + 28 — the clone adds nothing
   });
 
   it('counts a piece placed beyond the default 8×8 bounds when the real board is wider/taller', () => {

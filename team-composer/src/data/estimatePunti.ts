@@ -436,11 +436,39 @@ interface MechanicFeatures {
   radius: number;
   directionCount: number;
   intensityValue: number;
-  targetsAllies: number;
+  /** 1 when the mechanic's `target` literally names allied pieces (`alleato_in_linea_di_vista`
+   *  on the Mistico, `alleati_adiacenti` on the Paladino, `due_alleati...` on the Swapper) — a
+   *  benefit granted to the owner's own army. Deliberately separated from `harmsAllies`:
+   *  `includeAlleati` on the Colosso's danno_ad_area means the blast ALSO hits its own pieces,
+   *  a downside that must not be priced as an ally benefit (see `harmsAllies`). */
+  benefitsAllies: number;
   isPassive: number;
   isDefensive: number;
   isOnCapture: number;
   destinationConstraint: number;
+  /** 1 for mechanics that convert the captured enemy into an allied piece instead of eliminating
+   *  it (Vampiro Lunare's `conversione_ghoul`: the enemy never reaches the graveyard and an
+   *  allied Ghoul materializes next to it) — a double material swing (opponent loses a piece
+   *  AND the converter gains one) that a plain "sul_cattura" flag cannot express. Without this
+   *  feature the conversion's params (`target: nemico_catturato`, `conversioneAlleato: true`)
+   *  produce a feature vector identical to a bare capture mechanic, and the model prices the
+   *  Vampiro at ~32 instead of its real 38. */
+  isConversion: number;
+  /** 1 for actions flagged `senzaCattura: true` — the action repositions a piece (or grants a
+   *  bonus move) WITHOUT capturing anything: respingi, teletrasporto, attira, sostituzione,
+   *  furia_bellica's extra move, fulmine's second jump. Such an action is worth strictly less
+   *  than an action that removes an enemy piece, so the model must be able to see it. */
+  nonCapturing: number;
+  /** 1 for offensive mechanics whose `includeAlleati: true` means the effect damages/freezes the
+   *  owner's own pieces too (Colosso's danno_ad_area blasts orthogonally-adjacent squares,
+   *  allies included) — a genuine downside. Matches only when the `target` does NOT name allies
+   *  (otherwise it's a benefit, see `benefitsAllies`). */
+  harmsAllies: number;
+  /** 1 when the mechanic only works under listed conditions (`condizioni` array: Orfano's
+   *  copia_poteri only under `in_scacco`, Stunner/Basilisco's freezing excludes the King) — a
+   *  conditional effect applies less often than an unconditional one, so it should not be priced
+   *  at full strength. */
+  conditional: number;
 }
 
 /** Mechanic types that protect the owner rather than threatening the opponent — `armatura`
@@ -455,11 +483,15 @@ const MECHANIC_FEATURE_NAMES = [
   'Raggio',
   'Ampiezza direzionale/distanze',
   'Intensità numerica',
-  'Coinvolge alleati',
+  'Beneficia alleati',
   'Passiva',
   'Difensiva',
   'Su cattura',
   'Destinazione vincolata',
+  'Conversione nemico in alleato (vampirismo)',
+  'Senza cattura (riposizionamento)',
+  'Danneggia anche gli alleati',
+  'Condizionale',
 ] as const;
 
 /** Index of the 'Difensiva' feature in `MECHANIC_FEATURE_NAMES` / `mechanicFeatureVector`. Its
@@ -528,16 +560,23 @@ function mechanicFeaturesOf(action: MechanicActionInput): MechanicFeatures {
     radius: typeof params.raggio === 'number' ? params.raggio : 0,
     directionCount: countRangeArrays(params),
     intensityValue: (firstNumericParamMatching(params, /costo|max|valore/i) ?? 0) / MECHANIC_INTENSITY_SCALE,
-    targetsAllies: params.includeAlleati === true || (typeof target === 'string' && target.includes('alleat')) ? 1 : 0,
+    benefitsAllies: typeof target === 'string' && target.includes('alleat') ? 1 : 0,
     isPassive: modalita === 'passiva' ? 1 : 0,
     isDefensive: DEFENSIVE_MECHANIC_TYPES.has(action.type) ? 1 : 0,
     isOnCapture: modalita === 'sul_cattura' ? 1 : 0,
     destinationConstraint: hasEmptyDestinationConstraint(params),
+    isConversion: params.conversioneAlleato === true ? 1 : 0,
+    nonCapturing: params.senzaCattura === true ? 1 : 0,
+    harmsAllies: params.includeAlleati === true && !(typeof target === 'string' && target.includes('alleat')) ? 1 : 0,
+    conditional: Array.isArray(params.condizioni) && (params.condizioni as unknown[]).length > 0 ? 1 : 0,
   };
 }
 
 function mechanicFeatureVector(f: MechanicFeatures): number[] {
-  return [1, f.radius, f.directionCount, f.intensityValue, f.targetsAllies, f.isPassive, f.isDefensive, f.isOnCapture, f.destinationConstraint];
+  return [
+    1, f.radius, f.directionCount, f.intensityValue, f.benefitsAllies, f.isPassive, f.isDefensive,
+    f.isOnCapture, f.destinationConstraint, f.isConversion, f.nonCapturing, f.harmsAllies, f.conditional,
+  ];
 }
 
 interface MechanicTrainingRow {

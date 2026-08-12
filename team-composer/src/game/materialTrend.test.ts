@@ -3,15 +3,15 @@ import { computeMaterialTrend } from './materialTrend';
 import { createInitialGameState, type GameState, type HistoryEntry } from './turnManager';
 import { createEmptyBoard, createPieceInstance, setPieceAt, type BoardState } from './board';
 
-// From pieces.json (post-estimator rebalance): RE 15, PE 9, AL 19, CA 15, TO 27, CO 34, BO 23,
-// AR 34, MG 27.
+// From pieces.json (post-estimator rebalance): RE 15, PE 9, AL 19, CA 15, TO 27, CO 34, BO 24,
+// AR 34, MG 28.
 const RE = 15;
 const PE = 9;
 const AL = 19;
 const CA = 15;
 const TO = 27;
 const CO = 34;
-const BO = 23;
+const BO = 24;
 const AR_PUNTI = 34;
 
 function place(board: BoardState, coord: string, sigla: string, owner: 'A' | 'B' = 'A'): BoardState {
@@ -54,7 +54,7 @@ describe('computeMaterialTrend', () => {
     const state = finishedWith([
       entry({ owner: 'A', sigla: 'PE', from: 'd4', to: 'd5', isCapture: true, capturedSigla: 'BO', isExplosion: true, explodedAt: 'd5' }),
     ]);
-    // A loses its own PE (9) in the blast: 24 → 15. B loses the BO (23): 38 → 15.
+    // A loses its own PE (9) in the blast: 24 → 15. B loses the BO (24): 39 → 15.
     expect(computeMaterialTrend(state)).toEqual([
       { ply: 0, A: RE + PE, B: RE + BO },
       { ply: 1, A: RE, B: RE },

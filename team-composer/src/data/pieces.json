@@ -192,7 +192,7 @@
   {
     "sigla": "BE",
     "descrizione": "Berserker",
-    "punti": 39,
+    "punti": 40,
     "categoria": "base",
     "classico": false,
     "regole": "Si muove di massimo 2 caselle in qualsiasi direzione. Furia bellica: dopo una cattura in mischia riuscita, ottiene un secondo movimento extra immediato, senza possibilità di cattura durante quel movimento aggiuntivo.",
@@ -533,7 +533,7 @@
   {
     "sigla": "ST",
     "descrizione": "Stunner",
-    "punti": 25,
+    "punti": 24,
     "categoria": "base",
     "classico": false,
     "regole": "Muove come un Re. Ogni pezzo nemico (tranne il Re avversario, sempre immune) che si trova su una delle 8 caselle adiacenti allo Stunner è completamente congelato: non ha alcuna mossa né azione speciale disponibile, tranne l'unica mossa che catturerebbe lo Stunner stesso.",
@@ -551,7 +551,7 @@
   {
     "sigla": "MG",
     "descrizione": "Miraggio",
-    "punti": 27,
+    "punti": 28,
     "categoria": "base",
     "classico": false,
     "regole": "Si muove come il Re (una casella in qualsiasi direzione). Sdoppiamento: al posto del movimento può creare un clone illusorio su una casella vuota adiacente, scegliendo quale dei due è quello vero. L'avversario deve catturare quello vero: se cattura il clone, l'illusione si dissolve e il Miraggio vero sopravvive; se cattura quello vero, sparisce anche il clone (che non assegna punti). Riunione: finché il clone è vivo, può invece ricostituire vero e clone in un unico pezzo, scegliendo la casella in cui ricompare. Massimo 1 Miraggio per composizione (in gioco diventano 2 contando il clone).",
@@ -620,7 +620,7 @@
   {
     "sigla": "RP",
     "descrizione": "Repulsore",
-    "punti": 17,
+    "punti": 18,
     "categoria": "base",
     "classico": false,
     "regole": "Si muove di una casella in qualsiasi direzione. Cattura in mischia. In alternativa al movimento, può respingere un nemico adiacente (mai il Re) di una casella direttamente lontano da sé, purché la casella di arrivo sia vuota: il nemico viene spostato senza essere catturato.",
@@ -656,7 +656,7 @@
   {
     "sigla": "BO",
     "descrizione": "Bomba",
-    "punti": 23,
+    "punti": 24,
     "categoria": "base",
     "classico": false,
     "regole": "Si muove di una casella in qualsiasi direzione. Cattura in mischia. Quando viene catturata (con qualsiasi cattura: in mischia, a salto, a distanza o a fine catena), esplode e distrugge anche il pezzo che l'ha catturata — il Re è sempre immune all'esplosione. L'esplosione non scatta mai se lascerebbe sotto scacco il Re di chi cattura.",
@@ -710,7 +710,7 @@
   {
     "sigla": "BR",
     "descrizione": "Brigante",
-    "punti": 23,
+    "punti": 22,
     "categoria": "base",
     "classico": false,
     "regole": "Si muove di una casella in qualsiasi direzione. Cattura in mischia. In alternativa al movimento, può \"sostituirsi\" a un nemico adiacente (mai il Re): i due pezzi si scambiano di posto, senza cattura — il nemico viene spostato ma non eliminato — purché il proprio Re non resti esposto allo scacco. È l'unico pezzo del roster che scambia posizione con un nemico (Mistico e Swapper scambiano solo alleati).",
@@ -728,7 +728,7 @@
   {
     "sigla": "LP",
     "descrizione": "Lampo",
-    "punti": 17,
+    "punti": 18,
     "categoria": "base",
     "classico": false,
     "regole": "Salta esattamente 2 caselle in orizzontale o verticale (N, S, E, O), ignorando i pezzi in mezzo: è il salto \"dabbaba\", l'unico pezzo del roster che atterra sempre a esattamente 2 caselle di distanza. Se sulla casella di arrivo c'è un nemico, lo cattura in salto; se c'è un alleato, non può atterrarci. Non ha mai mosse da 1 o 3 caselle. Fulmine: dopo una cattura in salto riuscita, può immediatamente compiere un secondo salto non-catturante di 2 caselle (come la Furia bellica del Berserker, ma per i salti).",
@@ -747,7 +747,7 @@
   {
     "sigla": "VL",
     "descrizione": "Vampiro Lunare",
-    "punti": 38,
+    "punti": 34,
     "categoria": "base",
     "classico": false,
     "regole": "Si muove di massimo 2 caselle in diagonale. Sete di Sangue: quando effettua una cattura, non elimina definitivamente il pezzo nemico, ma lo converte alleato trasformandolo in un Ghoul di valore 1 nella casella adiacente libera.",
