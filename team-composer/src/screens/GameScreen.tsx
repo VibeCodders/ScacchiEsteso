@@ -17,7 +17,7 @@ import { canMimic, getOrphanThreats } from '../game/orphan';
 import { canSdoppiare, canRiunire, getSdoppiamentoSquares, getRiunioneSquares, isRealMirage } from '../game/mirage';
 import { canConvertOnCapture, getGhoulPlacementSquares } from '../game/vampire';
 import { createInitialGameState, applyTurn, applyScocca, applyRepulse, applyTeleport, applyAttract, applySwap, applySostituzione, applySwapperSwap, applyRevive, applySdoppiamento, applyRiunione, getLegalMovesForTurn, skipExtraMove, stopRabbitChain, type GameState } from '../game/turnManager';
-import { chooseBotAction, applyBotAction, formatMovesAhead, BOT_DIFFICULTY_MAX } from '../game/bot';
+import { chooseBotAction, applyBotAction, formatMovesAhead, BOT_DIFFICULTY_MAX, BOT_DIFFICULTY_MIN } from '../game/bot';
 import { sortSiglasByPunti } from '../data/pieces';
 import { movePiece, removePieceAt, type BoardState, type Coord, type Owner } from '../game/board';
 import { pieceDescription } from '../lib/pieceFormat';
@@ -81,7 +81,7 @@ function splitMirageGroupIds(board: BoardState): Record<Owner, Set<string>> {
 
 function GameScreen() {
   const navigate = useNavigate();
-  const { mode, humanOwner, botDifficulty, deployedBoard, boardDimensions, setMatchResult } = useGameSetup();
+  const { mode, humanOwner, botDifficulty, setBotDifficulty, deployedBoard, boardDimensions, setMatchResult } = useGameSetup();
   const ownerLabel = (owner: Owner) => playerLabel(owner, mode, humanOwner);
 
   const [gameState, setGameState] = useState<GameState | null>(() => (deployedBoard ? createInitialGameState(deployedBoard, 'A', boardDimensions) : null));
@@ -653,6 +653,30 @@ function GameScreen() {
           mirageRealSquares={mirageRealSquares}
           showNames={showNames}
         />
+        {mode === 'pvc' && (
+          <div className="flex flex-wrap items-center justify-center gap-2 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-950/50">
+            <label htmlFor="in-game-bot-difficulty" className="text-xs font-medium text-slate-600 dark:text-slate-400">
+              🤖 Difficoltà del PC:
+            </label>
+            <input
+              id="in-game-bot-difficulty"
+              type="range"
+              min={BOT_DIFFICULTY_MIN}
+              max={BOT_DIFFICULTY_MAX}
+              step={1}
+              value={botDifficulty}
+              onChange={(e) => setBotDifficulty(Number(e.target.value))}
+              aria-label="Difficoltà del bot in partita"
+              className="w-36 accent-blue-500"
+            />
+            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{botDifficulty}</span>
+            <span className="text-xs text-slate-500">
+              {botDifficulty < 0
+                ? `🫠 gioca male di proposito (${formatMovesAhead(botDifficulty)})`
+                : `vede ${formatMovesAhead(botDifficulty)} avanti`}
+            </span>
+          </div>
+        )}
         <div className="flex flex-wrap justify-center gap-2">
           <Button variant="improve" onClick={() => setOrientation((o) => (o === 'A' ? 'B' : 'A'))}>
             🔄 Gira scacchiera (vista: {ownerLabel(orientation)})

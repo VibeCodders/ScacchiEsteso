@@ -1383,6 +1383,34 @@ describe('GameScreen — PvC bot auto-play', () => {
     expect(screen.getByText(/PC: difficoltà 5\/50 — vede 0.5 mosse avanti/i)).toBeInTheDocument();
   });
 
+  it('lets the human change the PC difficulty mid-game with the in-game slider', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'a1', 'TO', 'A');
+    board = place(board, 'h8', 'TO', 'B');
+    renderPvcGame(board, 'A'); // BootstrapPvc sets difficulty 5
+
+    const slider = screen.getByLabelText('Difficoltà del bot in partita') as HTMLInputElement;
+    expect(slider).toBeInTheDocument();
+    expect(slider.value).toBe('5');
+
+    fireEvent.change(slider, { target: { value: '20' } });
+
+    expect(screen.getByText(/PC: difficoltà 20\/50 — vede 2 mosse avanti/i)).toBeInTheDocument();
+    expect(screen.getByText('20')).toBeInTheDocument();
+    expect(screen.getAllByText(/vede 2 mosse avanti/i)).toHaveLength(2); // header badge + slider label
+  });
+
+  it('does not show the difficulty slider outside PvC mode', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'a1', 'TO', 'A');
+    board = place(board, 'h8', 'TO', 'B');
+    renderGame(board);
+
+    expect(screen.queryByLabelText('Difficoltà del bot in partita')).not.toBeInTheDocument();
+  });
+
   it('does not let the human move the PC\'s pieces during the PC\'s turn', () => {
     let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
     board = place(board, 'e8', KING_SIGLA, 'B');
