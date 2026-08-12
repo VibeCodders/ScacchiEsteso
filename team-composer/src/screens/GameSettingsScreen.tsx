@@ -31,7 +31,9 @@ function GameSettingsScreen() {
     if (mode !== 'pvc') {
       navigate('/team/a');
     } else {
-      navigate(humanOwner === 'A' ? '/team/a' : '/team/pc-choice');
+      // The PC always composes first when the human plays B; its difficulty is the first of two
+      // sequential steps (difficulty, then team composition).
+      navigate(humanOwner === 'A' ? '/team/a' : '/team/pc-difficulty');
     }
   };
 

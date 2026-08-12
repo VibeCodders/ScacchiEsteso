@@ -64,19 +64,23 @@ describe('routing skeleton', () => {
     expect(screen.getByText(/Composizione Team — Giocatore 2/i)).toBeInTheDocument();
   });
 
-  it('completing the human team in PvC (playing A) routes through the PC team choice screen', () => {
+  it('completing the human team in PvC (playing A) routes through the PC difficulty, then the composition screen', () => {
     renderApp('/');
     fireEvent.click(screen.getByText(/gioco come Giocatore A/i));
     continueFromGameSettings();
     fireEvent.click(screen.getByText(/Conferma Team Giocatore 1/i));
-    expect(screen.getByText(/Come vuoi comporre l'esercito avversario/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Difficoltà del PC/i })).toBeInTheDocument(); // step 1
+    continueFromGameSettings();
+    expect(screen.getByText(/Come vuoi comporre l'esercito avversario/i)).toBeInTheDocument(); // step 2
   });
 
-  it('choosing to play as B in PvC routes straight to the PC team choice screen (PC composes first)', () => {
+  it('choosing to play as B in PvC routes through the PC difficulty, then the composition screen (PC composes first)', () => {
     renderApp('/');
     fireEvent.click(screen.getByText(/gioco come Giocatore B/i));
     continueFromGameSettings();
-    expect(screen.getByText(/Come vuoi comporre l'esercito avversario/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Difficoltà del PC/i })).toBeInTheDocument(); // step 1
+    continueFromGameSettings();
+    expect(screen.getByText(/Come vuoi comporre l'esercito avversario/i)).toBeInTheDocument(); // step 2
   });
 
   it('mounts the Deployment screen directly when navigated to "/deployment"', () => {
@@ -96,19 +100,24 @@ describe('routing skeleton', () => {
 });
 
 describe('PC team choice screen options', () => {
-  it('offers a difficulty selector plus manual, three presets, mirror and random options', () => {
+  it('offers a difficulty selector on the first step, then manual, three presets, mirror and random on the second', () => {
     renderApp('/');
     fireEvent.click(screen.getByText(/gioco come Giocatore A/i));
     continueFromGameSettings();
     fireEvent.click(screen.getByText(/Conferma Team Giocatore 1/i));
 
-    // Difficulty is a numeric −10…50 slider (default 10 = the PC sees 1 mossa ahead; negatives are stupid).
+    // Step 1 — difficulty: numeric −10…50 slider (default 10 = the PC sees 1 mossa ahead).
     const slider = screen.getByLabelText(/Difficoltà del bot/i) as HTMLInputElement;
     expect(slider.type).toBe('range');
     expect(Number(slider.min)).toBe(-10);
     expect(Number(slider.max)).toBe(50);
     expect(Number(slider.value)).toBe(10);
     expect(screen.getByText(/vede 1 mossa avanti/i)).toBeInTheDocument();
+    // The composition options are NOT on this screen.
+    expect(screen.queryByText(/Manuale — lo compongo io/i)).not.toBeInTheDocument();
+
+    // Step 2 — composition.
+    continueFromGameSettings();
     expect(screen.getByText(/Manuale — lo compongo io/i)).toBeInTheDocument();
     expect(screen.getByText(/Bilanciato/i)).toBeInTheDocument();
     expect(screen.getByText(/Aggressivo/i)).toBeInTheDocument();
@@ -122,6 +131,7 @@ describe('PC team choice screen options', () => {
     fireEvent.click(screen.getByText(/gioco come Giocatore A/i));
     continueFromGameSettings();
     fireEvent.click(screen.getByText(/Conferma Team Giocatore 1/i));
+    continueFromGameSettings(); // step 1: difficulty
     fireEvent.click(screen.getByText(/Preset: Bilanciato/i));
 
     expect(screen.getByRole('heading', { name: /Schieramento/i })).toBeInTheDocument();
@@ -131,6 +141,7 @@ describe('PC team choice screen options', () => {
     renderApp('/');
     fireEvent.click(screen.getByText(/gioco come Giocatore B/i));
     continueFromGameSettings();
+    continueFromGameSettings(); // step 1: difficulty
     fireEvent.click(screen.getByText(/Manuale — lo compongo io/i));
 
     expect(screen.getByText(/Composizione Team — PC \(manuale\)/i)).toBeInTheDocument();
@@ -140,6 +151,7 @@ describe('PC team choice screen options', () => {
     renderApp('/');
     fireEvent.click(screen.getByText(/gioco come Giocatore B/i));
     continueFromGameSettings();
+    continueFromGameSettings(); // step 1: difficulty
     fireEvent.click(screen.getByText(/Preset: Bilanciato/i));
 
     expect(screen.getByText(/Composizione Team — Giocatore 1/i)).toBeInTheDocument();
@@ -150,6 +162,7 @@ describe('PC team choice screen options', () => {
     fireEvent.click(screen.getByText(/gioco come Giocatore A/i));
     continueFromGameSettings();
     fireEvent.click(screen.getByText(/Conferma Team Giocatore 1/i));
+    continueFromGameSettings(); // step 1: difficulty
     fireEvent.click(screen.getByText(/Manuale — lo compongo io/i));
 
     expect(screen.getByText(/Composizione Team — PC \(manuale\)/i)).toBeInTheDocument();

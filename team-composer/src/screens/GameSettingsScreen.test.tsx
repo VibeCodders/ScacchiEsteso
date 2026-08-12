@@ -27,7 +27,7 @@ function renderSettings(mode: GameMode = 'pvp', humanOwner?: Owner, destinationL
           <Routes>
             <Route path="/game-settings" element={<GameSettingsScreen />} />
             <Route path="/team/a" element={<div>{destinationLabel}: team/a</div>} />
-            <Route path="/team/pc-choice" element={<div>{destinationLabel}: team/pc-choice</div>} />
+            <Route path="/team/pc-difficulty" element={<div>{destinationLabel}: team/pc-difficulty</div>} />
           </Routes>
         </Bootstrap>
         </ThemeProvider>
@@ -84,10 +84,10 @@ describe('GameSettingsScreen', () => {
     expect(screen.getByText(/destination: team\/a/i)).toBeInTheDocument();
   });
 
-  it('in PvC mode playing as B, "Continua" navigates to the PC team choice route (PC composes first)', () => {
+  it('in PvC mode playing as B, "Continua" navigates to the PC difficulty step first (PC composes first)', () => {
     renderSettings('pvc', 'B');
     fireEvent.click(screen.getByText(/Continua →/i));
-    expect(screen.getByText(/destination: team\/pc-choice/i)).toBeInTheDocument();
+    expect(screen.getByText(/destination: team\/pc-difficulty/i)).toBeInTheDocument();
   });
 
   it('a custom board size and an enabled special-types limit are both saved before navigating', () => {

@@ -12,7 +12,8 @@ function TeamSelectRouteA() {
     if (mode !== 'pvc') {
       navigate('/team/b');
     } else if (humanOwner === 'A') {
-      navigate('/team/pc-choice'); // the bot composes owner B next
+      // The bot composes owner B next: difficulty first, then team composition.
+      navigate('/team/pc-difficulty');
     } else {
       navigate('/team/b'); // the bot (owner A) is done — the human composes owner B next
     }

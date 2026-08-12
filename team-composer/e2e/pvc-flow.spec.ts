@@ -22,11 +22,15 @@ test('PvC: flusso completo con team del PC e risposta automatica del bot', async
   await expect(confirmHuman).toBeEnabled();
   await confirmHuman.click();
 
-  // 4. Scelta del team del PC — difficoltà minima, poi composizione manuale (auto-riempita)
-  await expect(page).toHaveURL(/\/team\/pc-choice/);
-  await expect(page.getByText(/Team del PC/)).toBeVisible();
+  // 4. Scelta del team del PC — passo 1: difficoltà minima, poi passo 2: composizione manuale
+  await expect(page).toHaveURL(/\/team\/pc-difficulty/);
+  await expect(page.getByText(/Difficoltà del PC/)).toBeVisible();
   await page.locator('#bot-difficulty').fill('1');
   await expect(page.getByText(/Livello di difficoltà: 1 \(da -10 a 50\)/)).toBeVisible();
+  await page.getByRole('button', { name: /Continua/ }).click();
+
+  await expect(page).toHaveURL(/\/team\/pc-choice/);
+  await expect(page.getByText(/Team del PC/)).toBeVisible();
   await page.getByRole('button', { name: /Manuale — lo compongo io/ }).click();
 
   await expect(page).toHaveURL(/\/team\/b/);

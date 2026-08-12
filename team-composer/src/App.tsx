@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom';
 import Home from './screens/Home';
 import TeamSelectRouteA from './screens/TeamSelectRouteA';
 import TeamSelectRouteB from './screens/TeamSelectRouteB';
+import PcDifficultyScreen from './screens/PcDifficultyScreen';
 import PcTeamChoiceScreen from './screens/PcTeamChoiceScreen';
 import DeploymentScreen from './screens/DeploymentScreen';
 import GameScreen from './screens/GameScreen';
@@ -17,6 +18,7 @@ function App() {
       <Route path="/" element={<Home />} />
       <Route path="/game-settings" element={<GameSettingsScreen />} />
       <Route path="/team/a" element={<TeamSelectRouteA />} />
+      <Route path="/team/pc-difficulty" element={<PcDifficultyScreen />} />
       <Route path="/team/pc-choice" element={<PcTeamChoiceScreen />} />
       <Route path="/team/b" element={<TeamSelectRouteB />} />
       <Route path="/deployment" element={<DeploymentScreen />} />

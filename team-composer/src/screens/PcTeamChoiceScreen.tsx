@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useGameSetup } from '../context/gameSetup';
 import { rules, scaleRulesForBoardSize } from '../data/pieces';
 import { getPresetTeams, buildPresetTeam, randomFillTeam, isPresetValid, type PresetTeamId } from '../data/presetTeams';
-import { BOT_DIFFICULTY_MAX, BOT_DIFFICULTY_MIN, difficultyToDepth, formatMovesAhead } from '../game/bot';
 import Button from '../components/ui/Button';
 import PageShell from '../components/ui/PageShell';
 import Panel from '../components/ui/Panel';
@@ -11,7 +10,7 @@ import Panel from '../components/ui/Panel';
 function PcTeamChoiceScreen() {
   const navigate = useNavigate();
   const {
-    humanOwner, teamA, teamB, setTeamA, setTeamB, botDifficulty, setBotDifficulty,
+    humanOwner, teamA, teamB, setTeamA, setTeamB,
     boardDimensions, maxDistinctSpecialTypes,
   } = useGameSetup();
 
@@ -50,30 +49,6 @@ function PcTeamChoiceScreen() {
 
   return (
     <PageShell title="🤖 Team del PC" subtitle="Come vuoi comporre l'esercito avversario?" layout="center">
-      <Panel title="🧠 Difficoltà" className="w-full max-w-[640px]">
-        <div className="flex flex-col gap-2">
-          <label htmlFor="bot-difficulty" className="text-sm text-slate-600 dark:text-slate-400">
-            Livello di difficoltà: {botDifficulty} (da {BOT_DIFFICULTY_MIN} a {BOT_DIFFICULTY_MAX})
-          </label>
-          <input
-            id="bot-difficulty"
-            type="range"
-            min={BOT_DIFFICULTY_MIN}
-            max={BOT_DIFFICULTY_MAX}
-            step={1}
-            value={botDifficulty}
-            onChange={(e) => setBotDifficulty(Number(e.target.value))}
-            aria-label="Difficoltà del bot"
-            className="w-full accent-blue-500"
-          />
-          <p className="text-sm text-slate-600 dark:text-slate-400">
-            {botDifficulty < 0
-              ? `🫠 Il PC è stupido di proposito: gioca le mosse peggiori per sé (${formatMovesAhead(botDifficulty)}, ricerca ${difficultyToDepth(botDifficulty)} mezze mosse anti).`
-              : `Il PC vede ${formatMovesAhead(botDifficulty)} avanti (profondità di ricerca ${difficultyToDepth(botDifficulty)} mezze mosse).`}
-          </p>
-        </div>
-      </Panel>
-
       <Panel title="🎯 Composizione" className="w-full max-w-[640px]">
         <div className="flex flex-col gap-2">
           <Button variant="primary" onClick={chooseManual}>Manuale — lo compongo io</Button>
