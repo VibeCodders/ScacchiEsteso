@@ -1247,7 +1247,7 @@ describe('GameScreen — Vampiro Lunare (Sete di Sangue)', () => {
     expect(document.querySelector('[data-coord="d4"]')?.querySelector('svg')?.getAttribute('aria-label')).toBe('GH');
   });
 
-  it('lists the converted Ghoul in the "Pezzi in gioco" sidebar', () => {
+  it('lists the converted Ghoul in the "Pezzi in gioco" sidebar with a distinct badge', () => {
     let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
     board = place(board, 'e8', KING_SIGLA, 'B');
     board = place(board, 'd4', 'VL', 'B');
@@ -1260,7 +1260,11 @@ describe('GameScreen — Vampiro Lunare (Sete di Sangue)', () => {
     fireEvent.click(document.querySelector('[data-coord="c5"]')!);
     fireEvent.click(screen.getByText(/🧟 d4/));
 
-    expect(document.querySelector('[data-piece-row="GH"]')).not.toBeNull(); // B's new Ghoul in the sidebar
+    // B's new Ghoul stands out from the deployed pieces: flagged as converted, with the badge.
+    const ghoulRow = document.querySelector('[data-piece-row="GH"]');
+    expect(ghoulRow).not.toBeNull();
+    expect(ghoulRow).toHaveAttribute('data-converted');
+    expect(within(ghoulRow as HTMLElement).getByText(/🩸 convertito/i)).toBeInTheDocument();
   });
 });
 

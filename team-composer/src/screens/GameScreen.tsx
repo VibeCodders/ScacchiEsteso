@@ -874,10 +874,21 @@ function GameScreen() {
                 {onBoardSiglas.map((sigla) => {
                   const count = boardPiecesByOwner[owner].get(sigla)!;
                   const def = getPieceDef(sigla);
+                  const converted = Boolean(def.obtainableOnlyViaConversion);
                   return (
-                    <div key={sigla} data-piece-row={sigla} className="flex items-center justify-between gap-2 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1">
+                    <div
+                      key={sigla}
+                      data-piece-row={sigla}
+                      data-converted={converted || undefined}
+                      className={cn(
+                        'flex items-center justify-between gap-2 rounded-md border px-2 py-1',
+                        converted
+                          ? 'border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950/40'
+                          : 'border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-900',
+                      )}
+                    >
                       <div className="flex min-w-0 items-center gap-2">
-                        <span className="board-sidebar-piece-icon size-5 shrink-0 text-slate-700 dark:text-slate-300">
+                        <span className={cn('board-sidebar-piece-icon size-5 shrink-0', converted ? 'text-red-600 dark:text-red-400' : 'text-slate-700 dark:text-slate-300')}>
                           <PieceIcon sigla={sigla} className="size-full" />
                         </span>
                         <span className="font-mono text-xs font-bold text-slate-900 dark:text-slate-50">{sigla}</span>
@@ -885,6 +896,11 @@ function GameScreen() {
                           {def.descrizione}
                           {count > 1 && ` ×${count}`}
                         </span>
+                        {converted && (
+                          <span className="shrink-0 rounded bg-red-100 px-1 py-0.5 text-[0.6rem] font-semibold text-red-600 dark:bg-red-950/60 dark:text-red-400">
+                            🩸 convertito
+                          </span>
+                        )}
                       </div>
                       <Button variant="auto" className="shrink-0 px-2 py-0.5 text-[0.68rem]" onClick={() => setInfoSigla(sigla)}>
                         🔍 Info
