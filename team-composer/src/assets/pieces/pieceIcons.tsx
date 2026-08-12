@@ -349,6 +349,14 @@ const PIECE_SHAPES: Record<string, ReactElement> = {
       <circle cx="57.5" cy="34" r="1.5" />
     </g>
   ),
+  SC: (
+    <g>
+      <rect x="26" y="72" width="48" height="10" rx="2" />
+      <path d="M30 72 Q30 54 44 50 Q54 47 60 40 Q64 34 74 24 Q78 36 68 46 Q78 50 76 60 L76 72 Z" />
+      <polygon points="58,38 62,26 68,36" />
+      <circle cx="60" cy="33" r="1.6" fill="var(--piece-label-color, #fff)" />
+    </g>
+  ),
 };
 
 export interface PieceIconProps extends SVGProps<SVGSVGElement> {

@@ -10,6 +10,7 @@ import { canSwap, getSwapTargets } from './swap';
 import { canSostituire, getSostituzioneTargets } from './sostituzione';
 import { canSwapperSwap, getSwapperCandidatePairs } from './swapper';
 import { canRevive, getRevivalSquares, getRevivableSiglas } from './necromancy';
+import { canLoot, getLootSquares, getLootableSiglas } from './scavenger';
 import { canMimic, getOrphanThreats } from './orphan';
 import { canSdoppiare, getSdoppiamentoSquares, canRiunire, getRiunioneSquares } from './mirage';
 import { computeMaterialScore } from './antiStalemate';
@@ -23,6 +24,7 @@ import {
   applySostituzione,
   applySwapperSwap,
   applyRevive,
+  applyLoot,
   applySdoppiamento,
   applyRiunione,
   skipExtraMove,
@@ -94,6 +96,7 @@ export type BotAction =
   | { kind: 'sostituzione'; from: Coord; target: Coord }
   | { kind: 'swapperSwap'; from: Coord; squareA: Coord; squareB: Coord }
   | { kind: 'revive'; from: Coord; target: Coord; sigla: string }
+  | { kind: 'loot'; from: Coord; target: Coord; sigla: string }
   | { kind: 'sdoppiamento'; from: Coord; cloneSquare: Coord; realSquare: Coord }
   | { kind: 'riunione'; from: Coord; mergeSquare: Coord }
   | { kind: 'skipExtraMove' }
@@ -119,6 +122,8 @@ export function applyBotAction(state: GameState, action: BotAction): ApplyTurnRe
       return applySwapperSwap(state, action.from, action.squareA, action.squareB);
     case 'revive':
       return applyRevive(state, action.from, action.target, action.sigla);
+    case 'loot':
+      return applyLoot(state, action.from, action.target, action.sigla);
     case 'sdoppiamento':
       return applySdoppiamento(state, action.from, action.cloneSquare, action.realSquare);
     case 'riunione':
@@ -232,6 +237,18 @@ export function generateBotActions(state: GameState, owner: Owner): BotAction[] 
       }
     }
 
+    if (canLoot(pieceDef)) {
+      const enemy: Owner = owner === 'A' ? 'B' : 'A';
+      const siglas = getLootableSiglas(state.captured[enemy]);
+      if (siglas.length > 0) {
+        for (const target of getLootSquares(state.board, from, owner, state.dimensions)) {
+          for (const sigla of siglas) {
+            actions.push({ kind: 'loot', from, target, sigla });
+          }
+        }
+      }
+    }
+
     if (canSdoppiare(pieceDef)) {
       for (const cloneSquare of getSdoppiamentoSquares(state.board, from, owner, getPieceDef, state.dimensions)) {
         for (const realSquare of [from, cloneSquare]) {
@@ -335,6 +352,7 @@ export function actionKey(action: BotAction): string {
     case 'sostituzione': return `sostituzione:${action.from}:${action.target}`;
     case 'swapperSwap': return `swapperSwap:${action.squareA}:${action.squareB}`;
     case 'revive': return `revive:${action.from}:${action.target}:${action.sigla}`;
+    case 'loot': return `loot:${action.from}:${action.target}:${action.sigla}`;
     case 'sdoppiamento': return `sdoppiamento:${action.from}:${action.cloneSquare}:${action.realSquare}`;
     case 'riunione': return `riunione:${action.from}:${action.mergeSquare}`;
     case 'skipExtraMove': return 'skipExtraMove';

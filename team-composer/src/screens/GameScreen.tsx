@@ -13,10 +13,11 @@ import { canSwap, getSwapTargets } from '../game/swap';
 import { canSostituire, getSostituzioneTargets } from '../game/sostituzione';
 import { canSwapperSwap, getSwapperCandidateSquares } from '../game/swapper';
 import { canRevive, getRevivalSquares, getRevivableSiglas } from '../game/necromancy';
+import { canLoot, getLootSquares, getLootableSiglas } from '../game/scavenger';
 import { canMimic, getOrphanThreats } from '../game/orphan';
 import { canSdoppiare, canRiunire, getSdoppiamentoSquares, getRiunioneSquares, isRealMirage } from '../game/mirage';
 import { canConvertOnCapture, getGhoulPlacementSquares } from '../game/vampire';
-import { createInitialGameState, applyTurn, applyScocca, applyRepulse, applyTeleport, applyAttract, applySwap, applySostituzione, applySwapperSwap, applyRevive, applySdoppiamento, applyRiunione, getLegalMovesForTurn, skipExtraMove, stopRabbitChain, type GameState } from '../game/turnManager';
+import { createInitialGameState, applyTurn, applyScocca, applyRepulse, applyTeleport, applyAttract, applySwap, applySostituzione, applySwapperSwap, applyRevive, applyLoot, applySdoppiamento, applyRiunione, getLegalMovesForTurn, skipExtraMove, stopRabbitChain, type GameState } from '../game/turnManager';
 import { chooseBotAction, applyBotAction, formatMovesAhead, BOT_DIFFICULTY_MAX, BOT_DIFFICULTY_MIN } from '../game/bot';
 import { sortSiglasByPunti } from '../data/pieces';
 import { movePiece, removePieceAt, type BoardState, type Coord, type Owner } from '../game/board';
@@ -91,9 +92,10 @@ function GameScreen() {
   const [error, setError] = useState<string | null>(null);
   const [pendingPromotion, setPendingPromotion] = useState<PendingPromotion | null>(null);
   const [pendingRevival, setPendingRevival] = useState<PendingRevival | null>(null);
+  const [pendingLoot, setPendingLoot] = useState<PendingRevival | null>(null);
   const [pendingMimicChoice, setPendingMimicChoice] = useState<PendingMimicChoice | null>(null);
   const [orphanMimicSource, setOrphanMimicSource] = useState<Coord | null>(null);
-  const [actionMode, setActionMode] = useState<'scocca' | 'repulse' | 'teleport' | 'attract' | 'swap' | 'sostituzione' | 'revive' | 'swapperSwap' | 'sdoppiamento' | 'riunione' | null>(null);
+  const [actionMode, setActionMode] = useState<'scocca' | 'repulse' | 'teleport' | 'attract' | 'swap' | 'sostituzione' | 'revive' | 'loot' | 'swapperSwap' | 'sdoppiamento' | 'riunione' | null>(null);
   const [swapperFirstSquare, setSwapperFirstSquare] = useState<Coord | null>(null);
   const [pendingSdoppiamento, setPendingSdoppiamento] = useState<PendingSdoppiamento | null>(null);
   const [pendingGhoulPlacement, setPendingGhoulPlacement] = useState<PendingGhoulPlacement | null>(null);
@@ -126,6 +128,7 @@ function GameScreen() {
       setPendingMimicChoice(null);
       setPendingSdoppiamento(null);
       setPendingGhoulPlacement(null);
+      setPendingLoot(null);
       setError(null);
     }
   }, [isBotTurn, gameState, botOwner, botDifficulty]);
@@ -153,6 +156,9 @@ function GameScreen() {
     }
     if (actionMode === 'revive') {
       return mover ? getRevivalSquares(gameState.board, effectiveSelected, mover.owner) : [];
+    }
+    if (actionMode === 'loot') {
+      return mover ? getLootSquares(gameState.board, effectiveSelected, mover.owner) : [];
     }
     if (actionMode === 'swapperSwap') {
       if (!mover) return [];
@@ -468,6 +474,33 @@ function GameScreen() {
     }
   };
 
+  const commitLoot = (from: Coord, target: Coord, sigla: string) => {
+    const result = applyLoot(gameState, from, target, sigla);
+    if (result.ok) {
+      setGameState(result.state);
+      setOrientation(result.state.turn);
+      setSelected(null);
+      setActionMode(null);
+      setSwapperFirstSquare(null);
+      setPendingLoot(null);
+      setError(null);
+    } else {
+      setError(result.reason);
+    }
+  };
+
+  const attemptLoot = (from: Coord, target: Coord) => {
+    const mover = gameState.board.get(from);
+    if (!mover) return;
+    const enemy: Owner = mover.owner === 'A' ? 'B' : 'A';
+    const options = getLootableSiglas(gameState.captured[enemy]);
+    if (options.length === 1) {
+      commitLoot(from, target, options[0]);
+    } else {
+      setPendingLoot({ from, target, options });
+    }
+  };
+
   const commitSdoppiamento = (from: Coord, cloneSquare: Coord, realSquare: Coord) => {
     const result = applySdoppiamento(gameState, from, cloneSquare, realSquare);
     if (result.ok) {
@@ -501,7 +534,7 @@ function GameScreen() {
   };
 
   const handleSquareClick = (coord: Coord) => {
-    if (gameOver || isBotTurn || pendingPromotion || pendingRevival || pendingMimicChoice || pendingSdoppiamento || pendingGhoulPlacement) return;
+    if (gameOver || isBotTurn || pendingPromotion || pendingRevival || pendingLoot || pendingMimicChoice || pendingSdoppiamento || pendingGhoulPlacement) return;
 
     if (gameState.pendingExtraMove) {
       if (legalDestinations.includes(coord)) {
@@ -538,6 +571,7 @@ function GameScreen() {
         else if (actionMode === 'sostituzione') commitSostituzione(selected, coord);
         else if (actionMode === 'sdoppiamento') setPendingSdoppiamento({ from: selected, cloneSquare: coord });
         else if (actionMode === 'riunione') commitRiunione(selected, coord);
+        else if (actionMode === 'loot') attemptLoot(selected, coord);
         else attemptRevive(selected, coord);
       }
       return;
@@ -575,7 +609,7 @@ function GameScreen() {
   };
 
   const handleDragStart = (coord: Coord) => {
-    if (gameOver || isBotTurn || pendingPromotion || pendingRevival || pendingMimicChoice || pendingSdoppiamento) return;
+    if (gameOver || isBotTurn || pendingPromotion || pendingRevival || pendingLoot || pendingMimicChoice || pendingSdoppiamento) return;
     if (gameState.pendingExtraMove) return; // the bonus square is already the effective selection
     if (gameState.pendingRabbitChain) return; // the chain's current square is already the effective selection
     const pieceHere = gameState.board.get(coord);
@@ -651,8 +685,8 @@ function GameScreen() {
           onSquareClick={handleSquareClick}
           highlightedSquares={legalDestinations}
           selectedSquare={effectiveSelected}
-          onPieceDragStart={gameOver || isBotTurn || pendingPromotion || pendingRevival || pendingMimicChoice || pendingGhoulPlacement || gameState.pendingExtraMove || gameState.pendingRabbitChain || actionMode ? undefined : handleDragStart}
-          onSquareDrop={gameOver || isBotTurn || pendingPromotion || pendingRevival || pendingMimicChoice || pendingGhoulPlacement || actionMode ? undefined : handleSquareClick}
+          onPieceDragStart={gameOver || isBotTurn || pendingPromotion || pendingRevival || pendingLoot || pendingMimicChoice || pendingGhoulPlacement || gameState.pendingExtraMove || gameState.pendingRabbitChain || actionMode ? undefined : handleDragStart}
+          onSquareDrop={gameOver || isBotTurn || pendingPromotion || pendingRevival || pendingLoot || pendingMimicChoice || pendingGhoulPlacement || actionMode ? undefined : handleSquareClick}
           flashSquares={lastMoveFlashSquares}
           flashVersion={gameState.history.length}
           mirageRealSquares={mirageRealSquares}
@@ -753,6 +787,13 @@ function GameScreen() {
               {actionMode === 'revive' ? '↩️ Annulla Rianimazione' : '🧟 Rianima alleato'}
             </Button>
           )}
+          {selected && selectedPiece && !gameState.pendingExtraMove && !gameState.pendingRabbitChain && canLoot(getPieceDef(selectedPiece.sigla))
+            && getLootableSiglas(gameState.captured[selectedPiece.owner === 'A' ? 'B' : 'A']).length > 0
+            && getLootSquares(gameState.board, selected, selectedPiece.owner).length > 0 && (
+            <Button variant="auto" onClick={() => setActionMode((m) => (m === 'loot' ? null : 'loot'))}>
+              {actionMode === 'loot' ? '↩️ Annulla Sciacallaggio' : '💀 Sciacallaggio'}
+            </Button>
+          )}
           {selected && selectedPiece && !gameState.pendingExtraMove && !gameState.pendingRabbitChain && canSdoppiare(getPieceDef(selectedPiece.sigla))
             && getSdoppiamentoSquares(gameState.board, selected, selectedPiece.owner, getPieceDef, gameState.dimensions).length > 0 && (
             <Button variant="auto" onClick={() => setActionMode((m) => (m === 'sdoppiamento' ? null : 'sdoppiamento'))}>
@@ -774,6 +815,7 @@ function GameScreen() {
         {actionMode === 'swap' && <p className="text-sm text-slate-600 dark:text-slate-400">🔀 Modalità Scambio: seleziona un alleato in linea di vista libera (riga, colonna o diagonale).</p>}
         {actionMode === 'sostituzione' && <p className="text-sm text-slate-600 dark:text-slate-400">🥷 Modalità Sostituzione: seleziona un nemico adiacente con cui scambiare di posto (mai il Re).</p>}
         {actionMode === 'revive' && <p className="text-sm text-slate-600 dark:text-slate-400">🧟 Modalità Rianimazione: seleziona una casella vuota adiacente.</p>}
+        {actionMode === 'loot' && <p className="text-sm text-slate-600 dark:text-slate-400">💀 Modalità Sciacallaggio: seleziona una casella vuota adiacente dove far comparire il pezzo saccheggiato dal cimitero nemico.</p>}
         {actionMode === 'swapperSwap' && !swapperFirstSquare && <p className="text-sm text-slate-600 dark:text-slate-400">🔁 Scambio: seleziona la prima casella (un alleato adiacente, o lo Swapper stesso).</p>}
         {actionMode === 'swapperSwap' && swapperFirstSquare && <p className="text-sm text-slate-600 dark:text-slate-400">🔁 Scambio: seleziona la seconda casella da scambiare con {swapperFirstSquare}.</p>}
         {actionMode === 'sdoppiamento' && <p className="text-sm text-slate-600 dark:text-slate-400">🌫️ Modalità Sdoppiamento: scegli una casella vuota adiacente dove materializzare il clone.</p>}
@@ -822,6 +864,20 @@ function GameScreen() {
                 key={sigla}
                 variant="primary"
                 onClick={() => commitRevive(pendingRevival.from, pendingRevival.target, sigla)}
+              >
+                {sigla} — {pieceDescription(sigla)}
+              </Button>
+            ))}
+          </Modal>
+        )}
+
+        {pendingLoot && (
+          <Modal title="💀 Chi saccheggiare dal cimitero nemico?" onClose={() => setPendingLoot(null)}>
+            {pendingLoot.options.map((sigla) => (
+              <Button
+                key={sigla}
+                variant="primary"
+                onClick={() => commitLoot(pendingLoot.from, pendingLoot.target, sigla)}
               >
                 {sigla} — {pieceDescription(sigla)}
               </Button>
@@ -988,6 +1044,7 @@ function GameScreen() {
                   {entry.isSwap && ' (scambio)'}
                   {entry.isSostituzione && ` (sostituzione: ${entry.sostituitoCon})`}
                   {entry.isRevival && ` (rianimato ${entry.revivedSigla})`}
+                  {entry.isLoot && ` (saccheggiato ${entry.lootedSigla})`}
                   {entry.isSdoppiamento && ` (sdoppiamento: vero in ${entry.realSquare}, clone in ${entry.cloneSquare})`}
                   {entry.isMerge && ' (riunione)'}
                   {entry.isCloneCapture && ' (clone eliminato — nessun punto)'}

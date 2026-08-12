@@ -2,13 +2,20 @@ import { useNavigate } from 'react-router-dom';
 import { playerLabel, useGameSetup, type MatchResult } from '../context/gameSetup';
 import { computeMaterialScore } from '../game/antiStalemate';
 import { computeMaterialTrend } from '../game/materialTrend';
+import { computeMatchStats, type MatchEventCounts } from '../game/matchStats';
 import { getPieceDef } from '../game/moveEngine';
 import type { Owner } from '../game/board';
 import Button from '../components/ui/Button';
 import PageShell from '../components/ui/PageShell';
 import Panel from '../components/ui/Panel';
 import MaterialTrendChart from './MaterialTrendChart';
+import CumulativeCapturesChart from './CumulativeCapturesChart';
+import StatBars from './StatBars';
 import { cn } from '../lib/cn';
+
+// Same categorical hues as the match charts (blue/orange).
+const COLOR_A = '#3987e5';
+const COLOR_B = '#d95926';
 
 function outcomeDescription(result: MatchResult, ownerLabel: (owner: Owner) => string): string {
   const { status, winner } = result;
@@ -18,6 +25,25 @@ function outcomeDescription(result: MatchResult, ownerLabel: (owner: Owner) => s
     ? `Limite di 20 turni senza progressi — vince ${ownerLabel(winner)} per punteggio`
     : 'Limite di 20 turni senza progressi — partita patta per punteggio pari';
 }
+
+/** Event type → emoji + label pair for the "Eventi speciali" ledger (only non-zero entries shown). */
+const EVENT_CHIPS: Array<[keyof MatchEventCounts, string]> = [
+  ['scocca', '🏹 Scoccare'],
+  ['repulse', '💨 Respingi'],
+  ['teleport', '🌀 Teletrasporti'],
+  ['attract', '🧲 Attira'],
+  ['swap', '🔀 Scambi di posizione'],
+  ['sostituzione', '🥷 Sostituzioni'],
+  ['swapperSwap', '🔁 Scambi tra alleati'],
+  ['sdoppiamento', '🌫️ Sdoppiamenti'],
+  ['riunione', '🔗 Riunioni'],
+  ['revival', '🧟 Rianimazioni'],
+  ['loot', '💀 Sciacallaggi'],
+  ['conversion', '🩸 Conversioni in Ghoul'],
+  ['explosion', '💥 Esplosioni di Bomba'],
+  ['areaDamage', '💥 Danni ad area'],
+  ['dispelledClone', '🙈 Cloni dissolti'],
+];
 
 function GameOverScreen() {
   const navigate = useNavigate();
@@ -47,11 +73,16 @@ function GameOverScreen() {
   }
 
   const { status, finalState } = matchResult;
+  const stats = computeMatchStats(finalState);
 
   // Per-owner statistics, computed from the final position snapshot.
   const remainingPunti: Record<Owner, number> = {
     A: computeMaterialScore(finalState.board, 'A', finalState.dimensions),
     B: computeMaterialScore(finalState.board, 'B', finalState.dimensions),
+  };
+  const piecesOnBoard: Record<Owner, number> = {
+    A: [...finalState.board.values()].filter((p) => p.owner === 'A').length,
+    B: [...finalState.board.values()].filter((p) => p.owner === 'B').length,
   };
   const lostPieces: Record<Owner, number> = {
     A: finalState.captured.A.length,
@@ -66,6 +97,10 @@ function GameOverScreen() {
     A: lostPunti.B,
     B: lostPunti.A,
   };
+  const netPunti: Record<Owner, number> = {
+    A: gainedPunti.A - lostPunti.A,
+    B: gainedPunti.B - lostPunti.B,
+  };
 
   // In drawn outcomes (stalemate, or anti-stalemate with equal points) the points still on the
   // board decide the moral winner — and when the anti-stalemate has an official winner, it simply
@@ -74,18 +109,60 @@ function GameOverScreen() {
     remainingPunti.A > remainingPunti.B ? 'A' : remainingPunti.B > remainingPunti.A ? 'B' : undefined;
   const showMoralWinner = status === 'stalemate' || status === 'anti_stalemate';
 
+  const formatNet = (v: number) => (v > 0 ? `+${v}` : `${v}`);
+
+  const chips: Array<{ icon: string; label: string; value: string }> = [
+    {
+      icon: '🩸',
+      label: 'Primo sangue',
+      value: stats.firstBlood
+        ? `${ownerLabel(stats.firstBlood.owner)} — ${stats.firstBlood.sigla} cattura ${stats.firstBlood.capturedSigla} (mossa ${stats.firstBlood.turnNumber})`
+        : '—',
+    },
+    {
+      icon: '💎',
+      label: 'Miglior cattura',
+      value: stats.bestCapture
+        ? `${ownerLabel(stats.bestCapture.owner)} — ${stats.bestCapture.sigla} cattura ${stats.bestCapture.capturedSigla} (+${stats.bestCapture.punti} pt, mossa ${stats.bestCapture.turnNumber})`
+        : '—',
+    },
+    {
+      icon: '⚡',
+      label: 'Pezzo più attivo',
+      value: stats.mostActivePiece
+        ? `${ownerLabel(stats.mostActivePiece.owner)} — ${stats.mostActivePiece.sigla} (${stats.mostActivePiece.count} mosse)`
+        : '—',
+    },
+  ];
+
+  const shownEvents = EVENT_CHIPS.filter(([key]) => stats.events[key] > 0);
+
   return (
     <PageShell
       title="🏁 Fine Partita"
       subtitle={outcomeDescription(matchResult, ownerLabel)}
     >
       <Panel title="📊 Statistiche della partita">
-        <p className="mb-4 text-sm text-slate-600 dark:text-slate-400">
+        <p className="mb-3 text-sm text-slate-600 dark:text-slate-400">
           Mosse giocate: <strong className="text-slate-900 dark:text-slate-100">{finalState.history.length}</strong>
           {' '}· catturati totali: <strong className="text-slate-900 dark:text-slate-100">
             {finalState.captured.A.length + finalState.captured.B.length}
           </strong>
+          {' '}· punti catturati totali: <strong className="text-slate-900 dark:text-slate-100">
+            {stats.totalCapturePunti} pt
+          </strong>
         </p>
+
+        <div className="mb-4 flex flex-wrap gap-2">
+          {chips.map((chip) => (
+            <span
+              key={chip.label}
+              className="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+            >
+              <span className="font-semibold">{chip.icon} {chip.label}:</span> {chip.value}
+            </span>
+          ))}
+        </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
           {(['A', 'B'] as const).map((owner) => (
@@ -106,8 +183,16 @@ function GameOverScreen() {
               </h3>
               <ul className="space-y-0.5 text-sm text-slate-600 dark:text-slate-400">
                 <li>Punti rimasti sulla scacchiera: <strong className="text-slate-900 dark:text-slate-100">{remainingPunti[owner]}</strong></li>
+                <li>Pezzi in gioco: <strong className="text-slate-900 dark:text-slate-100">{piecesOnBoard[owner]}</strong></li>
                 <li>Catturati all'avversario: <strong className="text-slate-900 dark:text-slate-100">{gainedPunti[owner]} pt</strong></li>
+                <li>Catture effettuate: <strong className="text-slate-900 dark:text-slate-100">{stats.players[owner].captures}</strong> ({stats.players[owner].capturePunti} pt)</li>
                 <li>Pezzi persi: <strong className="text-slate-900 dark:text-slate-100">{lostPieces[owner]}</strong> ({lostPunti[owner]} pt)</li>
+                <li>Mosse giocate: <strong className="text-slate-900 dark:text-slate-100">{stats.players[owner].moves}</strong></li>
+                <li>Punti netti: <strong className="text-slate-900 dark:text-slate-100">{formatNet(netPunti[owner])}</strong></li>
+                <li>
+                  Promozioni: <strong className="text-slate-900 dark:text-slate-100">{stats.players[owner].promotions}</strong>
+                  {' '}· Azioni speciali: <strong className="text-slate-900 dark:text-slate-100">{stats.players[owner].specialActions}</strong>
+                </li>
               </ul>
             </div>
           ))}
@@ -124,6 +209,70 @@ function GameOverScreen() {
 
       <Panel title="📈 Andamento materiale">
         <MaterialTrendChart points={computeMaterialTrend(finalState)} ownerLabel={ownerLabel} />
+      </Panel>
+
+      <Panel title="🖼️ Catture nel tempo">
+        <CumulativeCapturesChart points={stats.cumulativeCaptures} ownerLabel={ownerLabel} />
+      </Panel>
+
+      <Panel title="💀 Cosa hanno perso">
+        <div className="grid gap-4 sm:grid-cols-2">
+          {(['A', 'B'] as const).map((owner) => (
+            <div key={owner}>
+              <h3 className="mb-2 text-sm font-semibold text-slate-800 dark:text-slate-200">
+                {ownerLabel(owner)}
+              </h3>
+              <StatBars
+                bars={stats.lostBySigla[owner].map((entry) => ({
+                  label: entry.sigla,
+                  hint: `×${entry.count}`,
+                  value: entry.punti,
+                }))}
+                color={owner === 'A' ? COLOR_A : COLOR_B}
+                formatValue={(v) => `${v} pt`}
+                emptyText="Nessuna perdita."
+              />
+            </div>
+          ))}
+        </div>
+      </Panel>
+
+      <Panel title="⚡ Attività dei pezzi">
+        <div className="grid gap-4 sm:grid-cols-2">
+          {(['A', 'B'] as const).map((owner) => (
+            <div key={owner}>
+              <h3 className="mb-2 text-sm font-semibold text-slate-800 dark:text-slate-200">
+                {ownerLabel(owner)}
+              </h3>
+              <StatBars
+                bars={stats.activityBySigla[owner].map((entry) => ({
+                  label: entry.sigla,
+                  value: entry.count,
+                }))}
+                color={owner === 'A' ? COLOR_A : COLOR_B}
+                formatValue={(v) => `${v} mosse`}
+                emptyText="Nessuna mossa."
+              />
+            </div>
+          ))}
+        </div>
+      </Panel>
+
+      <Panel title="✨ Eventi speciali">
+        {shownEvents.length === 0 ? (
+          <p className="text-sm text-slate-500">Nessun evento speciale.</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {shownEvents.map(([key, label]) => (
+              <span
+                key={key}
+                className="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+              >
+                {label}: <strong className="text-slate-900 dark:text-slate-100">{stats.events[key]}</strong>
+              </span>
+            ))}
+          </div>
+        )}
       </Panel>
 
       <Panel title="📜 Cronologia mosse">
@@ -151,6 +300,7 @@ function GameOverScreen() {
                   {entry.isMerge && ' (riunione)'}
                   {entry.isCloneCapture && ' (clone eliminato — nessun punto)'}
                   {entry.dispelledClone && ' (clone dissolto)'}
+                  {entry.isConversion && ` (convertito: ghoul in ${entry.ghoulSquare})`}
                   {entry.areaDamageCoords && entry.areaDamageCoords.length > 0 && ` 💥 area: ${entry.areaDamageCoords.join(', ')}`}
                 </li>
               ))}

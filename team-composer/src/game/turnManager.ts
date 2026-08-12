@@ -29,6 +29,7 @@ import { getAreaDamageVictims, triggersAreaDamage } from './areaDamage';
 import { resolveExplosion } from './bomb';
 import { canMimic, getMimicMoves, getOrphanThreats } from './orphan';
 import { canConvertOnCapture, getGhoulPlacementSquares, GHOUL_SIGLA } from './vampire';
+import { canLoot, getLootSquares, getLootableSiglas } from './scavenger';
 import { isSilenced } from './auras';
 import { ANTI_STALEMATE_TURN_LIMIT, resolveAntiStalemateWinner } from './antiStalemate';
 import {
@@ -89,6 +90,11 @@ export interface HistoryEntry {
   isRevival?: boolean;
   /** Sigla of the piece revived from the graveyard, when `isRevival` is true. */
   revivedSigla?: string;
+  /** True for a Sciacallo's "sciacallaggio": it loots a piece from the OPPONENT's graveyard and
+   *  places it as an ALLY on an adjacent empty square — `to` is where the looted piece appears. */
+  isLoot?: boolean;
+  /** Sigla of the piece looted from the enemy's graveyard, when `isLoot` is true. */
+  lootedSigla?: string;
   /** Squares destroyed by a Colosso's "danno ad area" triggered by this capture, if any. */
   areaDamageCoords?: Coord[];
   /** The pieces destroyed by that area damage, with their owners — needed to track material over
@@ -1211,6 +1217,61 @@ export function applyRevive(state: GameState, from: Coord, target: Coord, sigla:
     isCapture: false,
     isRevival: true,
     revivedSigla: sigla,
+  };
+
+  return finishAction(state, piece, nextBoard, historyEntry, { captured: nextCaptured });
+}
+
+/**
+ * Plays a Sciacallo's "sciacallaggio" as the turn's action: the jackal scavenges the OPPONENT's
+ * graveyard (the pieces the enemy lost) and raises one of them — worth at most MAX_LOOT_VALUE
+ * punti, never the King — as an ALLY on an adjacent empty square, as an alternative to a normal
+ * move. The looted piece leaves the enemy graveyard forever (each capture adds exactly one entry,
+ * so the mechanic is self-limiting). Unlike the Necromante's rianimazione it is not restricted to
+ * "pedone"-category pieces — the trade-off is the value cap instead. Like any action, it's
+ * rejected if it would leave the acting player's own King in check (README §3.2).
+ */
+export function applyLoot(state: GameState, from: Coord, target: Coord, sigla: string): ApplyTurnResult {
+  const begun = beginAction(state, from);
+  if ('error' in begun) return begun.error;
+  const { piece } = begun;
+
+  const pieceDef = getPieceDef(piece.sigla);
+  if (!canLoot(pieceDef)) {
+    return { ok: false, reason: 'Questo pezzo non può saccheggiare il cimitero nemico.' };
+  }
+
+  const lootSquares = getLootSquares(state.board, from, piece.owner, state.dimensions);
+  if (!lootSquares.includes(target)) {
+    return { ok: false, reason: `Casella non valida per lo sciacallaggio: ${target}.` };
+  }
+
+  const enemy: Owner = piece.owner === 'A' ? 'B' : 'A';
+  const enemyGraveyard = state.captured[enemy];
+  const lootableSiglas = getLootableSiglas(enemyGraveyard);
+  if (!lootableSiglas.includes(sigla)) {
+    return { ok: false, reason: `Nessun pezzo saccheggiabile "${sigla}" nel cimitero nemico.` };
+  }
+
+  const indexToLoot = enemyGraveyard.findIndex((p) => p.sigla === sigla);
+  const nextGraveyard = [...enemyGraveyard.slice(0, indexToLoot), ...enemyGraveyard.slice(indexToLoot + 1)];
+  const nextCaptured: Record<Owner, PieceInstance[]> = { ...state.captured, [enemy]: nextGraveyard };
+
+  const nextBoard = setPieceAt(state.board, target, createPieceInstance(sigla, piece.owner));
+
+  if (isKingInCheck(nextBoard, piece.owner, state.dimensions)) {
+    return { ok: false, reason: 'Questa azione lascerebbe il tuo Re sotto scacco.' };
+  }
+
+  const historyEntry: HistoryEntry = {
+    turnNumber: state.turnNumber,
+    owner: piece.owner,
+    from,
+    to: target,
+    sigla: piece.sigla,
+    isCapture: false,
+    isLoot: true,
+    lootedSigla: sigla,
   };
 
   return finishAction(state, piece, nextBoard, historyEntry, { captured: nextCaptured });

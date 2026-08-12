@@ -76,9 +76,9 @@ describe('GameOverScreen — dedicated results page', () => {
     });
 
     expect(screen.getByText(/Scacco matto — vince Giocatore 2/i)).toBeInTheDocument();
-    // Stats panel: moves played and total captures (scoped to the summary line — the chart's
-    // x-axis labels are also plain numbers like "2").
-    const statsSummary = screen.getByText(/Mosse giocate:/i).closest('p')!;
+    // Stats panel: moves played and total captures (scoped to the summary line — the per-player
+    // cards also list "Mosse giocate:", and the charts' axis labels are plain numbers like "2").
+    const statsSummary = screen.getAllByText(/Mosse giocate:/i)[0].closest('p')!;
     expect(statsSummary.textContent).toContain('Mosse giocate: 2');
     expect(statsSummary.textContent).toContain('catturati totali: 2');
     // Remaining material per player (scoped to the stats panel — the chart's y-axis labels reuse
@@ -87,10 +87,11 @@ describe('GameOverScreen — dedicated results page', () => {
     const statsPanel = screen.getAllByText(/Punti rimasti sulla scacchiera:/i)[0].closest('section')!;
     expect(within(statsPanel).getByText('57')).toBeInTheDocument();
     expect(within(statsPanel).getByText('30')).toBeInTheDocument();
-    // One captured pawn each.
-    expect(screen.getAllByText(/Catturati all'avversario:/i)).toHaveLength(2);
-    expect(screen.getAllByText('9 pt')).toHaveLength(2); // each side captured one 9pt pawn
-    expect(screen.getAllByText(/Pezzi persi:/i)).toHaveLength(2);
+    // One captured pawn each (scoped to the stats panel — the "Cosa hanno perso" bars repeat the
+    // same "9 pt" totals).
+    expect(within(statsPanel).getAllByText(/Catturati all'avversario:/i)).toHaveLength(2);
+    expect(within(statsPanel).getAllByText('9 pt')).toHaveLength(2); // each side captured one 9pt pawn
+    expect(within(statsPanel).getAllByText(/Pezzi persi:/i)).toHaveLength(2);
     // No moral winner on checkmate.
     expect(screen.queryByText(/vincitore morale/i)).not.toBeInTheDocument();
   });
@@ -131,6 +132,36 @@ describe('GameOverScreen — dedicated results page', () => {
     expect(historyPanel.querySelectorAll('li')).toHaveLength(8);
   });
 
+  it('shows the new post-match panels: highlights, capture timeline, losses, activity and special events', () => {
+    const richHistory: GameState = {
+      ...stalemateSnapshot('anti_stalemate', 'A'),
+      history: [
+        { turnNumber: 1, owner: 'A', from: 'a1', to: 'a2', sigla: 'RE', isCapture: false },
+        { turnNumber: 3, owner: 'A', from: 'd4', to: 'd5', sigla: 'PE', isCapture: true, capturedSigla: 'BO', isExplosion: true, explodedAt: 'd5' },
+        { turnNumber: 4, owner: 'B', from: 'h4', to: 'h4', sigla: 'AR', isRangedAttack: true, isCapture: true, capturedSigla: 'CA' },
+        { turnNumber: 5, owner: 'A', from: 'c3', to: 'c6', sigla: 'TT', isCapture: false, isTeleport: true },
+      ],
+    };
+    renderResult({ status: 'anti_stalemate', winner: 'A', finalState: richHistory });
+
+    // Highlight chips: first blood (A's PE exploding the BO) and the best capture (B's AR, the CA = 15pt).
+    expect(screen.getByText('🩸 Primo sangue:').parentElement!.textContent).toMatch(/PE cattura BO \(mossa 3\)/);
+    expect(screen.getByText('💎 Miglior cattura:').parentElement!.textContent).toMatch(/PE cattura BO \(\+24 pt, mossa 3\)/);
+    // Cumulative captures chart (both lines + legend).
+    expect(screen.getByTestId('cumulative-captures-chart')).toBeInTheDocument();
+    // Loss breakdown bars (A lost BO + PE? here: A lost the CA, B lost the BO — the bars render).
+    expect(screen.getByText('💀 Cosa hanno perso')).toBeInTheDocument();
+    expect(screen.getAllByTestId('stat-bar').length).toBeGreaterThan(0);
+    // Activity bars.
+    expect(screen.getByText('⚡ Attività dei pezzi')).toBeInTheDocument();
+    // Special events ledger: scocca, teletrasporto and esplosione are present, respingi is not.
+    const eventsPanel = screen.getByText('✨ Eventi speciali').closest('section')!;
+    expect(within(eventsPanel).getByText(/🏹 Scoccare:/)).toBeInTheDocument();
+    expect(within(eventsPanel).getByText(/🌀 Teletrasporti:/)).toBeInTheDocument();
+    expect(within(eventsPanel).getByText(/💥 Esplosioni di Bomba:/)).toBeInTheDocument();
+    expect(within(eventsPanel).queryByText(/💨 Respingi:/)).not.toBeInTheDocument();
+  });
+
   it('renders the material trend chart with a line per player', () => {
     renderResult({ status: 'checkmate', winner: 'B', finalState: stalemateSnapshot('checkmate', 'B') });
 
@@ -139,9 +170,9 @@ describe('GameOverScreen — dedicated results page', () => {
     expect(chart.getAttribute('aria-label')).toContain('Andamento del materiale');
     expect(chart.querySelector('[data-testid="trend-line-a"]')).not.toBeNull();
     expect(chart.querySelector('[data-testid="trend-line-b"]')).not.toBeNull();
-    // Legend mentions both players (the stats panel headers already do too).
-    expect(screen.getAllByText('Giocatore 1')).toHaveLength(2);
-    expect(screen.getAllByText('Giocatore 2')).toHaveLength(2);
+    // Both charts' legends and the breakdown/activity panels mention the players too.
+    expect(screen.getAllByText('Giocatore 1')).toHaveLength(5);
+    expect(screen.getAllByText('Giocatore 2')).toHaveLength(5);
   });
 
   it('declares a moral winner from the remaining points on an anti-stalemate', () => {

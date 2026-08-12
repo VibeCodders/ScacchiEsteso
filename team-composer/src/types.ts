@@ -65,6 +65,11 @@ export interface Piece {
   secondoMovimentoPostCattura?: boolean;
   dannoAdArea?: boolean;
   rianimaPedoni?: boolean;
+  /** True for the Sciacallo (SC): its "sciacallaggio" alternative action revives a fallen piece
+   *  from the OPPONENT's graveyard (value ≤ 20, never the King) as an allied piece on an empty
+   *  adjacent square. Drives the loot resolution in turnManager, the bot and GameScreen's picker.
+   *  Mirrors rianimaPedoni (Necromante) but from the enemy's losses instead of your own. */
+  sciacallaggio?: boolean;
   silenzioAttacchiADistanza?: boolean;
   armatura?: boolean;
   armaturaMaxCosto?: number;

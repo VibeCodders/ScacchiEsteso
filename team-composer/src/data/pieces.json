@@ -7,7 +7,23 @@
     "classico": true,
     "regole": "Muove di una casella in qualsiasi direzione. Cattura in mischia.",
     "moves": [
-      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step" }
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w",
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 1,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "step"
+      }
     ],
     "movimentoTipo": "step",
     "resistance": 0,
@@ -22,7 +38,16 @@
     "classico": false,
     "regole": "Si muove di una casella in avanti (solo verso nord). Non cattura.",
     "moves": [
-      { "directions": ["n"], "minSteps": 1, "maxSteps": 1, "capture": false, "captureMode": "none", "movementType": "step" }
+      {
+        "directions": [
+          "n"
+        ],
+        "minSteps": 1,
+        "maxSteps": 1,
+        "capture": false,
+        "captureMode": "none",
+        "movementType": "step"
+      }
     ],
     "movimentoTipo": "step",
     "resistance": 0,
@@ -37,7 +62,17 @@
     "classico": false,
     "regole": "Si muove in avanti di una casella (solo verso nord). Cattura la casella davanti in mischia.",
     "moves": [
-      { "directions": ["n"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step", "note": "Cattura in avanti" }
+      {
+        "directions": [
+          "n"
+        ],
+        "minSteps": 1,
+        "maxSteps": 1,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "step",
+        "note": "Cattura in avanti"
+      }
     ],
     "movimentoTipo": "step",
     "resistance": 0,
@@ -52,13 +87,47 @@
     "classico": true,
     "regole": "Muove in avanti di una casella (due alla prima mossa); cattura diagonalmente.",
     "moves": [
-      { "directions": ["n"], "minSteps": 1, "maxSteps": 2, "capture": false, "captureMode": "none", "movementType": "step", "primaMossaDoppia": true },
-      { "directions": ["n"], "minSteps": 1, "maxSteps": 1, "capture": false, "captureMode": "none", "movementType": "step" },
-      { "directions": ["ne", "nw"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step" }
+      {
+        "directions": [
+          "n"
+        ],
+        "minSteps": 1,
+        "maxSteps": 2,
+        "capture": false,
+        "captureMode": "none",
+        "movementType": "step",
+        "primaMossaDoppia": true
+      },
+      {
+        "directions": [
+          "n"
+        ],
+        "minSteps": 1,
+        "maxSteps": 1,
+        "capture": false,
+        "captureMode": "none",
+        "movementType": "step"
+      },
+      {
+        "directions": [
+          "ne",
+          "nw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 1,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "step"
+      }
     ],
     "movimentoTipo": "step",
     "promotable": true,
-    "promotionTypes": ["PE", "AL", "CA", "SP"],
+    "promotionTypes": [
+      "PE",
+      "AL",
+      "CA",
+      "SP"
+    ],
     "promotionRank": 8,
     "resistance": 0,
     "immunityTypes": [],
@@ -72,7 +141,19 @@
     "classico": false,
     "regole": "Si muove in orizzontale o verticale per un massimo di due caselle. Cattura normalmente.",
     "moves": [
-      { "directions": ["n", "s", "e", "w"], "minSteps": 1, "maxSteps": 2, "capture": true, "captureMode": "melee", "movementType": "step" }
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w"
+        ],
+        "minSteps": 1,
+        "maxSteps": 2,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "step"
+      }
     ],
     "movimentoTipo": "step",
     "resistance": 0,
@@ -87,7 +168,19 @@
     "classico": false,
     "regole": "Si muove in diagonale per un massimo di due caselle. Cattura normalmente.",
     "moves": [
-      { "directions": ["ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 2, "capture": true, "captureMode": "melee", "movementType": "step" }
+      {
+        "directions": [
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 2,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "step"
+      }
     ],
     "movimentoTipo": "step",
     "resistance": 0,
@@ -102,7 +195,19 @@
     "classico": true,
     "regole": "Muove in diagonale per un numero illimitato di caselle.",
     "moves": [
-      { "directions": ["ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 99, "capture": true, "captureMode": "melee", "movementType": "slide" }
+      {
+        "directions": [
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 99,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "slide"
+      }
     ],
     "movimentoTipo": "slide",
     "resistance": 0,
@@ -117,7 +222,26 @@
     "classico": true,
     "regole": "Salta a forma di \"L\": due caselle in una direzione e una in quella perpendicolare. Ignora le interposizioni.",
     "moves": [
-      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 0, "capture": true, "captureMode": "leap", "movementType": "leap", "jump": true, "leapPattern": "L", "note": "Salto a L" }
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w",
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 0,
+        "capture": true,
+        "captureMode": "leap",
+        "movementType": "leap",
+        "jump": true,
+        "leapPattern": "L",
+        "note": "Salto a L"
+      }
     ],
     "movimentoTipo": "leap",
     "resistance": 0,
@@ -133,7 +257,19 @@
     "classico": true,
     "regole": "Si muove in orizzontale o verticale per un numero illimitato di caselle.",
     "moves": [
-      { "directions": ["n", "s", "e", "w"], "minSteps": 1, "maxSteps": 99, "capture": true, "captureMode": "melee", "movementType": "slide" }
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w"
+        ],
+        "minSteps": 1,
+        "maxSteps": 99,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "slide"
+      }
     ],
     "movimentoTipo": "slide",
     "resistance": 0,
@@ -148,7 +284,20 @@
     "classico": false,
     "regole": "Si muove di massimo 2 caselle in diagonale. Ignora le interposizioni. Cattura sulla casella di arrivo.",
     "moves": [
-      { "directions": ["ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 2, "capture": true, "captureMode": "leap", "movementType": "leap", "jump": true }
+      {
+        "directions": [
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 2,
+        "capture": true,
+        "captureMode": "leap",
+        "movementType": "leap",
+        "jump": true
+      }
     ],
     "movimentoTipo": "leap",
     "resistance": 0,
@@ -164,7 +313,18 @@
     "classico": false,
     "regole": "Si muovi di 1 o 2 caselle in orizzontale. Ignora le interposizioni. Cattura sulla casella di arrivo.",
     "moves": [
-      { "directions": ["e", "w"], "minSteps": 1, "maxSteps": 2, "capture": true, "captureMode": "leap", "movementType": "leap", "jump": true }
+      {
+        "directions": [
+          "e",
+          "w"
+        ],
+        "minSteps": 1,
+        "maxSteps": 2,
+        "capture": true,
+        "captureMode": "leap",
+        "movementType": "leap",
+        "jump": true
+      }
     ],
     "movimentoTipo": "leap",
     "resistance": 0,
@@ -180,9 +340,52 @@
     "classico": false,
     "regole": "Si muove come Alfiere per un massimo di 4 caselle sulle caselle chiare e come Torre per un massimo di 3 caselle sulle caselle scure. Può anche muoversi di 1 casella in qualsiasi direzione.",
     "moves": [
-      { "directions": ["ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 4, "capture": true, "captureMode": "melee", "movementType": "slide", "colorRestriction": "chiare" },
-      { "directions": ["n", "s", "e", "w"], "minSteps": 1, "maxSteps": 3, "capture": true, "captureMode": "melee", "movementType": "slide", "colorRestriction": "scure" },
-      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step", "colorRestriction": "nessuna" }
+      {
+        "directions": [
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 4,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "slide",
+        "colorRestriction": "chiare"
+      },
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w"
+        ],
+        "minSteps": 1,
+        "maxSteps": 3,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "slide",
+        "colorRestriction": "scure"
+      },
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w",
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 1,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "step",
+        "colorRestriction": "nessuna"
+      }
     ],
     "movimentoTipo": "speciale",
     "resistance": 0,
@@ -192,18 +395,40 @@
   {
     "sigla": "BE",
     "descrizione": "Berserker",
-    "punti": 40,
+    "punti": 41,
     "categoria": "base",
     "classico": false,
     "regole": "Si muove di massimo 2 caselle in qualsiasi direzione. Furia bellica: dopo una cattura in mischia riuscita, ottiene un secondo movimento extra immediato, senza possibilità di cattura durante quel movimento aggiuntivo.",
     "moves": [
-      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 2, "capture": true, "captureMode": "melee", "movementType": "step" }
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w",
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 2,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "step"
+      }
     ],
     "movimentoTipo": "step",
     "resistance": 0,
     "immunityTypes": [],
     "alternativeActions": [
-      { "type": "furia_bellica", "modalita": "sul_cattura", "params": { "senzaCattura": true } }
+      {
+        "type": "furia_bellica",
+        "modalita": "sul_cattura",
+        "params": {
+          "senzaCattura": true
+        }
+      }
     ],
     "secondoMovimentoPostCattura": true
   },
@@ -215,13 +440,31 @@
     "classico": false,
     "regole": "Si muove in diagonale per un massimo di 3 caselle. In alternativa al movimento, può rianimare un Pedone alleato precedentemente eliminato, schierandolo su una casella vuota immediatamente adiacente.",
     "moves": [
-      { "directions": ["ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 3, "capture": true, "captureMode": "melee", "movementType": "slide" }
+      {
+        "directions": [
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 3,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "slide"
+      }
     ],
     "movimentoTipo": "slide",
     "resistance": 0,
     "immunityTypes": [],
     "alternativeActions": [
-      { "type": "rianimazione_pedone", "modalita": "alternativa", "params": { "raggio": 1 } }
+      {
+        "type": "rianimazione_pedone",
+        "modalita": "alternativa",
+        "params": {
+          "raggio": 1
+        }
+      }
     ],
     "rianimaPedoni": true
   },
@@ -233,29 +476,71 @@
     "classico": false,
     "regole": "Si muove in orizzontale o verticale per massimo 3 caselle. Silenzio: tutti i pezzi nemici nelle 8 caselle adiacenti perdono la possibilità di effettuare attacchi a distanza in orizzontale o verticale. L'effetto cessa immediatamente quando il pezzo nemico lascia l'aura.",
     "moves": [
-      { "directions": ["n", "s", "e", "w"], "minSteps": 1, "maxSteps": 3, "capture": true, "captureMode": "melee", "movementType": "slide" }
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w"
+        ],
+        "minSteps": 1,
+        "maxSteps": 3,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "slide"
+      }
     ],
     "movimentoTipo": "slide",
     "resistance": 0,
     "immunityTypes": [],
     "alternativeActions": [
-      { "type": "silenzio_aura", "modalita": "passiva", "params": { "raggio": 1, "direzioni": ["n", "s", "e", "w"] } }
+      {
+        "type": "silenzio_aura",
+        "modalita": "passiva",
+        "params": {
+          "raggio": 1,
+          "direzioni": [
+            "n",
+            "s",
+            "e",
+            "w"
+          ]
+        }
+      }
     ],
     "silenzioAttacchiADistanza": true
   },
   {
     "sigla": "GL",
     "descrizione": "Golem",
-    "punti": 34,
+    "punti": 35,
     "categoria": "base",
     "classico": false,
     "regole": "Si muove di una o due caselle in qualsiasi direzione. Armatura naturale: non può essere catturato da pezzi avversari con costo di schieramento pari o inferiore a 14.",
     "moves": [
-      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 2, "capture": true, "captureMode": "melee", "movementType": "step" }
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w",
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 2,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "step"
+      }
     ],
     "movimentoTipo": "step",
     "resistance": 0,
-    "immunityTypes": ["costo<=14"],
+    "immunityTypes": [
+      "costo<=14"
+    ],
     "armaturaMaxCosto": 14,
     "alternativeActions": [],
     "armatura": true
@@ -263,18 +548,43 @@
   {
     "sigla": "MI",
     "descrizione": "Mistico",
-    "punti": 37,
+    "punti": 36,
     "categoria": "base",
     "classico": false,
     "regole": "Si muove di 1 o 2 caselle in qualsiasi direzione. In alternativa al movimento, può scambiare istantaneamente la propria posizione con quella di un qualsiasi alleato in linea di vista libera (stessa riga, colonna o diagonale, senza pezzi frapposti, a qualsiasi distanza), eccetto il Re.",
     "moves": [
-      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 2, "capture": true, "captureMode": "melee", "movementType": "step" }
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w",
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 2,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "step"
+      }
     ],
     "movimentoTipo": "step",
     "resistance": 0,
     "immunityTypes": [],
     "alternativeActions": [
-      { "type": "scambio_posizione", "modalita": "alternativa", "params": { "target": "alleato_in_linea_di_vista", "esclusi": ["re"] } }
+      {
+        "type": "scambio_posizione",
+        "modalita": "alternativa",
+        "params": {
+          "target": "alleato_in_linea_di_vista",
+          "esclusi": [
+            "re"
+          ]
+        }
+      }
     ],
     "scambiaPosizioneConAlleato": true
   },
@@ -286,13 +596,50 @@
     "classico": false,
     "regole": "Si muove di 1 o 2 caselle in qualsiasi direzione. Oltre alla cattura normale, può usare il turno per \"scoccare\": elimina un nemico posto a esattamente 3 o 4 caselle in orizzontale, verticale o diagonale purché la traiettoria sia libera, senza effettuare alcuno spostamento.",
     "moves": [
-      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 2, "capture": true, "captureMode": "melee", "movementType": "step" }
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w",
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 2,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "step"
+      }
     ],
     "movimentoTipo": "step",
     "resistance": 0,
     "immunityTypes": [],
     "alternativeActions": [
-      { "type": "scocca", "modalita": "alternativa", "params": { "distanze": [3, 4], "direzioni": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "traiettoriaLibera": true, "senzaSpostamento": true } }
+      {
+        "type": "scocca",
+        "modalita": "alternativa",
+        "params": {
+          "distanze": [
+            3,
+            4
+          ],
+          "direzioni": [
+            "n",
+            "s",
+            "e",
+            "w",
+            "ne",
+            "nw",
+            "se",
+            "sw"
+          ],
+          "traiettoriaLibera": true,
+          "senzaSpostamento": true
+        }
+      }
     ],
     "scocca": true
   },
@@ -304,14 +651,56 @@
     "classico": false,
     "regole": "Si muove come il Cavallo oppure di 1 casella in qualsiasi direzione. Egida: i pezzi alleati nelle 8 caselle adiacenti sono protetti da attacchi a distanza. I nemici possono attaccarli solo con catture in mischia.",
     "moves": [
-      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step" },
-      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 0, "capture": true, "captureMode": "leap", "movementType": "leap", "jump": true, "leapPattern": "L", "note": "Salto a L" }
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w",
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 1,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "step"
+      },
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w",
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 0,
+        "capture": true,
+        "captureMode": "leap",
+        "movementType": "leap",
+        "jump": true,
+        "leapPattern": "L",
+        "note": "Salto a L"
+      }
     ],
     "movimentoTipo": "speciale",
     "resistance": 0,
     "immunityTypes": [],
     "alternativeActions": [
-      { "type": "egida", "modalita": "passiva", "params": { "raggio": 1, "target": "alleati_adiacenti" } }
+      {
+        "type": "egida",
+        "modalita": "passiva",
+        "params": {
+          "raggio": 1,
+          "target": "alleati_adiacenti"
+        }
+      }
     ],
     "egida": true
   },
@@ -323,13 +712,37 @@
     "classico": false,
     "regole": "Si muove di massimo 2 caselle in qualsiasi direzione. Danno ad area: quando cattura in mischia, distrugge automaticamente tutti i pezzi (alleati e nemici) che si trovano nelle quattro caselle ortogonalmente adiacenti alla propria casella di arrivo.",
     "moves": [
-      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 2, "capture": true, "captureMode": "melee", "movementType": "step" }
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w",
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 2,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "step"
+      }
     ],
     "movimentoTipo": "step",
     "resistance": 0,
     "immunityTypes": [],
     "alternativeActions": [
-      { "type": "danno_ad_area", "modalita": "sul_cattura", "params": { "raggio": 1, "target": "caselle_ortogonali_adiacenti", "includeAlleati": true } }
+      {
+        "type": "danno_ad_area",
+        "modalita": "sul_cattura",
+        "params": {
+          "raggio": 1,
+          "target": "caselle_ortogonali_adiacenti",
+          "includeAlleati": true
+        }
+      }
     ],
     "dannoAdArea": true
   },
@@ -341,7 +754,23 @@
     "classico": true,
     "regole": "Si muove in qualsiasi direzione per un numero illimitato di caselle.",
     "moves": [
-      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 99, "capture": true, "captureMode": "melee", "movementType": "slide" }
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w",
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 99,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "slide"
+      }
     ],
     "movimentoTipo": "slide",
     "resistance": 0,
@@ -356,12 +785,36 @@
     "classico": false,
     "regole": "Come la pedina di Dama.",
     "moves": [
-      { "directions": ["n"], "minSteps": 1, "maxSteps": 1, "capture": false, "captureMode": "none", "movementType": "step", "colorRestriction": "forward" },
-      { "directions": ["ne", "nw"], "minSteps": 1, "maxSteps": 0, "capture": true, "captureMode": "leap", "movementType": "leap", "jump": true, "multiJump": true }
+      {
+        "directions": [
+          "n"
+        ],
+        "minSteps": 1,
+        "maxSteps": 1,
+        "capture": false,
+        "captureMode": "none",
+        "movementType": "step",
+        "colorRestriction": "forward"
+      },
+      {
+        "directions": [
+          "ne",
+          "nw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 0,
+        "capture": true,
+        "captureMode": "leap",
+        "movementType": "leap",
+        "jump": true,
+        "multiJump": true
+      }
     ],
     "movimentoTipo": "speciale",
     "promotable": true,
-    "promotionTypes": ["DM"],
+    "promotionTypes": [
+      "DM"
+    ],
     "promotionRank": 8,
     "resistance": 0,
     "immunityTypes": [],
@@ -375,7 +828,28 @@
     "classico": false,
     "regole": "Vedi Grasshopper su https://en.wikipedia.org/wiki/Grasshopper_(chess_variant)",
     "moves": [
-      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 0, "capture": true, "captureMode": "leap", "movementType": "leap", "jump": true, "leapPattern": "grasshopper", "jumpOver": true, "jumpOverCount": 1, "landBeyond": true }
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w",
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 0,
+        "capture": true,
+        "captureMode": "leap",
+        "movementType": "leap",
+        "jump": true,
+        "leapPattern": "grasshopper",
+        "jumpOver": true,
+        "jumpOverCount": 1,
+        "landBeyond": true
+      }
     ],
     "movimentoTipo": "leap",
     "resistance": 0,
@@ -390,13 +864,38 @@
     "classico": false,
     "regole": "Ha tutti i poteri, per quel turno, di chi lo tiene in scacco. Se nessuno lo ha in scacco, può muoversi di 1 cella in qualsiasi direzione",
     "moves": [
-      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step" }
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w",
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 1,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "step"
+      }
     ],
     "movimentoTipo": "speciale",
     "resistance": 0,
     "immunityTypes": [],
     "alternativeActions": [
-      { "type": "copia_poteri", "modalita": "passiva", "params": { "condizioni": ["in_scacco"], "fallback": "muovi_1_cella" } }
+      {
+        "type": "copia_poteri",
+        "modalita": "passiva",
+        "params": {
+          "condizioni": [
+            "in_scacco"
+          ],
+          "fallback": "muovi_1_cella"
+        }
+      }
     ]
   },
   {
@@ -407,8 +906,34 @@
     "classico": false,
     "regole": "Ottenuto solo tramite promozione del Pedone di Dama. Si muove di una casella in diagonale in qualsiasi direzione. Cattura saltando un nemico adiacente in diagonale e atterrando sulla casella libera successiva.",
     "moves": [
-      { "directions": ["ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 1, "capture": false, "captureMode": "none", "movementType": "step" },
-      { "directions": ["ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 0, "capture": true, "captureMode": "leap", "movementType": "leap", "jump": true, "multiJump": true }
+      {
+        "directions": [
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 1,
+        "capture": false,
+        "captureMode": "none",
+        "movementType": "step"
+      },
+      {
+        "directions": [
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 0,
+        "capture": true,
+        "captureMode": "leap",
+        "movementType": "leap",
+        "jump": true,
+        "multiJump": true
+      }
     ],
     "movimentoTipo": "speciale",
     "resistance": 0,
@@ -424,7 +949,19 @@
     "classico": false,
     "regole": "Si muove di una casella in diagonale. Cattura in mischia.",
     "moves": [
-      { "directions": ["ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step" }
+      {
+        "directions": [
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 1,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "step"
+      }
     ],
     "movimentoTipo": "step",
     "resistance": 0,
@@ -439,8 +976,43 @@
     "classico": false,
     "regole": "Si muove come il Cavallo oppure di 1 casella in qualsiasi direzione.",
     "moves": [
-      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step" },
-      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 0, "capture": true, "captureMode": "leap", "movementType": "leap", "jump": true, "leapPattern": "L", "note": "Salto a L" }
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w",
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 1,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "step"
+      },
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w",
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 0,
+        "capture": true,
+        "captureMode": "leap",
+        "movementType": "leap",
+        "jump": true,
+        "leapPattern": "L",
+        "note": "Salto a L"
+      }
     ],
     "movimentoTipo": "speciale",
     "resistance": 0,
@@ -455,8 +1027,36 @@
     "classico": false,
     "regole": "Si muove come la Torre oppure di 1 casella in qualsiasi direzione.",
     "moves": [
-      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step" },
-      { "directions": ["n", "s", "e", "w"], "minSteps": 1, "maxSteps": 99, "capture": true, "captureMode": "melee", "movementType": "slide" }
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w",
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 1,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "step"
+      },
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w"
+        ],
+        "minSteps": 1,
+        "maxSteps": 99,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "slide"
+      }
     ],
     "movimentoTipo": "speciale",
     "resistance": 0,
@@ -471,8 +1071,36 @@
     "classico": false,
     "regole": "Si muove come l'Alfiere oppure di 1 casella in qualsiasi direzione.",
     "moves": [
-      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step" },
-      { "directions": ["ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 99, "capture": true, "captureMode": "melee", "movementType": "slide" }
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w",
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 1,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "step"
+      },
+      {
+        "directions": [
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 99,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "slide"
+      }
     ],
     "movimentoTipo": "speciale",
     "resistance": 0,
@@ -487,8 +1115,43 @@
     "classico": false,
     "regole": "Se non ha salti disponibili, si muove come il Re (1 casella, cattura in mischia). Se ha un nemico adiacente in una delle 8 direzioni con la casella successiva libera, puo saltarlo senza catturarlo subito; dopo l'atterraggio, se c'e un altro nemico adiacente (anche lo stesso appena saltato) con casella successiva libera, puo continuare a saltare. Quando si ferma, solo l'ultimo nemico saltato viene catturato: tutti gli altri nemici saltati durante la catena restano in gioco.",
     "moves": [
-      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step", "note": "Mossa di riserva: usata solo se non ci sono salti disponibili" },
-      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 0, "capture": true, "captureMode": "leap", "movementType": "leap", "jump": true, "note": "Salto in catena: cattura differita, vedi catenaSaltiConCatturaFinale" }
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w",
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 1,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "step",
+        "note": "Mossa di riserva: usata solo se non ci sono salti disponibili"
+      },
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w",
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 0,
+        "capture": true,
+        "captureMode": "leap",
+        "movementType": "leap",
+        "jump": true,
+        "note": "Salto in catena: cattura differita, vedi catenaSaltiConCatturaFinale"
+      }
     ],
     "movimentoTipo": "speciale",
     "resistance": 0,
@@ -504,7 +1167,20 @@
     "classico": false,
     "regole": "Muove in diagonale come un Alfiere, ma può rimbalzare una sola volta cambiando direzione: contro il bordo della scacchiera riflette l'asse superato (in un angolo riflette entrambi); contro un pezzo (alleato o nemico, mai catturato dal rimbalzo) prosegue in una delle due direzioni di riflessione possibili, a scelta del giocatore. Dopo il rimbalzo prosegue come una normale scivolata fino a un ostacolo o al bordo.",
     "moves": [
-      { "directions": ["ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 99, "capture": true, "captureMode": "melee", "movementType": "speciale", "note": "Rimbalzo unico gestito da generateBounceSlideMoves; vedi rimbalzoUnico." }
+      {
+        "directions": [
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 99,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "speciale",
+        "note": "Rimbalzo unico gestito da generateBounceSlideMoves; vedi rimbalzoUnico."
+      }
     ],
     "movimentoTipo": "speciale",
     "resistance": 0,
@@ -515,18 +1191,41 @@
   {
     "sigla": "SW",
     "descrizione": "Swapper",
-    "punti": 28,
+    "punti": 27,
     "categoria": "base",
     "classico": false,
     "regole": "Muove come un Re. In alternativa al movimento, può scambiare le posizioni di due alleati (anche se stesso) purché entrambi si trovino in una delle 8 caselle adiacenti allo Swapper.",
     "moves": [
-      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step" }
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w",
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 1,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "step"
+      }
     ],
     "movimentoTipo": "step",
     "resistance": 0,
     "immunityTypes": [],
     "alternativeActions": [
-      { "type": "scambio_due_alleati", "modalita": "alternativa", "params": { "target": "due_alleati_adiacenti_allo_swapper", "includeAlleati": true } }
+      {
+        "type": "scambio_due_alleati",
+        "modalita": "alternativa",
+        "params": {
+          "target": "due_alleati_adiacenti_allo_swapper",
+          "includeAlleati": true
+        }
+      }
     ],
     "scambioTraDueAlleati": true
   },
@@ -538,33 +1237,89 @@
     "classico": false,
     "regole": "Muove come un Re. Ogni pezzo nemico (tranne il Re avversario, sempre immune) che si trova su una delle 8 caselle adiacenti allo Stunner è completamente congelato: non ha alcuna mossa né azione speciale disponibile, tranne l'unica mossa che catturerebbe lo Stunner stesso.",
     "moves": [
-      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step" }
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w",
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 1,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "step"
+      }
     ],
     "movimentoTipo": "step",
     "resistance": 0,
     "immunityTypes": [],
     "alternativeActions": [
-      { "type": "congelamento", "modalita": "passiva", "params": { "raggio": 1, "condizioni": ["non_re"], "effetto": "blocca_tutte_le_azioni_tranne_cattura_dello_stunner" } }
+      {
+        "type": "congelamento",
+        "modalita": "passiva",
+        "params": {
+          "raggio": 1,
+          "condizioni": [
+            "non_re"
+          ],
+          "effetto": "blocca_tutte_le_azioni_tranne_cattura_dello_stunner"
+        }
+      }
     ],
     "stunAura": true
   },
   {
     "sigla": "MG",
     "descrizione": "Miraggio",
-    "punti": 28,
+    "punti": 30,
     "categoria": "base",
     "classico": false,
     "regole": "Si muove come il Re (una casella in qualsiasi direzione). Sdoppiamento: al posto del movimento può creare un clone illusorio su una casella vuota adiacente, scegliendo quale dei due è quello vero. L'avversario deve catturare quello vero: se cattura il clone, l'illusione si dissolve e il Miraggio vero sopravvive; se cattura quello vero, sparisce anche il clone (che non assegna punti). Riunione: finché il clone è vivo, può invece ricostituire vero e clone in un unico pezzo, scegliendo la casella in cui ricompare. Massimo 1 Miraggio per composizione (in gioco diventano 2 contando il clone).",
     "moves": [
-      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step" }
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w",
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 1,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "step"
+      }
     ],
     "movimentoTipo": "step",
     "maxIdentical": 1,
     "resistance": 0,
     "immunityTypes": [],
     "alternativeActions": [
-      { "type": "sdoppiamento", "modalita": "alternativa", "params": { "target": "casella_adiacente_vuota", "raggio": 1 } },
-      { "type": "riunione", "modalita": "alternativa", "params": { "target": "vero_e_clone", "raggio": 1 } }
+      {
+        "type": "sdoppiamento",
+        "modalita": "alternativa",
+        "params": {
+          "target": "casella_adiacente_vuota",
+          "raggio": 1
+        }
+      },
+      {
+        "type": "riunione",
+        "modalita": "alternativa",
+        "params": {
+          "target": "vero_e_clone",
+          "raggio": 1
+        }
+      }
     ],
     "sdoppiamento": true,
     "riunione": true
@@ -577,7 +1332,20 @@
     "classico": false,
     "regole": "Si muove di una casella in diagonale (che deve essere vuota), poi prosegue in orizzontale o verticale verso l'esterno per un numero illimitato di caselle. La cattura avviene solo sulla seconda tratta: la casella diagonale di passaggio non può contenere alcun pezzo.",
     "moves": [
-      { "directions": ["ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 99, "capture": true, "captureMode": "melee", "movementType": "speciale", "note": "Prima tratta diagonale di 1 casella (vuota), poi scivolata ortogonale verso l'esterno; vedi generateBentSlideMoves." }
+      {
+        "directions": [
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 99,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "speciale",
+        "note": "Prima tratta diagonale di 1 casella (vuota), poi scivolata ortogonale verso l'esterno; vedi generateBentSlideMoves."
+      }
     ],
     "movimentoTipo": "speciale",
     "resistance": 0,
@@ -593,7 +1361,20 @@
     "classico": false,
     "regole": "Si muove di una casella in orizzontale o verticale (che deve essere vuota), poi prosegue in diagonale verso l'esterno per un numero illimitato di caselle. La cattura avviene solo sulla seconda tratta: la casella ortogonale di passaggio non può contenere alcun pezzo.",
     "moves": [
-      { "directions": ["n", "s", "e", "w"], "minSteps": 1, "maxSteps": 99, "capture": true, "captureMode": "melee", "movementType": "speciale", "note": "Prima tratta ortogonale di 1 casella (vuota), poi scivolata diagonale verso l'esterno; vedi generateBentSlideMoves." }
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w"
+        ],
+        "minSteps": 1,
+        "maxSteps": 99,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "speciale",
+        "note": "Prima tratta ortogonale di 1 casella (vuota), poi scivolata diagonale verso l'esterno; vedi generateBentSlideMoves."
+      }
     ],
     "movimentoTipo": "speciale",
     "resistance": 0,
@@ -609,8 +1390,39 @@
     "classico": false,
     "regole": "Si muove come la Torre (in orizzontale o verticale per un numero illimitato di caselle) oppure come il Cavallo (salto a \"L\", ignorando le interposizioni).",
     "moves": [
-      { "directions": ["n", "s", "e", "w"], "minSteps": 1, "maxSteps": 99, "capture": true, "captureMode": "melee", "movementType": "slide" },
-      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 0, "capture": true, "captureMode": "leap", "movementType": "leap", "jump": true, "leapPattern": "L", "note": "Salto a L" }
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w"
+        ],
+        "minSteps": 1,
+        "maxSteps": 99,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "slide"
+      },
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w",
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 0,
+        "capture": true,
+        "captureMode": "leap",
+        "movementType": "leap",
+        "jump": true,
+        "leapPattern": "L",
+        "note": "Salto a L"
+      }
     ],
     "movimentoTipo": "speciale",
     "resistance": 0,
@@ -620,18 +1432,56 @@
   {
     "sigla": "RP",
     "descrizione": "Repulsore",
-    "punti": 18,
+    "punti": 20,
     "categoria": "base",
     "classico": false,
     "regole": "Si muove di una casella in qualsiasi direzione. Cattura in mischia. In alternativa al movimento, può respingere un nemico adiacente (mai il Re) di una casella direttamente lontano da sé, purché la casella di arrivo sia vuota: il nemico viene spostato senza essere catturato.",
     "moves": [
-      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step" }
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w",
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 1,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "step"
+      }
     ],
     "movimentoTipo": "step",
     "resistance": 0,
     "immunityTypes": [],
     "alternativeActions": [
-      { "type": "respingi", "modalita": "alternativa", "params": { "raggio": 1, "target": "nemico_adiacente", "direzioni": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "destinazione": "vuota", "esclusi": ["re"], "senzaCattura": true } }
+      {
+        "type": "respingi",
+        "modalita": "alternativa",
+        "params": {
+          "raggio": 1,
+          "target": "nemico_adiacente",
+          "direzioni": [
+            "n",
+            "s",
+            "e",
+            "w",
+            "ne",
+            "nw",
+            "se",
+            "sw"
+          ],
+          "destinazione": "vuota",
+          "esclusi": [
+            "re"
+          ],
+          "senzaCattura": true
+        }
+      }
     ],
     "respingeNemici": true
   },
@@ -643,13 +1493,48 @@
     "classico": false,
     "regole": "Si muove di una casella in qualsiasi direzione. Cattura in mischia. In alternativa al movimento, può teletrasportarsi su una casella vuota a esattamente 3 caselle in linea retta (orizzontale, verticale o diagonale), saltando sopra qualsiasi pezzo; non cattura nulla all'arrivo.",
     "moves": [
-      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step" }
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w",
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 1,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "step"
+      }
     ],
     "movimentoTipo": "step",
     "resistance": 0,
     "immunityTypes": [],
     "alternativeActions": [
-      { "type": "teletrasporto", "modalita": "alternativa", "params": { "distanza": 3, "target": "casella_vuota_a_distanza_3", "direzioni": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "ignoraInterposizioni": true, "senzaCattura": true } }
+      {
+        "type": "teletrasporto",
+        "modalita": "alternativa",
+        "params": {
+          "distanza": 3,
+          "target": "casella_vuota_a_distanza_3",
+          "direzioni": [
+            "n",
+            "s",
+            "e",
+            "w",
+            "ne",
+            "nw",
+            "se",
+            "sw"
+          ],
+          "ignoraInterposizioni": true,
+          "senzaCattura": true
+        }
+      }
     ],
     "teletrasporto": true
   },
@@ -661,13 +1546,37 @@
     "classico": false,
     "regole": "Si muove di una casella in qualsiasi direzione. Cattura in mischia. Quando viene catturata (con qualsiasi cattura: in mischia, a salto, a distanza o a fine catena), esplode e distrugge anche il pezzo che l'ha catturata — il Re è sempre immune all'esplosione. L'esplosione non scatta mai se lascerebbe sotto scacco il Re di chi cattura.",
     "moves": [
-      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step" }
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w",
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 1,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "step"
+      }
     ],
     "movimentoTipo": "step",
     "resistance": 0,
     "immunityTypes": [],
     "alternativeActions": [
-      { "type": "esplosione", "modalita": "passiva", "params": { "raggio": 0, "target": "catturatore", "reImmune": true } }
+      {
+        "type": "esplosione",
+        "modalita": "passiva",
+        "params": {
+          "raggio": 0,
+          "target": "catturatore",
+          "reImmune": true
+        }
+      }
     ],
     "esplodeSeCatturato": true
   },
@@ -679,31 +1588,95 @@
     "classico": false,
     "regole": "Si muove di una casella in qualsiasi direzione. Cattura in mischia. In alternativa al movimento, può \"attirare\": un nemico a esattamente 2 caselle in linea retta (mai il Re) viene trascinato di 1 casella verso il Vortice, sulla casella vuota in mezzo — non lo cattura, ma lo sposta più vicino.",
     "moves": [
-      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step" }
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w",
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 1,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "step"
+      }
     ],
     "movimentoTipo": "step",
     "resistance": 0,
     "immunityTypes": [],
     "alternativeActions": [
-      { "type": "attira", "modalita": "alternativa", "params": { "distanza": 2, "target": "nemico_a_distanza_2", "direzioni": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "senzaCattura": true, "reEscluso": true } }
+      {
+        "type": "attira",
+        "modalita": "alternativa",
+        "params": {
+          "distanza": 2,
+          "target": "nemico_a_distanza_2",
+          "direzioni": [
+            "n",
+            "s",
+            "e",
+            "w",
+            "ne",
+            "nw",
+            "se",
+            "sw"
+          ],
+          "senzaCattura": true,
+          "reEscluso": true
+        }
+      }
     ],
     "attiraNemici": true
   },
   {
     "sigla": "BS",
     "descrizione": "Basilisco",
-    "punti": 16,
+    "punti": 17,
     "categoria": "base",
     "classico": false,
     "regole": "Si muove di una casella in qualsiasi direzione. Cattura in mischia. Il suo sguardo pietrificante congela ogni pezzo nemico (tranne il Re avversario, sempre immune) che si trova nelle 3 caselle direttamente di fronte a lui, in direzione dell'avversario: lo sguardo attraversa i pezzi in mezzo. Come per lo Stunner, un pezzo congelato non ha alcuna mossa né azione speciale disponibile, tranne l'unica mossa che catturerebbe il Basilisco stesso. È una versione direzionale dello Stunner: aggirabile di fianco.",
     "moves": [
-      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step" }
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w",
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 1,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "step"
+      }
     ],
     "movimentoTipo": "step",
     "resistance": 0,
     "immunityTypes": [],
     "alternativeActions": [
-      { "type": "sguardo_pietrificante", "modalita": "passiva", "params": { "raggio": 3, "direzioni": ["n"], "condizioni": ["non_re"], "effetto": "blocca_tutte_le_azioni_tranne_cattura_del_basilisco" } }
+      {
+        "type": "sguardo_pietrificante",
+        "modalita": "passiva",
+        "params": {
+          "raggio": 3,
+          "direzioni": [
+            "n"
+          ],
+          "condizioni": [
+            "non_re"
+          ],
+          "effetto": "blocca_tutte_le_azioni_tranne_cattura_del_basilisco"
+        }
+      }
     ],
     "congelaDirezione": true
   },
@@ -715,31 +1688,78 @@
     "classico": false,
     "regole": "Si muove di una casella in qualsiasi direzione. Cattura in mischia. In alternativa al movimento, può \"sostituirsi\" a un nemico adiacente (mai il Re): i due pezzi si scambiano di posto, senza cattura — il nemico viene spostato ma non eliminato — purché il proprio Re non resti esposto allo scacco. È l'unico pezzo del roster che scambia posizione con un nemico (Mistico e Swapper scambiano solo alleati).",
     "moves": [
-      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step" }
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w",
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 1,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "step"
+      }
     ],
     "movimentoTipo": "step",
     "resistance": 0,
     "immunityTypes": [],
     "alternativeActions": [
-      { "type": "sostituzione", "modalita": "alternativa", "params": { "target": "nemico_adiacente", "raggio": 1, "esclusi": ["re"], "senzaCattura": true } }
+      {
+        "type": "sostituzione",
+        "modalita": "alternativa",
+        "params": {
+          "target": "nemico_adiacente",
+          "raggio": 1,
+          "esclusi": [
+            "re"
+          ],
+          "senzaCattura": true
+        }
+      }
     ],
     "scambioConNemico": true
   },
   {
     "sigla": "LP",
     "descrizione": "Lampo",
-    "punti": 18,
+    "punti": 19,
     "categoria": "base",
     "classico": false,
     "regole": "Salta esattamente 2 caselle in orizzontale o verticale (N, S, E, O), ignorando i pezzi in mezzo: è il salto \"dabbaba\", l'unico pezzo del roster che atterra sempre a esattamente 2 caselle di distanza. Se sulla casella di arrivo c'è un nemico, lo cattura in salto; se c'è un alleato, non può atterrarci. Non ha mai mosse da 1 o 3 caselle. Fulmine: dopo una cattura in salto riuscita, può immediatamente compiere un secondo salto non-catturante di 2 caselle (come la Furia bellica del Berserker, ma per i salti).",
     "moves": [
-      { "directions": ["n", "s", "e", "w"], "minSteps": 2, "maxSteps": 2, "capture": true, "captureMode": "leap", "movementType": "leap", "jump": true }
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w"
+        ],
+        "minSteps": 2,
+        "maxSteps": 2,
+        "capture": true,
+        "captureMode": "leap",
+        "movementType": "leap",
+        "jump": true
+      }
     ],
     "movimentoTipo": "leap",
     "resistance": 0,
     "immunityTypes": [],
     "alternativeActions": [
-      { "type": "fulmine", "modalita": "sul_cattura", "params": { "senzaCattura": true, "effetto": "secondo_salto_non_catturante" } }
+      {
+        "type": "fulmine",
+        "modalita": "sul_cattura",
+        "params": {
+          "senzaCattura": true,
+          "effetto": "secondo_salto_non_catturante"
+        }
+      }
     ],
     "fulmine": true,
     "saltaInterposizioni": true
@@ -747,18 +1767,37 @@
   {
     "sigla": "VL",
     "descrizione": "Vampiro Lunare",
-    "punti": 34,
+    "punti": 27,
     "categoria": "base",
     "classico": false,
     "regole": "Si muove di massimo 2 caselle in diagonale. Sete di Sangue: quando effettua una cattura, non elimina definitivamente il pezzo nemico, ma lo converte alleato trasformandolo in un Ghoul di valore 1 nella casella adiacente libera.",
     "moves": [
-      { "directions": ["ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 2, "capture": true, "captureMode": "melee", "movementType": "step" }
+      {
+        "directions": [
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 2,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "step"
+      }
     ],
     "movimentoTipo": "step",
     "resistance": 0,
     "immunityTypes": [],
     "alternativeActions": [
-      { "type": "conversione_ghoul", "modalita": "sul_cattura", "params": { "target": "nemico_catturato", "conversioneAlleato": true } }
+      {
+        "type": "conversione_ghoul",
+        "modalita": "sul_cattura",
+        "params": {
+          "target": "nemico_catturato",
+          "conversioneAlleato": true
+        }
+      }
     ],
     "vampirismo": true
   },
@@ -770,12 +1809,72 @@
     "classico": false,
     "regole": "Creatura non morta creata dal Vampiro Lunare (Sete di Sangue). Si muove di una casella in qualsiasi direzione e cattura in mischia. Non schierabile in composizione: si ottiene solo convertendo un nemico.",
     "moves": [
-      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step" }
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w",
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 1,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "step"
+      }
     ],
     "movimentoTipo": "step",
     "resistance": 0,
     "immunityTypes": [],
     "alternativeActions": [],
     "obtainableOnlyViaConversion": true
+  },
+  {
+    "sigla": "SC",
+    "descrizione": "Sciacallo",
+    "punti": 27,
+    "categoria": "base",
+    "classico": false,
+    "regole": "Si muove di una casella in qualsiasi direzione. Cattura in mischia. Sciacallaggio: in alternativa al movimento, fruga nel cimitero dell'avversario e risveglia per la propria causa un pezzo nemico caduto di valore non superiore a 20 punti (mai il Re), facendolo comparire su una casella vuota adiacente allo Sciacallo. Ogni pezzo saccheggiato lascia per sempre il cimitero nemico.",
+    "moves": [
+      {
+        "directions": [
+          "n",
+          "s",
+          "e",
+          "w",
+          "ne",
+          "nw",
+          "se",
+          "sw"
+        ],
+        "minSteps": 1,
+        "maxSteps": 1,
+        "capture": true,
+        "captureMode": "melee",
+        "movementType": "step"
+      }
+    ],
+    "movimentoTipo": "step",
+    "resistance": 0,
+    "immunityTypes": [],
+    "alternativeActions": [
+      {
+        "type": "sciacallaggio",
+        "modalita": "alternativa",
+        "params": {
+          "raggio": 1,
+          "target": "cimitero_nemico",
+          "maxLootValue": 20,
+          "destinazione": "vuota",
+          "senzaCattura": true
+        }
+      }
+    ],
+    "sciacallaggio": true
   }
 ]

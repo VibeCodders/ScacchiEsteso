@@ -41,6 +41,9 @@ function entryDelta(entry: HistoryEntry): { dA: number; dB: number } {
   if (entry.promotedTo) add(entry.owner, punti(entry.promotedTo) - punti(entry.sigla));
   // A Necromante's rianimazione puts a fallen piece back on the board.
   if (entry.isRevival && entry.revivedSigla) add(entry.owner, punti(entry.revivedSigla));
+  // A Sciacallo's sciacallaggio raises an ENEMY's fallen piece as an ally — the looter gains the
+  // piece's punti out of thin air (the enemy already lost them when it was captured).
+  if (entry.isLoot && entry.lootedSigla) add(entry.owner, punti(entry.lootedSigla));
 
   return { dA, dB };
 }
