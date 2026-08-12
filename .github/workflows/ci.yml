@@ -30,6 +30,12 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # `tsc -b` type-checks src AND e2e (with noUnusedLocals) — the same check developers
+      # run locally via `npm run typecheck` before pushing, so unused imports in tests fail
+      # fast here rather than deep inside the build step.
+      - name: Typecheck (tsc -b)
+        run: npm run typecheck
+
       # `npm run build` runs `tsc -b && vite build` — the typecheck is part of it.
       - name: Typecheck & build
         run: npm run build
