@@ -26,7 +26,7 @@ test('PvC: flusso completo con team del PC e risposta automatica del bot', async
   await expect(page).toHaveURL(/\/team\/pc-choice/);
   await expect(page.getByText(/Team del PC/)).toBeVisible();
   await page.locator('#bot-difficulty').fill('1');
-  await expect(page.getByText(/Livello di difficoltà: 1 \/ 50/)).toBeVisible();
+  await expect(page.getByText(/Livello di difficoltà: 1 \(da -10 a 50\)/)).toBeVisible();
   await page.getByRole('button', { name: /Manuale — lo compongo io/ }).click();
 
   await expect(page).toHaveURL(/\/team\/b/);
