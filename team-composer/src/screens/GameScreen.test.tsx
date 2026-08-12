@@ -1013,6 +1013,73 @@ describe('GameScreen — Miraggio sdoppiamento', () => {
     expect(screen.queryByText(/Vedi i Miraggi veri/i)).not.toBeInTheDocument();
   });
 
+  it('turns the reveal off automatically when the real Miraggio is destroyed by a Scoccare', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'AR', 'A'); // Arciere: can scoccare the real at d7 (3 away, clear path)
+    board = place(board, 'd7', 'MG', 'B');
+    renderGame(board);
+
+    // A shuffles; B splits (real stays at d7, clone at e7).
+    fireEvent.click(document.querySelector('[data-coord="e1"]')!);
+    fireEvent.click(document.querySelector('[data-coord="f1"]')!);
+    fireEvent.click(document.querySelector('[data-coord="d7"]')!);
+    fireEvent.click(screen.getByText(/🌫️ Sdoppia/i));
+    fireEvent.click(document.querySelector('[data-coord="e7"]')!);
+    fireEvent.click(screen.getByText(/Il vero resta in d7/));
+
+    // A shuffles; back on B's turn, B reveals the real half.
+    fireEvent.click(document.querySelector('[data-coord="f1"]')!);
+    fireEvent.click(document.querySelector('[data-coord="g1"]')!);
+    fireEvent.click(screen.getByText(/Vedi i Miraggi veri/i));
+    expect(screen.getByText(/I Miraggi veri del giocatore di turno/i)).toBeInTheDocument();
+    expect(document.querySelector('[data-coord="d7"] .board-mirage-real-marker')).not.toBeNull();
+
+    // B shuffles; A scocca the real at d7 — the clone dissolves and the reveal resets.
+    fireEvent.click(document.querySelector('[data-coord="e8"]')!);
+    fireEvent.click(document.querySelector('[data-coord="f8"]')!);
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    fireEvent.click(screen.getByText(/🏹 Scoccare/i));
+    fireEvent.click(document.querySelector('[data-coord="d7"]')!);
+
+    expect(screen.queryByText(/I Miraggi veri del giocatore di turno/i)).not.toBeInTheDocument();
+    expect(document.querySelector('[data-coord="e7"]')?.querySelector('svg')).toBeNull(); // clone dissolved as fallout
+  });
+
+  it('turns the reveal off automatically when the real Miraggio is destroyed by the Colosso\'s area damage', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd5', 'CO', 'A'); // Colosso: captures the PE at d6, its blast hits d7
+    board = place(board, 'd6', 'PE', 'B'); // capture bait
+    board = place(board, 'd7', 'MG', 'B');
+    renderGame(board);
+
+    // A shuffles; B splits (real stays at d7, clone at e7).
+    fireEvent.click(document.querySelector('[data-coord="e1"]')!);
+    fireEvent.click(document.querySelector('[data-coord="f1"]')!);
+    fireEvent.click(document.querySelector('[data-coord="d7"]')!);
+    fireEvent.click(screen.getByText(/🌫️ Sdoppia/i));
+    fireEvent.click(document.querySelector('[data-coord="e7"]')!);
+    fireEvent.click(screen.getByText(/Il vero resta in d7/));
+
+    // A shuffles; back on B's turn, B reveals the real half.
+    fireEvent.click(document.querySelector('[data-coord="f1"]')!);
+    fireEvent.click(document.querySelector('[data-coord="g1"]')!);
+    fireEvent.click(screen.getByText(/Vedi i Miraggi veri/i));
+    expect(screen.getByText(/I Miraggi veri del giocatore di turno/i)).toBeInTheDocument();
+    expect(document.querySelector('[data-coord="d7"] .board-mirage-real-marker')).not.toBeNull();
+
+    // B shuffles; the Colosso captures the PE at d6 and its blast destroys the real at d7.
+    fireEvent.click(document.querySelector('[data-coord="e8"]')!);
+    fireEvent.click(document.querySelector('[data-coord="f8"]')!);
+    fireEvent.click(document.querySelector('[data-coord="d5"]')!);
+    fireEvent.click(document.querySelector('[data-coord="d6"]')!);
+
+    expect(screen.queryByText(/I Miraggi veri del giocatore di turno/i)).not.toBeInTheDocument();
+    expect(document.querySelector('[data-coord="d7"]')?.querySelector('svg')).toBeNull(); // real destroyed by the blast
+    expect(document.querySelector('[data-coord="e7"]')?.querySelector('svg')).toBeNull(); // clone dissolved as fallout
+  });
+
   it('turns the reveal off automatically once the Miraggio merges back (riunione)', () => {
     let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
     board = place(board, 'e8', KING_SIGLA, 'B');
