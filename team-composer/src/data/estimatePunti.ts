@@ -309,7 +309,9 @@ function solveRobustLeastSquares(X: number[][], y: number[], lambda: number, non
  *  quantity in the same sense as everything else) — the "pure movement" training set for the
  *  stage-1 fit. */
 function stage1TrainingSet(): Piece[] {
-  return ROSTER.filter((p) => p.sigla !== 'RE' && p.alternativeActions.length === 0 && !p.armatura);
+  return ROSTER.filter(
+    (p) => p.sigla !== 'RE' && !p.obtainableOnlyViaConversion && p.alternativeActions.length === 0 && !p.armatura,
+  );
 }
 
 /** Candidate ridge penalties tried during leave-one-out selection — 0 keeps the old OLS behavior
@@ -887,7 +889,7 @@ export interface FitQuality {
  * and checkable, instead of a comment asserting "loose heuristic" without a number to back it up.
  */
 export function estimatorFitQuality(): FitQuality {
-  const evaluated = ROSTER.filter((p) => p.sigla !== 'RE').map((p) => {
+  const evaluated = ROSTER.filter((p) => p.sigla !== 'RE' && !p.obtainableOnlyViaConversion).map((p) => {
     const suggested = estimatePunti(p).suggestedPunti;
     return { sigla: p.sigla, actual: p.punti, suggested, absError: Math.abs(suggested - p.punti) };
   });
