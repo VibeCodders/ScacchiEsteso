@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { useEffect } from 'react';
 import { render, screen, fireEvent, within } from '@testing-library/react';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { MemoryRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import GameScreen from './GameScreen';
 import GameOverScreen from './GameOverScreen';
+import LeaveGameGuard from '../components/LeaveGameGuard';
 import { GameSetupProvider } from '../context/GameSetupContext';
 import { ThemeProvider } from '../context/ThemeContext';
 import { useGameSetup } from '../context/gameSetup';
@@ -12,6 +13,12 @@ import { KING_SIGLA } from '../data/pieces';
 
 function place(board: BoardState, coord: string, sigla: string, owner: 'A' | 'B' = 'A') {
   return setPieceAt(board, coord, createPieceInstance(sigla, owner));
+}
+
+/** Triggers a browser-Back-style navigation (POP) on click, to exercise the leave-game guard. */
+function BackProbe({ label = 'Indietro' }: { label?: string }) {
+  const navigate = useNavigate();
+  return <button onClick={() => navigate(-1)}>{label}</button>;
 }
 
 function Bootstrap({ board, dimensions }: { board: BoardState; dimensions?: { width: number; height: number } }) {
@@ -29,11 +36,13 @@ function Bootstrap({ board, dimensions }: { board: BoardState; dimensions?: { wi
 function renderGame(board: BoardState, dimensions?: { width: number; height: number }) {
   return render(
     <MemoryRouter>
-      <GameSetupProvider>
-        <ThemeProvider>
-          <Bootstrap board={board} dimensions={dimensions} />
-        </ThemeProvider>
-      </GameSetupProvider>
+      <LeaveGameGuard>
+        <GameSetupProvider>
+          <ThemeProvider>
+            <Bootstrap board={board} dimensions={dimensions} />
+          </ThemeProvider>
+        </GameSetupProvider>
+      </LeaveGameGuard>
     </MemoryRouter>,
   );
 }
@@ -42,11 +51,13 @@ describe('GameScreen — fallback when there is no deployed board', () => {
   it('shows a message and a way back to Home instead of crashing', () => {
     render(
       <MemoryRouter>
-        <ThemeProvider>
-          <GameSetupProvider>
-            <GameScreen />
-          </GameSetupProvider>
-        </ThemeProvider>
+        <LeaveGameGuard>
+          <ThemeProvider>
+            <GameSetupProvider>
+              <GameScreen />
+            </GameSetupProvider>
+          </ThemeProvider>
+        </LeaveGameGuard>
       </MemoryRouter>,
     );
     expect(screen.getByText(/Nessuno schieramento trovato/i)).toBeInTheDocument();
@@ -57,14 +68,16 @@ describe('GameScreen — return to Home', () => {
   function renderGameWithHomeRoute(board: BoardState) {
     return render(
       <MemoryRouter initialEntries={['/game']}>
-        <GameSetupProvider>
-          <ThemeProvider>
-            <Routes>
-              <Route path="/game" element={<Bootstrap board={board} />} />
-              <Route path="/" element={<div>HOME-PROBE</div>} />
-            </Routes>
-          </ThemeProvider>
-        </GameSetupProvider>
+        <LeaveGameGuard>
+          <GameSetupProvider>
+            <ThemeProvider>
+              <Routes>
+                <Route path="/game" element={<Bootstrap board={board} />} />
+                <Route path="/" element={<div>HOME-PROBE</div>} />
+              </Routes>
+            </ThemeProvider>
+          </GameSetupProvider>
+        </LeaveGameGuard>
       </MemoryRouter>,
     );
   }
@@ -91,6 +104,41 @@ describe('GameScreen — return to Home', () => {
 
     // Sì, torna alla Home — the match is abandoned and the home route is shown.
     fireEvent.click(screen.getAllByRole('button', { name: '🏠 Torna alla Home' })[1]);
+    fireEvent.click(screen.getByRole('button', { name: /sì, torna alla home/i }));
+    expect(screen.getByText('HOME-PROBE')).toBeInTheDocument();
+  });
+
+  it('guards the browser Back button: a POP departure is undone and asks for confirmation', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    render(
+      <MemoryRouter initialEntries={['/', '/deployment', '/game']} initialIndex={2}>
+        <LeaveGameGuard>
+          <GameSetupProvider>
+            <ThemeProvider>
+              <Routes>
+                <Route path="/game" element={<><Bootstrap board={board} /><BackProbe /></>} />
+                <Route path="/" element={<div>HOME-PROBE</div>} />
+              </Routes>
+            </ThemeProvider>
+          </GameSetupProvider>
+        </LeaveGameGuard>
+      </MemoryRouter>,
+    );
+
+    // Press browser Back (a POP navigation): the departure is undone and the dialog appears
+    // over the still-running match.
+    fireEvent.click(screen.getByRole('button', { name: /indietro/i }));
+    expect(screen.getByText(/La partita in corso andrà persa/i)).toBeInTheDocument();
+    expect(screen.getByText(/Turno: Giocatore 1/i)).toBeInTheDocument();
+
+    // Annulla keeps the match on screen.
+    fireEvent.click(screen.getByRole('button', { name: /annulla/i }));
+    expect(screen.queryByText(/La partita in corso andrà persa/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/Turno: Giocatore 1/i)).toBeInTheDocument();
+
+    // Back again, then confirm: the match is abandoned for Home.
+    fireEvent.click(screen.getByRole('button', { name: /indietro/i }));
     fireEvent.click(screen.getByRole('button', { name: /sì, torna alla home/i }));
     expect(screen.getByText('HOME-PROBE')).toBeInTheDocument();
   });
@@ -297,14 +345,16 @@ describe('GameScreen — game over', () => {
 
     render(
       <MemoryRouter initialEntries={['/game']}>
-        <GameSetupProvider>
-          <ThemeProvider>
-            <Routes>
-              <Route path="/game" element={<Bootstrap board={board} />} />
-              <Route path="/game-over" element={<GameOverScreen />} />
-            </Routes>
-          </ThemeProvider>
-        </GameSetupProvider>
+        <LeaveGameGuard>
+          <GameSetupProvider>
+            <ThemeProvider>
+              <Routes>
+                <Route path="/game" element={<Bootstrap board={board} />} />
+                <Route path="/game-over" element={<GameOverScreen />} />
+              </Routes>
+            </ThemeProvider>
+          </GameSetupProvider>
+        </LeaveGameGuard>
       </MemoryRouter>,
     );
 
@@ -1321,14 +1371,16 @@ describe('GameScreen — anti-stalemate (20 turns without progress)', () => {
 
     render(
       <MemoryRouter initialEntries={['/game']}>
-        <GameSetupProvider>
-          <ThemeProvider>
-            <Routes>
-              <Route path="/game" element={<Bootstrap board={board} />} />
-              <Route path="/game-over" element={<GameOverScreen />} />
-            </Routes>
-          </ThemeProvider>
-        </GameSetupProvider>
+        <LeaveGameGuard>
+          <GameSetupProvider>
+            <ThemeProvider>
+              <Routes>
+                <Route path="/game" element={<Bootstrap board={board} />} />
+                <Route path="/game-over" element={<GameOverScreen />} />
+              </Routes>
+            </ThemeProvider>
+          </GameSetupProvider>
+        </LeaveGameGuard>
       </MemoryRouter>,
     );
 
@@ -1373,14 +1425,16 @@ function BootstrapPvc({ board, humanOwner }: { board: BoardState; humanOwner: 'A
 function renderPvcGame(board: BoardState, humanOwner: 'A' | 'B') {
   return render(
     <MemoryRouter initialEntries={['/game']}>
-      <GameSetupProvider>
-        <ThemeProvider>
-          <Routes>
-            <Route path="/game" element={<BootstrapPvc board={board} humanOwner={humanOwner} />} />
-            <Route path="/game-over" element={<GameOverScreen />} />
-          </Routes>
-        </ThemeProvider>
-      </GameSetupProvider>
+      <LeaveGameGuard>
+        <GameSetupProvider>
+          <ThemeProvider>
+            <Routes>
+              <Route path="/game" element={<BootstrapPvc board={board} humanOwner={humanOwner} />} />
+              <Route path="/game-over" element={<GameOverScreen />} />
+            </Routes>
+          </ThemeProvider>
+        </GameSetupProvider>
+      </LeaveGameGuard>
     </MemoryRouter>,
   );
 }

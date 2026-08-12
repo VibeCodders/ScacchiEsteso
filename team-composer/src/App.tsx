@@ -11,10 +11,12 @@ import PieceEncyclopediaScreen from './screens/PieceEncyclopediaScreen';
 import GameSettingsScreen from './screens/GameSettingsScreen';
 import PuntiEstimatorScreen from './screens/PuntiEstimatorScreen';
 import SimilarPiecesScreen from './screens/SimilarPiecesScreen';
+import LeaveGameGuard from './components/LeaveGameGuard';
 
 function App() {
   return (
-    <Routes>
+    <LeaveGameGuard>
+      <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/game-settings" element={<GameSettingsScreen />} />
       <Route path="/team/a" element={<TeamSelectRouteA />} />
@@ -27,7 +29,8 @@ function App() {
       <Route path="/pieces" element={<PieceEncyclopediaScreen />} />
       <Route path="/punti-estimator" element={<PuntiEstimatorScreen />} />
       <Route path="/pezzi-simili" element={<SimilarPiecesScreen />} />
-    </Routes>
+      </Routes>
+    </LeaveGameGuard>
   );
 }
 
