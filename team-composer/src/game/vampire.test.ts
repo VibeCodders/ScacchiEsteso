@@ -128,7 +128,7 @@ describe('Vampiro Lunare conversion', () => {
 });
 
 describe('Vampiro Lunare — material trend', () => {
-  it('the opponent loses the converted piece and the capturer gains the Ghoul (valore 1)', () => {
+  it('the opponent loses the converted piece and the capturer gains the Ghoul', () => {
     const state = gameWith([['e4', 'VL', 'B'], ['d5', 'PE', 'A']]);
     const result = applyTurn(state, 'e4', 'd5');
     expect(result.ok).toBe(true);
@@ -137,7 +137,7 @@ describe('Vampiro Lunare — material trend', () => {
 
     const trend = computeMaterialTrend(next);
     expect(trend[1].A).toBe(trend[0].A - getPieceDef('PE').punti); // A lost the PE (9 pt)
-    expect(trend[1].B).toBe(trend[0].B + getPieceDef(GHOUL_SIGLA).punti); // B gained the Ghoul (1 pt)
+    expect(trend[1].B).toBe(trend[0].B + getPieceDef(GHOUL_SIGLA).punti); // B gained the Ghoul (estimator-priced)
     expect(trend.at(-1)!.A).toBeGreaterThan(0);
     expect(trend.at(-1)!.B).toBeGreaterThan(0);
   });
@@ -147,6 +147,6 @@ describe('roster', () => {
   it('the Vampiro Lunare is pickable, the Ghoul only via conversion', () => {
     expect(pickablePieces.some((p) => p.sigla === 'VL')).toBe(true);
     expect(pickablePieces.some((p) => p.sigla === GHOUL_SIGLA)).toBe(false);
-    expect(getPieceDef(GHOUL_SIGLA).punti).toBe(1);
+    expect(getPieceDef(GHOUL_SIGLA).punti).toBe(15); // the estimator's score for the king-step Ghoul
   });
 });

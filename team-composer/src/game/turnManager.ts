@@ -424,7 +424,7 @@ function resolveMove(state: GameState, piece: PieceInstance, move: GeneratedMove
 
   const pieceDef = getPieceDef(piece.sigla);
   // Vampiro Lunare's Sete di Sangue: a capture CONVERTS the enemy instead of eliminating it — an
-  // allied Ghoul (valore 1) materializes on a free square adjacent to the captured piece. With
+  // allied Ghoul materializes on a free square adjacent to the captured piece. With
   // several candidates the UI has the player choose (`ghoulSquare`); the engine auto-picks the
   // first when none was given (bot / single candidate). Without any free square the conversion is
   // impossible and the capture resolves normally (the enemy is eliminated after all). A converted

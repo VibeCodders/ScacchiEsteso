@@ -210,7 +210,7 @@
   {
     "sigla": "NE",
     "descrizione": "Necromante",
-    "punti": 25,
+    "punti": 24,
     "categoria": "base",
     "classico": false,
     "regole": "Si muove in diagonale per un massimo di 3 caselle. In alternativa al movimento, può rianimare un Pedone alleato precedentemente eliminato, schierandolo su una casella vuota immediatamente adiacente.",
@@ -604,7 +604,7 @@
   {
     "sigla": "DR",
     "descrizione": "Drago",
-    "punti": 45,
+    "punti": 46,
     "categoria": "base",
     "classico": false,
     "regole": "Si muove come la Torre (in orizzontale o verticale per un numero illimitato di caselle) oppure come il Cavallo (salto a \"L\", ignorando le interposizioni).",
@@ -765,7 +765,7 @@
   {
     "sigla": "GH",
     "descrizione": "Ghoul",
-    "punti": 1,
+    "punti": 15,
     "categoria": "base",
     "classico": false,
     "regole": "Creatura non morta creata dal Vampiro Lunare (Sete di Sangue). Si muove di una casella in qualsiasi direzione e cattura in mischia. Non schierabile in composizione: si ottiene solo convertendo un nemico.",

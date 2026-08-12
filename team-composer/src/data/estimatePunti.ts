@@ -306,11 +306,14 @@ function solveRobustLeastSquares(X: number[][], y: number[], lambda: number, non
 /** Pieces with no special mechanic (no `alternativeActions`, no `armatura`) and not the King —
  *  even though the King now carries a nominal punti value (used only to size the team budget; it
  *  can't actually be traded for other pieces or left out of a team, so it isn't a mobility-priced
- *  quantity in the same sense as everything else) — the "pure movement" training set for the
- *  stage-1 fit. */
+ *  quantity in the same sense as everything else). The Ghoul (GH) IS included: although it is
+ *  only obtainable in-game via the Vampiro's conversion (never fieldable in composition), it
+ *  carries a real material score once on the board (the material trend counts it), so its punti
+ *  is a mobility-priced quantity like any other piece's — the estimator assigns it and
+ *  `applySuggestedPunti` keeps it in sync like the rest of the roster. */
 function stage1TrainingSet(): Piece[] {
   return ROSTER.filter(
-    (p) => p.sigla !== 'RE' && !p.obtainableOnlyViaConversion && p.alternativeActions.length === 0 && !p.armatura,
+    (p) => p.sigla !== 'RE' && p.alternativeActions.length === 0 && !p.armatura,
   );
 }
 
@@ -924,11 +927,13 @@ export interface FitQuality {
  * Measures how well `estimatePunti` currently reproduces the real roster's hand-balanced `punti`
  * values (excluding the King, which isn't part of the stage-1 training set — see
  * `stage1TrainingSet` — so comparing its estimate to its assigned value wouldn't say anything
- * about the model's real accuracy). This is what makes the model's real-world accuracy visible
- * and checkable, instead of a comment asserting "loose heuristic" without a number to back it up.
+ * about the model's real accuracy). The Ghoul IS evaluated: like every other piece it carries a
+ * real material score, so the fit must reproduce it. This is what makes the model's real-world
+ * accuracy visible and checkable, instead of a comment asserting "loose heuristic" without a
+ * number to back it up.
  */
 export function estimatorFitQuality(): FitQuality {
-  const evaluated = ROSTER.filter((p) => p.sigla !== 'RE' && !p.obtainableOnlyViaConversion).map((p) => {
+  const evaluated = ROSTER.filter((p) => p.sigla !== 'RE').map((p) => {
     const suggested = estimatePunti(p).suggestedPunti;
     return { sigla: p.sigla, actual: p.punti, suggested, absError: Math.abs(suggested - p.punti) };
   });

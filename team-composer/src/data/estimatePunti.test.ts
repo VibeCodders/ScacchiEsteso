@@ -196,10 +196,11 @@ describe('stage2ModelSummary — parametric mechanic-bonus model', () => {
 
 /** The Vampiro Lunare converts its captured enemy into an allied Ghoul — the double material
  *  swing (enemy lost, ally gained) is the mechanic the stage-2 conversion feature must capture.
- *  The Ghoul itself (GH, fixed 1-point token) is deliberately excluded from the mobility fit
- *  (see `stage1TrainingSet`) and from `estimatorFitQuality`: its value is a design constant set
- *  by the conversion, not a quantity priced by its movement — `applySuggestedPunti` skips it for
- *  the same reason it skips the King. */
+ *  The Ghoul (GH) carries a real material score once on the board, so its punti is priced by the
+ *  stage-1 mobility fit like every other piece (it is a plain king-step piece, no mechanics) and
+ *  it is included in `estimatorFitQuality` — `applySuggestedPunti` keeps it in sync with the
+ *  estimator like the rest of the roster. Only the King stays fixed (a nominal budget-sizing
+ *  cost, not a mobility-priced quantity). */
 describe('estimatePunti — vampirismo and the Ghoul it produces', () => {
   it('the Vampiro Lunare lands near its real 34 punti (conversion must not be priced as a plain capture)', () => {
     const vl = estimatePunti(getPieceDef('VL'));
@@ -218,9 +219,12 @@ describe('estimatePunti — vampirismo and the Ghoul it produces', () => {
     expect(conversion).toBeGreaterThan(plainCapture + 8);
   });
 
-  it('the Ghoul is excluded from the fit-quality evaluation (fixed 1-point token, like the King)', () => {
+  it('the Ghoul is estimator-priced and evaluated like any other piece (only the King stays fixed)', () => {
     const quality = estimatorFitQuality();
-    expect(quality.worstFits.some((f) => f.sigla === 'GH')).toBe(false);
+    // The king-step Ghoul is priced near its mobility (like the other king-step pieces GE/RN/TI/ST)
+    // and its estimate must reproduce its roster value exactly at the converged equilibrium.
+    expect(estimatePunti(getPieceDef('GH')).suggestedPunti).toBe(getPieceDef('GH').punti);
+    // Only RE stays out of the fit entirely.
     expect(quality.worstFits.some((f) => f.sigla === 'RE')).toBe(false);
   });
 });

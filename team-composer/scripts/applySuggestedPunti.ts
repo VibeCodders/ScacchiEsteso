@@ -21,11 +21,11 @@ function main() {
   let changed = 0;
 
   for (const piece of pieces) {
-    // RE: a fixed nominal budget-sizing cost, not part of the stage-1 training set. GH (Ghoul):
-    // a fixed 1-point token created by the Vampiro's conversion, deliberately excluded from the
-    // mobility fit like the King — its value is a design constant, so the estimator's
-    // mobility-based suggestion must never overwrite it (see `stage1TrainingSet` in estimatePunti.ts).
-    if (piece.sigla === 'RE' || piece.obtainableOnlyViaConversion) continue;
+    // RE: a fixed nominal budget-sizing cost, not part of the stage-1 training set — a fixed 15 by
+    // design, never estimator-driven. The Ghoul (GH) IS included: it carries a real material score
+    // on the board, so its punti is estimator-priced like every other piece (see `stage1TrainingSet`
+    // in estimatePunti.ts).
+    if (piece.sigla === 'RE') continue;
     const { suggestedPunti } = estimatePunti(piece);
     if (suggestedPunti === piece.punti) continue;
 
