@@ -83,6 +83,17 @@ describe('computeMaterialTrend', () => {
     ]);
   });
 
+  it('counts a Sciacallo loot as material appearing out of the enemy graveyard', () => {
+    const state = finishedWith([
+      entry({ owner: 'A', sigla: 'SC', from: 'd4', to: 'd4', isLoot: true, lootedSigla: 'PE' }),
+    ], [['c3', 'PE', 'A']]);
+    // The looted PE (9) sits on the final board as an A piece: initial 15 → final 24.
+    expect(computeMaterialTrend(state)).toEqual([
+      { ply: 0, A: RE, B: RE },
+      { ply: 1, A: RE + PE, B: RE },
+    ]);
+  });
+
   it('ignores Miraggio clone captures (illusions have no punti)', () => {
     const state = finishedWith([
       entry({ owner: 'A', sigla: 'CA', from: 'd4', to: 'e5', isCapture: true, capturedSigla: 'MG', isCloneCapture: true }),

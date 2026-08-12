@@ -144,6 +144,7 @@ describe('computeMatchStats', () => {
         entry({ owner: 'B', sigla: 'MG', from: 'g2', to: 'g2', isSdoppiamento: true, cloneSquare: 'h2', realSquare: 'g2' }),
         entry({ owner: 'A', sigla: 'MG', from: 'g2', to: 'g3', isMerge: true }),
         entry({ owner: 'B', sigla: 'NE', from: 'd4', to: 'd5', isRevival: true, revivedSigla: 'PE' }),
+        entry({ owner: 'A', sigla: 'SC', from: 'd4', to: 'd5', isLoot: true, lootedSigla: 'CA' }),
         entry({ owner: 'A', sigla: 'PE', from: 'd5', to: 'd6', isCapture: true, capturedSigla: 'BO', isExplosion: true, explodedAt: 'd6' }),
         entry({ owner: 'B', sigla: 'CO', from: 'c4', to: 'c5', isCapture: true, capturedSigla: 'PE', areaDamageCoords: ['c6'], areaDamage: [{ sigla: 'TO', owner: 'A' }] }),
         entry({ owner: 'A', sigla: 'VL', from: 'e4', to: 'd5', isCapture: true, capturedSigla: 'PE', isConversion: true, ghoulSquare: 'e5' }),
@@ -164,14 +165,15 @@ describe('computeMatchStats', () => {
       sdoppiamento: 1,
       riunione: 1,
       revival: 1,
+      loot: 1,
       conversion: 1,
       dispelledClone: 1,
       explosion: 1,
       areaDamage: 1,
     });
-    // Special actions: the first 10 entries are special actions; the last 4 are plain captures
-    // (explosion, area damage, conversion, dispelled clone) — not special actions.
-    expect(stats.players.A.specialActions + stats.players.B.specialActions).toBe(10);
+    // Special actions: the first 11 entries are special actions (the loot included); the last 4
+    // are plain captures (explosion, area damage, conversion, dispelled clone) — not special actions.
+    expect(stats.players.A.specialActions + stats.players.B.specialActions).toBe(11);
     expect(stats.players.A.explosions).toBe(1);
     expect(stats.players.B.areaDamageVictims).toBe(1);
   });

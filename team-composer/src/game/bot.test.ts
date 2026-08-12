@@ -152,6 +152,42 @@ describe('generateBotActions', () => {
     expect(mgAfterMerge).toHaveLength(1);
     expect(mgAfterMerge[0].mirage).toBeUndefined(); // unsplit again
   });
+
+  it('generates and applies a Sciacallo loot action from the ENEMY graveyard', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'SC', 'A');
+    const state = {
+      ...createInitialGameState(board, 'A'),
+      // B has lost a Pedone (worth ≤ MAX_LOOT_VALUE) — the jackal can raise it as an ally.
+      captured: { A: [], B: [createPieceInstance('PE', 'B')] } as Record<'A' | 'B', ReturnType<typeof createPieceInstance>[]>,
+    };
+
+    const lootActions = generateBotActions(state, 'A').filter((a) => a.kind === 'loot' && a.from === 'd4');
+    expect(lootActions.length).toBeGreaterThan(0);
+
+    const result = applyBotAction(state, lootActions[0]);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const next = result.state;
+    // The looted PE now stands on an empty square adjacent to the Sciacallo, owned by A.
+    const lootedPiece = [...next.board.values()].find((p) => p.sigla === 'PE');
+    expect(lootedPiece?.owner).toBe('A');
+    expect(next.captured.B.some((p) => p.sigla === 'PE')).toBe(false); // graveyard entry consumed
+  });
+
+  it('does not generate loot actions when the enemy graveyard holds nothing lootable', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'SC', 'A');
+    const state = {
+      ...createInitialGameState(board, 'A'),
+      captured: { A: [], B: [createPieceInstance('DR', 'B')] } as Record<'A' | 'B', ReturnType<typeof createPieceInstance>[]>,
+    };
+
+    const lootActions = generateBotActions(state, 'A').filter((a) => a.kind === 'loot');
+    expect(lootActions).toEqual([]); // Drago is 46 > MAX_LOOT_VALUE
+  });
 });
 
 describe('chooseBotAction', () => {
@@ -186,6 +222,25 @@ describe('chooseBotAction', () => {
 
     const action = chooseBotAction(state, 'A', 5);
     expect(action).toEqual({ kind: 'move', from: 'd4', to: 'd7' });
+  });
+
+  it('prefers a Sciacallo loot over a plain king-step move (free material from the enemy graveyard)', () => {
+    let board = place(createEmptyBoard(), 'e1', 'RE', 'A');
+    board = place(board, 'e8', 'RE', 'B');
+    board = place(board, 'd4', 'SC', 'A');
+    const state = {
+      ...createInitialGameState(board, 'A'),
+      // B lost a Pedone: looting it nets +9 material for free, beating any quiet king-step move.
+      captured: { A: [], B: [createPieceInstance('PE', 'B')] } as Record<'A' | 'B', ReturnType<typeof createPieceInstance>[]>,
+    };
+
+    const action = chooseBotAction(state, 'A', 5);
+    expect(action?.kind).toBe('loot');
+    if (!action || action.kind !== 'loot') return;
+    const result = applyBotAction(state, action);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect([...result.state.board.values()].some((p) => p.sigla === 'PE' && p.owner === 'A')).toBe(true);
   });
 
   it('prefers a Miraggio split whose clone guards its own King (positional bonus)', () => {

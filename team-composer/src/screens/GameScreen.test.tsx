@@ -872,6 +872,84 @@ describe('GameScreen — Necromante revival', () => {
   });
 });
 
+describe('GameScreen — Sciacallo sciacallaggio', () => {
+  it('shows the "Sciacallaggio" toggle only once the ENEMY graveyard has a lootable piece', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'SC', 'A');
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    expect(screen.queryByText(/Sciacallaggio/i)).not.toBeInTheDocument(); // empty enemy graveyard
+  });
+
+  it('loots the enemy fallen piece back as an ally on an adjacent square', () => {
+    // A's Sciacallo loots the B Pedone that A's Torre captured — it reappears as an A piece.
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'a1', 'TO', 'A');
+    board = place(board, 'a4', 'PE', 'B');
+    board = place(board, 'd4', 'SC', 'A');
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="a1"]')!); // A: Torre captures the B Pedone
+    fireEvent.click(document.querySelector('[data-coord="a4"]')!);
+
+    expect(screen.getByText(/Turno: Giocatore 2/i)).toBeInTheDocument();
+    fireEvent.click(document.querySelector('[data-coord="e8"]')!); // B: harmless King move
+    fireEvent.click(document.querySelector('[data-coord="e7"]')!);
+
+    expect(screen.getByText(/Turno: Giocatore 1/i)).toBeInTheDocument();
+
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!); // select the Sciacallo
+    fireEvent.click(screen.getByText(/💀 Sciacallaggio/i));
+    fireEvent.click(document.querySelector('[data-coord="d5"]')!); // adjacent empty square
+
+    // Only the PE is in the enemy graveyard, so the loot applies without a picker dialog.
+    expect(screen.queryByText(/Chi saccheggiare/i)).not.toBeInTheDocument();
+    expect(document.querySelector('[data-coord="d5"]')?.querySelector('svg')?.getAttribute('aria-label')).toBe('PE');
+    expect(screen.getByText(/Turno: Giocatore 2/i)).toBeInTheDocument();
+    expect(screen.getByText(/\(saccheggiato PE\)/i)).toBeInTheDocument();
+  });
+
+  it('shows a choice dialog when the enemy graveyard holds several lootable pieces, and picks the selected one', () => {
+    // A's Torre captures the B Pedone (a4) and then the B Basilisco (a5) — both land in B's
+    // graveyard, so the Sciacallo can choose which to raise.
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'a1', 'TO', 'A');
+    board = place(board, 'a4', 'PE', 'B');
+    board = place(board, 'a5', 'BS', 'B');
+    board = place(board, 'd4', 'SC', 'A');
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="a1"]')!); // A: Torre captures the Pedone
+    fireEvent.click(document.querySelector('[data-coord="a4"]')!);
+    fireEvent.click(document.querySelector('[data-coord="e8"]')!); // B: harmless King move
+    fireEvent.click(document.querySelector('[data-coord="e7"]')!);
+    fireEvent.click(document.querySelector('[data-coord="a4"]')!); // A: Torre captures the Basilisco
+    fireEvent.click(document.querySelector('[data-coord="a5"]')!);
+    fireEvent.click(document.querySelector('[data-coord="e7"]')!); // B: harmless King move
+    fireEvent.click(document.querySelector('[data-coord="e8"]')!);
+
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!); // select the Sciacallo
+    fireEvent.click(screen.getByText(/💀 Sciacallaggio/i));
+    fireEvent.click(document.querySelector('[data-coord="d5"]')!); // empty adjacent square
+
+    expect(screen.getByText(/Chi saccheggiare/i)).toBeInTheDocument();
+    expect(screen.getByText(/PE — Pedone/i)).toBeInTheDocument();
+    expect(screen.getByText(/BS — Basilisco/i)).toBeInTheDocument();
+
+    // sorted by point cost, ascending: Pedone (9pt) before Basilisco (17pt)
+    const optionSiglas = [...document.querySelectorAll('.btn-save')].map((el) => el.textContent?.split(' — ')[0]);
+    expect(optionSiglas).toEqual(['PE', 'BS']);
+
+    fireEvent.click(screen.getByText(/BS — Basilisco/i));
+    expect(document.querySelector('[data-coord="d5"]')?.querySelector('svg')?.getAttribute('aria-label')).toBe('BS');
+    expect(screen.getByText(/\(saccheggiato BS\)/i)).toBeInTheDocument();
+  });
+});
+
 describe('GameScreen — Orfano mimicry', () => {
   it('highlights its normal 1-square moves when not under threat', () => {
     let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');

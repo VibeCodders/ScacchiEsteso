@@ -103,12 +103,12 @@ describe('applyLoot — sciacallaggio', () => {
     const noScState: GameState = { ...noSc, captured: { A: [createPieceInstance('PE', 'A')], B: [] } };
     expect(applyLoot(noScState, 'd4', 'c4', 'PE').ok).toBe(false);
 
-    // B's King at h8, Sciacallo at d4 — looting A's fallen PE onto h7 (empty, adjacent to the
-    // Sciacallo) exposes nothing: the king-safety filter only rejects when the acting player's
-    // own King would be left in check, so the loot must succeed.
+    // B's King at h8, Sciacallo at d4 — looting A's fallen PE onto the empty adjacent c4 is
+    // legal (adding a friendly piece can never expose the acting player's own King, mirroring
+    // applySdoppiamento's note that no king-safety filter can trip on a pure piece placement).
     const state = gameWith([['d4', 'SC', 'B']]);
     const seeded: GameState = { ...state, captured: { A: [createPieceInstance('PE', 'A')], B: [] } };
-    const okResult = applyLoot(seeded, 'd4', 'h7', 'PE');
+    const okResult = applyLoot(seeded, 'd4', 'c4', 'PE');
     expect(okResult.ok).toBe(true);
   });
 

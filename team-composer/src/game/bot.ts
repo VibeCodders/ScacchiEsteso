@@ -303,6 +303,7 @@ function positionalScore(state: GameState, owner: Owner): number {
 
 /** Cheap capture-value estimate used only to order actions before search, so alpha-beta prunes more. */
 function estimateActionGain(state: GameState, owner: Owner, action: BotAction): number {
+  if (action.kind === 'loot') return getPieceDef(action.sigla).punti; // a free ally materializes
   const targetCoord = action.kind === 'move' ? action.to : action.kind === 'scocca' ? action.target : null;
   if (!targetCoord) return 0;
   const target = getPieceAt(state.board, targetCoord);
