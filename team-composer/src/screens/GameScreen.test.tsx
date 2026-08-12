@@ -923,6 +923,38 @@ describe('GameScreen — Miraggio sdoppiamento', () => {
     expect(screen.getByText(/\(riunione\)/i)).toBeInTheDocument();
   });
 
+  it('hides the "Vedi i Miraggi veri" toggle when no player has a Miraggio on the board', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'TO', 'A');
+    renderGame(board);
+
+    expect(screen.queryByText(/Vedi i Miraggi veri/i)).not.toBeInTheDocument();
+  });
+
+  it('shows the "Vedi i Miraggi veri" toggle only while the player to move has a split Miraggio', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'MG', 'A'); // unsplit — no real/clone ambiguity yet
+    renderGame(board);
+
+    // Unsplit Miraggio: nothing to reveal, toggle hidden.
+    expect(screen.queryByText(/Vedi i Miraggi veri/i)).not.toBeInTheDocument();
+
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    fireEvent.click(screen.getByText(/🌫️ Sdoppia/i));
+    fireEvent.click(document.querySelector('[data-coord="e4"]')!);
+    fireEvent.click(screen.getByText(/Il vero è in e4/)); // real at e4, clone left at d4
+
+    // It's B's turn now — B has no Miraggio, so the toggle stays hidden.
+    expect(screen.queryByText(/Vedi i Miraggi veri/i)).not.toBeInTheDocument();
+
+    // B plays a quiet king shuffle; back on A's turn, A's split Miraggio brings the toggle back.
+    fireEvent.click(document.querySelector('[data-coord="e8"]')!);
+    fireEvent.click(document.querySelector('[data-coord="e7"]')!);
+    expect(screen.getByText(/Vedi i Miraggi veri/i)).toBeInTheDocument();
+  });
+
   it('the reveal toggle marks only the current player\'s real Miraggio', () => {
     let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
     board = place(board, 'e8', KING_SIGLA, 'B');
@@ -934,15 +966,14 @@ describe('GameScreen — Miraggio sdoppiamento', () => {
     fireEvent.click(document.querySelector('[data-coord="e4"]')!);
     fireEvent.click(screen.getByText(/Il vero è in e4/)); // real at e4, clone left at d4
 
-    // Reveal is off by default, and even once toggled on it only shows the current player's reals
-    // (it's B's turn now — A's pieces stay hidden).
-    expect(document.querySelector('[data-coord="e4"] .board-mirage-real-marker')).toBeNull();
-    fireEvent.click(screen.getByText(/Vedi i Miraggi veri/i));
+    // It's B's turn: B has no Miraggio, so the toggle is hidden and nothing is marked.
+    expect(screen.queryByText(/Vedi i Miraggi veri/i)).not.toBeInTheDocument();
     expect(document.querySelector('[data-coord="e4"] .board-mirage-real-marker')).toBeNull();
 
     // B plays a quiet king shuffle; back on A's turn the reveal marks A's real at e4, never the clone at d4.
     fireEvent.click(document.querySelector('[data-coord="e8"]')!);
     fireEvent.click(document.querySelector('[data-coord="e7"]')!);
+    fireEvent.click(screen.getByText(/Vedi i Miraggi veri/i));
     expect(document.querySelector('[data-coord="e4"] .board-mirage-real-marker')).not.toBeNull();
     expect(document.querySelector('[data-coord="d4"] .board-mirage-real-marker')).toBeNull();
   });

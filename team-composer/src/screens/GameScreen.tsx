@@ -176,6 +176,14 @@ function GameScreen() {
       .map(([coord]) => coord);
   }, [gameState, revealRealMirage]);
 
+  /** True while the player to move has a split Miraggio on the board (real half, so with a living
+   *  clone) — the "Vedi i Miraggi veri" toggle only reveals the current player's real half, so the
+   *  button is shown only when there is actually something to reveal. */
+  const currentPlayerHasRealMirage = useMemo(() => {
+    if (!gameState) return false;
+    return [...gameState.board.values()].some((p) => p.owner === gameState.turn && isRealMirage(p));
+  }, [gameState]);
+
   // The end-of-match dialog is gone: as soon as the game reaches a terminal status, the match
   // result (with the final position snapshot) is recorded and the dedicated results page opens.
   useEffect(() => {
@@ -575,9 +583,11 @@ function GameScreen() {
           <Button variant="improve" onClick={() => setNamesToggled((v) => !v)}>
             {namesToggled ? '🙈 Nascondi i nomi' : '🏷 Mostra i nomi (tieni H)'}
           </Button>
-          <Button variant="improve" onClick={() => setRevealRealMirage((r) => !r)}>
-            {revealRealMirage ? '🙈 Nascondi Miraggi veri' : '👁 Vedi i Miraggi veri (tuo turno)'}
-          </Button>
+          {currentPlayerHasRealMirage && (
+            <Button variant="improve" onClick={() => setRevealRealMirage((r) => !r)}>
+              {revealRealMirage ? '🙈 Nascondi Miraggi veri' : '👁 Vedi i Miraggi veri (tuo turno)'}
+            </Button>
+          )}
           {selected && selectedPiece && !gameState.pendingExtraMove && !gameState.pendingRabbitChain && canUseScocca(getPieceDef(selectedPiece.sigla))
             && getScoccaTargets(gameState.board, selected, selectedPiece.owner).length > 0 && (
             <Button variant="auto" onClick={() => setActionMode((m) => (m === 'scocca' ? null : 'scocca'))}>
