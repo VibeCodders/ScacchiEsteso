@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { playerLabel, useGameSetup } from '../context/gameSetup';
 import Board from '../components/Board';
@@ -183,6 +183,26 @@ function GameScreen() {
     if (!gameState) return false;
     return [...gameState.board.values()].some((p) => p.owner === gameState.turn && isRealMirage(p));
   }, [gameState]);
+
+  /** Ids of the real Miraggio halves on the previous board — lets the effect below notice when a
+   *  split Miraggio is gone without resetting the reveal on ordinary turn changes. */
+  const previousRealMirageIdsRef = useRef<Set<string> | null>(null);
+
+  // The reveal marks the current player's real Miraggio halves; when a real half leaves the board
+  // (captured) or stops being split (riunione clears its marker), there is nothing left to reveal
+  // — turn the toggle off automatically. Quiet turns (that keep the split pair alive) don't reset
+  // it, so each player's reveal survives the opponent's move and their own ordinary plays.
+  useEffect(() => {
+    const previousIds = previousRealMirageIdsRef.current;
+    previousRealMirageIdsRef.current = gameState
+      ? new Set([...gameState.board.values()].filter((p) => isRealMirage(p)).map((p) => p.id))
+      : null;
+    if (!gameState || !revealRealMirage || !previousIds) return;
+    const currentIds = previousRealMirageIdsRef.current!;
+    if ([...previousIds].some((id) => !currentIds.has(id))) {
+      setRevealRealMirage(false);
+    }
+  }, [gameState, revealRealMirage]);
 
   // The end-of-match dialog is gone: as soon as the game reaches a terminal status, the match
   // result (with the final position snapshot) is recorded and the dedicated results page opens.

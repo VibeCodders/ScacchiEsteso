@@ -955,6 +955,58 @@ describe('GameScreen — Miraggio sdoppiamento', () => {
     expect(screen.getByText(/Vedi i Miraggi veri/i)).toBeInTheDocument();
   });
 
+  it('turns the reveal off automatically when the real Miraggio is captured', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd8', 'TO', 'B'); // rook that can reach d4
+    board = place(board, 'd4', 'MG', 'A');
+    renderGame(board);
+
+    // A splits (real stays at d4, clone at e4); the turn passes to B.
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    fireEvent.click(screen.getByText(/🌫️ Sdoppia/i));
+    fireEvent.click(document.querySelector('[data-coord="e4"]')!);
+    fireEvent.click(screen.getByText(/Il vero resta in d4/));
+
+    // B shuffles; back on A's turn, A reveals the real half.
+    fireEvent.click(document.querySelector('[data-coord="e8"]')!);
+    fireEvent.click(document.querySelector('[data-coord="e7"]')!);
+    fireEvent.click(screen.getByText(/Vedi i Miraggi veri/i));
+    expect(screen.getByText(/I Miraggi veri del giocatore di turno/i)).toBeInTheDocument();
+
+    // A shuffles away; B captures the real at d4 — the reveal resets on its own.
+    fireEvent.click(document.querySelector('[data-coord="e1"]')!);
+    fireEvent.click(document.querySelector('[data-coord="f1"]')!);
+    fireEvent.click(document.querySelector('[data-coord="d8"]')!);
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    expect(screen.queryByText(/I Miraggi veri del giocatore di turno/i)).not.toBeInTheDocument();
+  });
+
+  it('turns the reveal off automatically once the Miraggio merges back (riunione)', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'MG', 'A');
+    renderGame(board);
+
+    // A splits (real stays at d4, clone at e4); the turn passes to B.
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    fireEvent.click(screen.getByText(/🌫️ Sdoppia/i));
+    fireEvent.click(document.querySelector('[data-coord="e4"]')!);
+    fireEvent.click(screen.getByText(/Il vero resta in d4/));
+
+    // B shuffles; back on A's turn, A reveals the real half.
+    fireEvent.click(document.querySelector('[data-coord="e8"]')!);
+    fireEvent.click(document.querySelector('[data-coord="e7"]')!);
+    fireEvent.click(screen.getByText(/Vedi i Miraggi veri/i));
+    expect(screen.getByText(/I Miraggi veri del giocatore di turno/i)).toBeInTheDocument();
+
+    // A merges the pair back on d4 — the reveal resets on its own.
+    fireEvent.click(document.querySelector('[data-coord="e4"]')!); // select the clone half
+    fireEvent.click(screen.getByText(/🔗 Riunisci/i));
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!); // reconstitute on the real's square
+    expect(screen.queryByText(/I Miraggi veri del giocatore di turno/i)).not.toBeInTheDocument();
+  });
+
   it('the reveal toggle marks only the current player\'s real Miraggio', () => {
     let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
     board = place(board, 'e8', KING_SIGLA, 'B');
