@@ -1201,6 +1201,69 @@ describe('GameScreen — Miraggio sdoppiamento', () => {
   });
 });
 
+describe('GameScreen — Vampiro Lunare (Sete di Sangue)', () => {
+  it('asks the player where to materialize the Ghoul when several squares are free', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'VL', 'B');
+    board = place(board, 'c5', 'PE', 'A'); // capture bait — c5 has 8 free neighbors
+    renderGame(board);
+
+    // A passes; B selects the Vampiro Lunare and captures the Pedone.
+    fireEvent.click(document.querySelector('[data-coord="e1"]')!);
+    fireEvent.click(document.querySelector('[data-coord="f1"]')!);
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    fireEvent.click(document.querySelector('[data-coord="c5"]')!);
+
+    // The placement dialog appears instead of committing the move.
+    expect(screen.getByText(/Dove materializzare il Ghoul/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByText(/🧟 d4/)); // place the Ghoul on the VL's old square
+
+    expect(document.querySelector('[data-coord="c5"]')?.querySelector('svg')?.getAttribute('aria-label')).toBe('VL');
+    expect(document.querySelector('[data-coord="d4"]')?.querySelector('svg')?.getAttribute('aria-label')).toBe('GH');
+    expect(document.querySelector('[data-coord="c5"] .board-square-highlighted')).toBeNull();
+    expect(screen.queryByText(/Dove materializzare il Ghoul/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/Turno: Giocatore 1/i)).toBeInTheDocument(); // turn passed to A
+  });
+
+  it('auto-places the Ghoul without a dialog when only one square is free', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'VL', 'B');
+    board = place(board, 'c5', 'PE', 'A');
+    // Occupy every neighbor of c5 except the VL's origin d4 (free again after the capture).
+    for (const coord of ['b4', 'b5', 'b6', 'c4', 'c6', 'd5', 'd6']) {
+      board = place(board, coord, 'FG', 'A');
+    }
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="e1"]')!);
+    fireEvent.click(document.querySelector('[data-coord="f1"]')!);
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    fireEvent.click(document.querySelector('[data-coord="c5"]')!);
+
+    expect(screen.queryByText(/Dove materializzare il Ghoul/i)).not.toBeInTheDocument();
+    expect(document.querySelector('[data-coord="c5"]')?.querySelector('svg')?.getAttribute('aria-label')).toBe('VL');
+    expect(document.querySelector('[data-coord="d4"]')?.querySelector('svg')?.getAttribute('aria-label')).toBe('GH');
+  });
+
+  it('lists the converted Ghoul in the "Pezzi in gioco" sidebar', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'VL', 'B');
+    board = place(board, 'c5', 'PE', 'A');
+    renderGame(board);
+
+    fireEvent.click(document.querySelector('[data-coord="e1"]')!);
+    fireEvent.click(document.querySelector('[data-coord="f1"]')!);
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    fireEvent.click(document.querySelector('[data-coord="c5"]')!);
+    fireEvent.click(screen.getByText(/🧟 d4/));
+
+    expect(document.querySelector('[data-piece-row="GH"]')).not.toBeNull(); // B's new Ghoul in the sidebar
+  });
+});
+
 describe('GameScreen — anti-stalemate (20 turns without progress)', () => {
   it('shows the anti-stalemate banner and result after 20 consecutive non-progress moves', () => {
     let board = place(createEmptyBoard(), 'a1', KING_SIGLA, 'A');
