@@ -96,6 +96,7 @@ function GameScreen() {
   const [swapperFirstSquare, setSwapperFirstSquare] = useState<Coord | null>(null);
   const [pendingSdoppiamento, setPendingSdoppiamento] = useState<PendingSdoppiamento | null>(null);
   const [pendingGhoulPlacement, setPendingGhoulPlacement] = useState<PendingGhoulPlacement | null>(null);
+  const [confirmLeaveHome, setConfirmLeaveHome] = useState(false);
   const [revealRealMirage, setRevealRealMirage] = useState(false);
   /** The player who turned the reveal on — its auto-reset only watches THEIR split pairs, so an
    *  opponent's pair breaking (e.g. captured by this player's own clone) never kills the toggle. */
@@ -635,6 +636,9 @@ function GameScreen() {
               🤖 Il PC sta pensando...
             </span>
           )}
+          <Button variant="danger" onClick={() => setConfirmLeaveHome(true)}>
+            🏠 Torna alla Home
+          </Button>
         </>
       }
     >
@@ -683,6 +687,9 @@ function GameScreen() {
           </Button>
           <Button variant="improve" onClick={() => setNamesToggled((v) => !v)}>
             {namesToggled ? '🙈 Nascondi i nomi' : '🏷 Mostra i nomi (tieni H)'}
+          </Button>
+          <Button variant="danger" onClick={() => setConfirmLeaveHome(true)}>
+            🏠 Torna alla Home
           </Button>
           {currentPlayerHasSplitMirage && (
             <Button
@@ -879,6 +886,22 @@ function GameScreen() {
                   🧟 {coord}
                 </Button>
               ))}
+            </div>
+          </Modal>
+        )}
+
+        {confirmLeaveHome && (
+          <Modal title="🏠 Tornare alla Home?" onClose={() => setConfirmLeaveHome(false)}>
+            <p className="text-center text-sm text-slate-600 dark:text-slate-400">
+              La partita in corso andrà persa e tornerai alla schermata iniziale.
+            </p>
+            <div className="mt-2 flex flex-wrap justify-center gap-2">
+              <Button variant="danger" onClick={() => navigate('/')}>
+                Sì, torna alla Home
+              </Button>
+              <Button variant="secondary" onClick={() => setConfirmLeaveHome(false)}>
+                Annulla
+              </Button>
             </div>
           </Modal>
         )}

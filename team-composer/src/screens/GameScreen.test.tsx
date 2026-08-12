@@ -53,6 +53,49 @@ describe('GameScreen — fallback when there is no deployed board', () => {
   });
 });
 
+describe('GameScreen — return to Home', () => {
+  function renderGameWithHomeRoute(board: BoardState) {
+    return render(
+      <MemoryRouter initialEntries={['/game']}>
+        <GameSetupProvider>
+          <ThemeProvider>
+            <Routes>
+              <Route path="/game" element={<Bootstrap board={board} />} />
+              <Route path="/" element={<div>HOME-PROBE</div>} />
+            </Routes>
+          </ThemeProvider>
+        </GameSetupProvider>
+      </MemoryRouter>,
+    );
+  }
+
+  it('shows a "Torna alla Home" button during the match (header and under the board)', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    renderGameWithHomeRoute(board);
+    expect(screen.getAllByRole('button', { name: '🏠 Torna alla Home' })).toHaveLength(2);
+  });
+
+  it('asks for confirmation before leaving: Annulla keeps the match, Sì navigates Home', () => {
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    renderGameWithHomeRoute(board);
+
+    fireEvent.click(screen.getAllByRole('button', { name: '🏠 Torna alla Home' })[0]);
+    expect(screen.getByText(/La partita in corso andrà persa/i)).toBeInTheDocument();
+
+    // Annulla closes the dialog and the match stays playable.
+    fireEvent.click(screen.getByRole('button', { name: /annulla/i }));
+    expect(screen.queryByText(/La partita in corso andrà persa/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/Turno: Giocatore 1/i)).toBeInTheDocument();
+
+    // Sì, torna alla Home — the match is abandoned and the home route is shown.
+    fireEvent.click(screen.getAllByRole('button', { name: '🏠 Torna alla Home' })[1]);
+    fireEvent.click(screen.getByRole('button', { name: /sì, torna alla home/i }));
+    expect(screen.getByText('HOME-PROBE')).toBeInTheDocument();
+  });
+});
+
 describe('GameScreen — playable match', () => {
   it('renders the deployed board and starts with Player A to move', () => {
     let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
