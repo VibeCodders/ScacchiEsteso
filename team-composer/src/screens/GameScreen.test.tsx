@@ -1563,8 +1563,8 @@ describe('GameScreen — PvC complete game: the bot repulses with the Repulsore'
 describe('GameScreen — PvC complete game: the bot captures a Bomba and its piece is destroyed by the blast', () => {
   it('the PC (A) captures the Bomba with its Pedone, the explosion destroys the Pedone, and the game continues', () => {
     // PC (owner A): King e1 + Pedone d4. Human (owner B): King h8 + Bomba e5 (diagonally NE of the
-    // Pedone). The 1-ply bot prefers the capture: netting the BO's 21 punti (36 → 15 on B's side)
-    // outweighs losing its own 7-pt Pedone to the blast (22 → 15 on A's side).
+    // Pedone). The 1-ply bot prefers the capture: netting the BO's 24 punti (39 → 15 on B's side)
+    // outweighs losing its own 9-pt Pedone to the blast (24 → 15 on A's side).
     let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
     board = place(board, 'd4', 'PE', 'A');
     board = place(board, 'h8', KING_SIGLA, 'B');
