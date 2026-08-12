@@ -28,6 +28,7 @@ import { canRevive, getRevivalSquares, getRevivableSiglas } from './necromancy';
 import { getAreaDamageVictims, triggersAreaDamage } from './areaDamage';
 import { resolveExplosion } from './bomb';
 import { canMimic, getMimicMoves, getOrphanThreats } from './orphan';
+import { canConvertOnCapture, getGhoulPlacementSquares, GHOUL_SIGLA } from './vampire';
 import { isSilenced } from './auras';
 import { ANTI_STALEMATE_TURN_LIMIT, resolveAntiStalemateWinner } from './antiStalemate';
 import {
@@ -112,6 +113,11 @@ export interface HistoryEntry {
   isCloneCapture?: boolean;
   /** True when capturing the REAL Miraggio dissolved its clone as fallout (also no material value). */
   dispelledClone?: boolean;
+  /** True when a Vampiro Lunare's capture CONVERTED the enemy instead of eliminating it: the
+   *  victim never enters the graveyard, and an allied Ghoul materializes on `ghoulSquare`. */
+  isConversion?: boolean;
+  /** Where the converted Ghoul materialized (a free square adjacent to the captured piece). */
+  ghoulSquare?: Coord;
 }
 
 export interface GameState {
@@ -405,7 +411,7 @@ interface MoveOutcome {
   historyEntry: HistoryEntry;
 }
 
-function resolveMove(state: GameState, piece: PieceInstance, move: GeneratedMove, promotionChoice: string | undefined, isExtraMove: boolean): MoveOutcome {
+function resolveMove(state: GameState, piece: PieceInstance, move: GeneratedMove, promotionChoice: string | undefined, isExtraMove: boolean, ghoulSquare?: Coord): MoveOutcome {
   const capturedPiece = move.capturedCoord ? getPieceAt(state.board, move.capturedCoord) : undefined;
   // The clone of a real Miraggio dissolves the moment the real is removed (applyMove handles the
   // board; the graveyard bookkeeping below handles what's worth punti).
@@ -416,8 +422,25 @@ function resolveMove(state: GameState, piece: PieceInstance, move: GeneratedMove
     nextBoard = setPieceAt(nextBoard, move.to, createPieceInstance(promotionChoice, piece.owner));
   }
 
+  const pieceDef = getPieceDef(piece.sigla);
+  // Vampiro Lunare's Sete di Sangue: a capture CONVERTS the enemy instead of eliminating it — an
+  // allied Ghoul (valore 1) materializes on a free square adjacent to the captured piece. With
+  // several candidates the UI has the player choose (`ghoulSquare`); the engine auto-picks the
+  // first when none was given (bot / single candidate). Without any free square the conversion is
+  // impossible and the capture resolves normally (the enemy is eliminated after all). A converted
+  // piece never reaches the graveyard and a converted Bomba does not explode (it was not destroyed).
+  let ghoulPlacement: Coord | undefined;
+  if (capturedPiece && canConvertOnCapture(pieceDef) && move.isCapture && move.capturedCoord) {
+    const options = getGhoulPlacementSquares(nextBoard, move.capturedCoord, state.dimensions);
+    ghoulPlacement = ghoulSquare && options.includes(ghoulSquare) ? ghoulSquare : options[0];
+    if (ghoulPlacement) {
+      nextBoard = setPieceAt(nextBoard, ghoulPlacement, createPieceInstance(GHOUL_SIGLA, piece.owner));
+    }
+  }
+  const converted = Boolean(ghoulPlacement);
+
   const nextCaptured: Record<Owner, PieceInstance[]> = { A: state.captured.A, B: state.captured.B };
-  if (capturedPiece && !isMirageClone(capturedPiece)) {
+  if (capturedPiece && !isMirageClone(capturedPiece) && !converted) {
     // A clone is an illusion: it leaves the board but awards no punti (killing it was a wasted
     // capture — the real Miraggio survives). Only the real piece has material value.
     nextCaptured[capturedPiece.owner] = [...nextCaptured[capturedPiece.owner], capturedPiece];
@@ -426,8 +449,9 @@ function resolveMove(state: GameState, piece: PieceInstance, move: GeneratedMove
   // Bomba (esplodeSeCatturato): capturing it destroys the capturer too — never a King, and never
   // when the blast would expose the capturer's own King. The exploded capturer joins its owner's
   // graveyard like any captured piece. Collateral area-damage victims never trigger the blast.
+  // A Bomba CONVERTED by the Vampiro Lunare was not destroyed, so it does not explode.
   let explodedAt: Coord | undefined;
-  if (capturedPiece && !isMirageClone(capturedPiece)) {
+  if (!converted && capturedPiece && !isMirageClone(capturedPiece)) {
     const explosion = resolveExplosion(nextBoard, capturedPiece, move.to, piece.owner, state.dimensions);
     if (explosion.explodedAt) {
       explodedAt = explosion.explodedAt;
@@ -446,7 +470,6 @@ function resolveMove(state: GameState, piece: PieceInstance, move: GeneratedMove
 
   let areaDamageCoords: Coord[] | undefined;
   let areaDamage: Array<{ sigla: string; owner: Owner }> | undefined;
-  const pieceDef = getPieceDef(piece.sigla);
   // A Colosso destroyed by the blast is gone: no area damage fires from its empty square.
   if (!explodedAt && triggersAreaDamage(pieceDef, move) && !isSilenced(nextBoard, move.to, piece.owner, state.dimensions)) {
     const victims = getAreaDamageVictims(nextBoard, move.to, state.dimensions);
@@ -494,6 +517,8 @@ function resolveMove(state: GameState, piece: PieceInstance, move: GeneratedMove
     explodedAt,
     isCloneCapture: capturedPiece && isMirageClone(capturedPiece) ? true : undefined,
     dispelledClone: dispelledClone ? true : undefined,
+    isConversion: converted ? true : undefined,
+    ghoulSquare: ghoulPlacement,
   };
 
   return { nextBoard, nextCaptured, historyEntry };
@@ -670,7 +695,14 @@ export function stopRabbitChain(state: GameState): ApplyTurnResult {
  * `orphanMimicSource` selects which threatening piece an Orfano imitates when under threat (see
  * `getLegalMovesForTurn`) — required in that situation, ignored otherwise.
  */
-export function applyTurn(state: GameState, from: Coord, to: Coord, promotionChoice?: string, orphanMimicSource?: Coord): ApplyTurnResult {
+export function applyTurn(
+  state: GameState,
+  from: Coord,
+  to: Coord,
+  promotionChoice?: string,
+  orphanMimicSource?: Coord,
+  ghoulSquare?: Coord,
+): ApplyTurnResult {
   if (GAME_OVER_STATUSES.has(state.status)) {
     return { ok: false, reason: 'La partita è terminata.' };
   }
@@ -724,6 +756,18 @@ export function applyTurn(state: GameState, from: Coord, to: Coord, promotionCho
 
   const pieceDef = getPieceDef(piece.sigla);
 
+  // A Vampiro Lunare's conversion placement only makes sense on a capture it can convert, and the
+  // square must be a free neighbor of the captured piece on the post-capture board.
+  if (ghoulSquare && !(canConvertOnCapture(pieceDef) && move.isCapture && move.capturedCoord)) {
+    return { ok: false, reason: 'Conversione non applicabile a questa mossa.' };
+  }
+  if (ghoulSquare && move.capturedCoord) {
+    const postCaptureBoard = applyMove(state.board, move);
+    if (!getGhoulPlacementSquares(postCaptureBoard, move.capturedCoord, state.dimensions).includes(ghoulSquare)) {
+      return { ok: false, reason: `Casella non valida per la conversione: ${ghoulSquare}.` };
+    }
+  }
+
   if (isRabbitHop(pieceDef, move)) {
     const hurdle = findRabbitHurdle(state.board, from, to, piece.owner, state.dimensions);
     if (!hurdle) {
@@ -744,7 +788,7 @@ export function applyTurn(state: GameState, from: Coord, to: Coord, promotionCho
     return { ok: true, state: finalizeTurn(state, piece, move, outcome, false) };
   }
 
-  const outcome = resolveMove(state, piece, move, undefined, false);
+  const outcome = resolveMove(state, piece, move, undefined, false, ghoulSquare);
   // A Berserker destroyed by a Bomba's blast gets no bonus move — it's no longer on the board.
   if (triggersExtraMove(pieceDef, move) && !outcome.historyEntry.isExplosion) {
     return { ok: true, state: enterExtraMovePhase(state, piece, outcome) };

@@ -332,6 +332,23 @@ const PIECE_SHAPES: Record<string, ReactElement> = {
       <polygon points="58,12 42,46 50,46 40,74 62,38 52,38" />
     </g>
   ),
+  VL: (
+    <g>
+      <rect x="30" y="68" width="40" height="12" rx="3" />
+      <path d="M50 16 A26 26 0 1 0 50 62 A19 19 0 1 1 50 16 Z" />
+      <path d="M43 34 L46 46 L49 34 L52 46 L55 34" fill="none" stroke="currentColor" strokeWidth="3" strokeLinejoin="round" />
+    </g>
+  ),
+  GH: (
+    <g>
+      <rect x="24" y="72" width="52" height="10" rx="2" />
+      <path d="M36 72 Q30 50 38 44 Q32 40 34 30 Q38 20 50 20 Q62 20 66 30 Q68 40 62 44 Q70 50 64 72 Z" />
+      <circle cx="42" cy="34" r="3.5" fill="var(--piece-label-color, #fff)" />
+      <circle cx="58" cy="34" r="3.5" fill="var(--piece-label-color, #fff)" />
+      <circle cx="42.5" cy="34" r="1.5" />
+      <circle cx="57.5" cy="34" r="1.5" />
+    </g>
+  ),
 };
 
 export interface PieceIconProps extends SVGProps<SVGSVGElement> {

@@ -6,8 +6,9 @@ import { DEFAULT_BOARD_DIMENSIONS, type BoardDimensions } from '../game/board';
 export const pieces: Piece[] = piecesRaw as Piece[];
 export const rules: Rules = rulesRaw as Rules;
 
-/** Pieces selectable during team-building — excludes pieces only obtainable via in-game promotion (e.g. Damone). */
-export const pickablePieces: Piece[] = pieces.filter((p) => !p.obtainableOnlyViaPromotion);
+/** Pieces selectable during team-building — excludes pieces only obtainable via in-game promotion
+ *  (e.g. Damone) or via the Vampiro Lunare's conversion (the Ghoul). */
+export const pickablePieces: Piece[] = pieces.filter((p) => !p.obtainableOnlyViaPromotion && !p.obtainableOnlyViaConversion);
 
 export const BUDGET = rules.budget;
 export const MAX_PIECES_TOTAL = rules.maxPiecesTotal;

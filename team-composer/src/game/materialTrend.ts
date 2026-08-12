@@ -1,5 +1,6 @@
 import { computeMaterialScore } from './antiStalemate';
 import { getPieceDef } from './moveEngine';
+import { GHOUL_SIGLA } from './vampire';
 import type { GameState, HistoryEntry } from './turnManager';
 import type { Owner } from './board';
 
@@ -29,6 +30,9 @@ function entryDelta(entry: HistoryEntry): { dA: number; dB: number } {
   if (entry.isCapture && entry.capturedSigla && !entry.isCloneCapture) {
     add(opponent, -punti(entry.capturedSigla));
   }
+  // A Vampiro Lunare's conversion swaps the victim for an allied Ghoul (valore 1): the enemy's
+  // punti are already subtracted above, and the Ghoul now sits on the capturer's board side.
+  if (entry.isConversion) add(entry.owner, punti(GHOUL_SIGLA));
   // A Bomba's blast destroys the capturer as well (the King is immune, so no King ever explodes).
   if (entry.isExplosion) add(entry.owner, -punti(entry.sigla));
   // A Colosso's area damage removes allies and enemies alike (clones have no value).

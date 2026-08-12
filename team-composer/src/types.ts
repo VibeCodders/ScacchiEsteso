@@ -134,6 +134,15 @@ export interface Piece {
    *  bellica but for leaps (the Berserker's extra move only triggers on melee captures). Drives
    *  turnManager's triggersExtraMove via the pendingExtraMove flow. */
   fulmine?: boolean;
+  /** True only for Vampiro Lunare (VL): "Sete di Sangue" — instead of eliminating the enemy it
+   *  captures, it converts it into an allied Ghoul (GH, valore 1) materialized on a free square
+   *  adjacent to the captured piece. The converted piece never reaches the graveyard; the VL's
+   *  capture still counts as progress. Drives the capture resolution in turnManager and the
+   *  placement-choice flow in GameScreen. */
+  vampirismo?: boolean;
+  /** True only for pieces obtainable only in-game via the Vampiro Lunare's conversion (Ghoul) —
+   *  excluded from team-building rosters, like obtainableOnlyViaPromotion pieces. */
+  obtainableOnlyViaConversion?: boolean;
 }
 
 export interface MirageMarker {

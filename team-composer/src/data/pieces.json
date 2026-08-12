@@ -743,5 +743,39 @@
     ],
     "fulmine": true,
     "saltaInterposizioni": true
+  },
+  {
+    "sigla": "VL",
+    "descrizione": "Vampiro Lunare",
+    "punti": 38,
+    "categoria": "base",
+    "classico": false,
+    "regole": "Si muove di massimo 2 caselle in diagonale. Sete di Sangue: quando effettua una cattura, non elimina definitivamente il pezzo nemico, ma lo converte alleato trasformandolo in un Ghoul di valore 1 nella casella adiacente libera.",
+    "moves": [
+      { "directions": ["ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 2, "capture": true, "captureMode": "melee", "movementType": "step" }
+    ],
+    "movimentoTipo": "step",
+    "resistance": 0,
+    "immunityTypes": [],
+    "alternativeActions": [
+      { "type": "conversione_ghoul", "modalita": "sul_cattura", "params": { "target": "nemico_catturato", "conversioneAlleato": true } }
+    ],
+    "vampirismo": true
+  },
+  {
+    "sigla": "GH",
+    "descrizione": "Ghoul",
+    "punti": 1,
+    "categoria": "base",
+    "classico": false,
+    "regole": "Creatura non morta creata dal Vampiro Lunare (Sete di Sangue). Si muove di una casella in qualsiasi direzione e cattura in mischia. Non schierabile in composizione: si ottiene solo convertendo un nemico.",
+    "moves": [
+      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step" }
+    ],
+    "movimentoTipo": "step",
+    "resistance": 0,
+    "immunityTypes": [],
+    "alternativeActions": [],
+    "obtainableOnlyViaConversion": true
   }
 ]

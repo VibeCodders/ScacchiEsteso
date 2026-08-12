@@ -15,6 +15,7 @@ import { canSwapperSwap, getSwapperCandidateSquares } from '../game/swapper';
 import { canRevive, getRevivalSquares, getRevivableSiglas } from '../game/necromancy';
 import { canMimic, getOrphanThreats } from '../game/orphan';
 import { canSdoppiare, canRiunire, getSdoppiamentoSquares, getRiunioneSquares, isRealMirage } from '../game/mirage';
+import { canConvertOnCapture, getGhoulPlacementSquares } from '../game/vampire';
 import { createInitialGameState, applyTurn, applyScocca, applyRepulse, applyTeleport, applyAttract, applySwap, applySostituzione, applySwapperSwap, applyRevive, applySdoppiamento, applyRiunione, getLegalMovesForTurn, skipExtraMove, stopRabbitChain, type GameState } from '../game/turnManager';
 import { chooseBotAction, applyBotAction, formatMovesAhead, BOT_DIFFICULTY_MAX } from '../game/bot';
 import { sortSiglasByPunti } from '../data/pieces';
@@ -49,6 +50,12 @@ interface PendingMimicChoice {
 interface PendingSdoppiamento {
   from: Coord;
   cloneSquare: Coord;
+}
+
+interface PendingGhoulPlacement {
+  from: Coord;
+  to: Coord;
+  options: Coord[];
 }
 
 /** Group ids of Miraggio pairs with BOTH halves on the board (real + living clone), per owner —
@@ -88,6 +95,7 @@ function GameScreen() {
   const [actionMode, setActionMode] = useState<'scocca' | 'repulse' | 'teleport' | 'attract' | 'swap' | 'sostituzione' | 'revive' | 'swapperSwap' | 'sdoppiamento' | 'riunione' | null>(null);
   const [swapperFirstSquare, setSwapperFirstSquare] = useState<Coord | null>(null);
   const [pendingSdoppiamento, setPendingSdoppiamento] = useState<PendingSdoppiamento | null>(null);
+  const [pendingGhoulPlacement, setPendingGhoulPlacement] = useState<PendingGhoulPlacement | null>(null);
   const [revealRealMirage, setRevealRealMirage] = useState(false);
   /** The player who turned the reveal on — its auto-reset only watches THEIR split pairs, so an
    *  opponent's pair breaking (e.g. captured by this player's own clone) never kills the toggle. */
@@ -115,6 +123,7 @@ function GameScreen() {
       setOrphanMimicSource(null);
       setPendingMimicChoice(null);
       setPendingSdoppiamento(null);
+      setPendingGhoulPlacement(null);
       setError(null);
     }
   }, [isBotTurn, gameState, botOwner, botDifficulty]);
@@ -260,8 +269,8 @@ function GameScreen() {
     ? [...new Set([lastHistoryEntry.from, lastHistoryEntry.to, lastHistoryEntry.capturedCoord, ...(lastHistoryEntry.areaDamageCoords ?? [])].filter((c): c is Coord => Boolean(c)))]
     : [];
 
-  const commitPlainMove = (from: Coord, to: Coord, promotionChoice?: string) => {
-    const result = applyTurn(gameState, from, to, promotionChoice, orphanMimicSource ?? undefined);
+  const commitPlainMove = (from: Coord, to: Coord, promotionChoice?: string, ghoulSquare?: Coord) => {
+    const result = applyTurn(gameState, from, to, promotionChoice, orphanMimicSource ?? undefined, ghoulSquare);
     if (result.ok) {
       setGameState(result.state);
       setOrientation(result.state.turn);
@@ -271,6 +280,7 @@ function GameScreen() {
       setOrphanMimicSource(null);
       setPendingMimicChoice(null);
       setPendingSdoppiamento(null);
+      setPendingGhoulPlacement(null);
     } else {
       setError(result.reason);
     }
@@ -285,6 +295,7 @@ function GameScreen() {
     setOrphanMimicSource(null);
     setPendingMimicChoice(null);
     setPendingSdoppiamento(null);
+    setPendingGhoulPlacement(null);
 
     const piece = gameState.board.get(coord);
     if (piece && canMimic(getPieceDef(piece.sigla))) {
@@ -310,6 +321,22 @@ function GameScreen() {
         setPendingPromotion({ from, to, options });
       }
       return;
+    }
+
+    // Vampiro Lunare's Sete di Sangue: the capture converts the enemy into a Ghoul placed on a
+    // free adjacent square (computed on the post-capture board, like the engine does — so the
+    // VL's own origin square is offered too). With several candidates the player picks one (like
+    // promotion); with a single candidate the move commits directly and the engine auto-places.
+    if (canConvertOnCapture(pieceDef)) {
+      const captured = gameState.board.get(to);
+      if (captured && captured.owner !== mover.owner) {
+        const postCaptureBoard = movePiece(removePieceAt(gameState.board, to), from, to);
+        const options = getGhoulPlacementSquares(postCaptureBoard, to, gameState.dimensions);
+        if (options.length > 1) {
+          setPendingGhoulPlacement({ from, to, options });
+          return;
+        }
+      }
     }
 
     commitPlainMove(from, to);
@@ -448,6 +475,7 @@ function GameScreen() {
       setActionMode(null);
       setSwapperFirstSquare(null);
       setPendingSdoppiamento(null);
+      setPendingGhoulPlacement(null);
       setError(null);
     } else {
       setError(result.reason);
@@ -463,6 +491,7 @@ function GameScreen() {
       setActionMode(null);
       setSwapperFirstSquare(null);
       setPendingSdoppiamento(null);
+      setPendingGhoulPlacement(null);
       setError(null);
     } else {
       setError(result.reason);
@@ -470,7 +499,7 @@ function GameScreen() {
   };
 
   const handleSquareClick = (coord: Coord) => {
-    if (gameOver || isBotTurn || pendingPromotion || pendingRevival || pendingMimicChoice || pendingSdoppiamento) return;
+    if (gameOver || isBotTurn || pendingPromotion || pendingRevival || pendingMimicChoice || pendingSdoppiamento || pendingGhoulPlacement) return;
 
     if (gameState.pendingExtraMove) {
       if (legalDestinations.includes(coord)) {
@@ -527,6 +556,7 @@ function GameScreen() {
         setOrphanMimicSource(null);
         setPendingMimicChoice(null);
         setPendingSdoppiamento(null);
+        setPendingGhoulPlacement(null);
       } else {
         selectPiece(coord);
       }
@@ -539,6 +569,7 @@ function GameScreen() {
     setOrphanMimicSource(null);
     setPendingMimicChoice(null);
     setPendingSdoppiamento(null);
+    setPendingGhoulPlacement(null);
   };
 
   const handleDragStart = (coord: Coord) => {
@@ -615,8 +646,8 @@ function GameScreen() {
           onSquareClick={handleSquareClick}
           highlightedSquares={legalDestinations}
           selectedSquare={effectiveSelected}
-          onPieceDragStart={gameOver || isBotTurn || pendingPromotion || pendingRevival || pendingMimicChoice || gameState.pendingExtraMove || gameState.pendingRabbitChain || actionMode ? undefined : handleDragStart}
-          onSquareDrop={gameOver || isBotTurn || pendingPromotion || pendingRevival || pendingMimicChoice || actionMode ? undefined : handleSquareClick}
+          onPieceDragStart={gameOver || isBotTurn || pendingPromotion || pendingRevival || pendingMimicChoice || pendingGhoulPlacement || gameState.pendingExtraMove || gameState.pendingRabbitChain || actionMode ? undefined : handleDragStart}
+          onSquareDrop={gameOver || isBotTurn || pendingPromotion || pendingRevival || pendingMimicChoice || pendingGhoulPlacement || actionMode ? undefined : handleSquareClick}
           flashSquares={lastMoveFlashSquares}
           flashVersion={gameState.history.length}
           mirageRealSquares={mirageRealSquares}
@@ -810,6 +841,21 @@ function GameScreen() {
             >
               Il vero è in {pendingSdoppiamento.cloneSquare} (clone in {pendingSdoppiamento.from})
             </Button>
+          </Modal>
+        )}
+
+        {pendingGhoulPlacement && (
+          <Modal title="🩸 Dove materializzare il Ghoul?" onClose={() => setPendingGhoulPlacement(null)}>
+            <p className="text-center text-sm text-slate-600 dark:text-slate-400">
+              Il Vampiro Lunare converte il nemico catturato in un Ghoul alleato: scegli la casella adiacente libera dove appare.
+            </p>
+            <div className="flex flex-wrap justify-center gap-2">
+              {pendingGhoulPlacement.options.map((coord) => (
+                <Button key={coord} variant="primary" onClick={() => commitPlainMove(pendingGhoulPlacement.from, pendingGhoulPlacement.to, undefined, coord)}>
+                  🧟 {coord}
+                </Button>
+              ))}
+            </div>
           </Modal>
         )}
 
