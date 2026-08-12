@@ -18,16 +18,16 @@ import { computeMaterialScore, resolveAntiStalemateWinner, ANTI_STALEMATE_TURN_L
 
 // From pieces.json: RE 15, PE 7, VZ 24, TT 22, RP 10, SW 28, NE 28, MI 37, MG 27.
 // Current pieces.json prices (rebalanced via the point estimator): RE 15, PE 9, VZ 24, TT 23,
-// RP 18, SW 28, NE 24, MI 37, MG 28, BR 22.
+// RP 20, SW 27, NE 24, MI 36, MG 30, BR 22.
 const RE = 15;
 const PE = 9;
 const VZ = 24;
 const TT = 23;
-const RP = 18;
-const SW = 28;
+const RP = 20;
+const SW = 27;
 const NE = 24;
-const MI = 37;
-const MG = 28;
+const MI = 36;
+const MG = 30;
 const BR = 22;
 
 function place(board: BoardState, coord: Coord, sigla: string, owner: 'A' | 'B' = 'A'): BoardState {
