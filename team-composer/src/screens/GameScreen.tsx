@@ -51,17 +51,25 @@ interface PendingSdoppiamento {
   cloneSquare: Coord;
 }
 
-/** Group ids of Miraggio pairs with BOTH halves on the board (real + living clone) — only those
- *  are "split" in the sense the reveal cares about: a lone real half whose clone was captured has
- *  nothing left to distinguish. Shared by the button-visibility check and the auto-reset effect. */
-function splitMirageGroupIds(board: BoardState): Set<string> {
-  const reals = new Set<string>();
-  const clones = new Set<string>();
+/** Group ids of Miraggio pairs with BOTH halves on the board (real + living clone), per owner —
+ *  only those are "split" in the sense the reveal cares about: a lone real half whose clone was
+ *  captured has nothing left to distinguish. Per-owner, because the reveal belongs to whoever
+ *  turned it on: an opponent's pair breaking must not kill it. Shared by the button-visibility
+ *  check and the auto-reset effect. */
+function splitMirageGroupIds(board: BoardState): Record<Owner, Set<string>> {
+  const byOwner: Record<Owner, { reals: Set<string>; clones: Set<string> }> = {
+    A: { reals: new Set(), clones: new Set() },
+    B: { reals: new Set(), clones: new Set() },
+  };
   for (const piece of board.values()) {
     if (!piece.mirage) continue;
-    (piece.mirage.isClone ? clones : reals).add(piece.mirage.id);
+    const bucket = byOwner[piece.owner];
+    (piece.mirage.isClone ? bucket.clones : bucket.reals).add(piece.mirage.id);
   }
-  return new Set([...reals].filter((id) => clones.has(id)));
+  return {
+    A: new Set([...byOwner.A.reals].filter((id) => byOwner.A.clones.has(id))),
+    B: new Set([...byOwner.B.reals].filter((id) => byOwner.B.clones.has(id))),
+  };
 }
 
 function GameScreen() {
@@ -81,6 +89,9 @@ function GameScreen() {
   const [swapperFirstSquare, setSwapperFirstSquare] = useState<Coord | null>(null);
   const [pendingSdoppiamento, setPendingSdoppiamento] = useState<PendingSdoppiamento | null>(null);
   const [revealRealMirage, setRevealRealMirage] = useState(false);
+  /** The player who turned the reveal on — its auto-reset only watches THEIR split pairs, so an
+   *  opponent's pair breaking (e.g. captured by this player's own clone) never kills the toggle. */
+  const [revealOwner, setRevealOwner] = useState<Owner | null>(null);
   const [infoSigla, setInfoSigla] = useState<string | null>(null);
   const { showNames, namesToggled, setNamesToggled, namesKeyHeld } = useShowNames();
 
@@ -195,31 +206,29 @@ function GameScreen() {
    *  clone was captured has nothing left to distinguish). */
   const currentPlayerHasSplitMirage = useMemo(() => {
     if (!gameState) return false;
-    const splitIds = splitMirageGroupIds(gameState.board);
-    return [...gameState.board.values()].some(
-      (p) => p.owner === gameState.turn && isRealMirage(p) && splitIds.has(p.mirage!.id),
-    );
+    return splitMirageGroupIds(gameState.board)[gameState.turn].size > 0;
   }, [gameState]);
 
-  /** Ids of the complete split Miraggio pairs (real + living clone) on the previous board — lets
-   *  the effect below notice when a split pair is gone without resetting the reveal on ordinary
-   *  turn changes. */
-  const previousSplitMirageIdsRef = useRef<Set<string> | null>(null);
+  /** Complete split Miraggio pairs (real + living clone) on the previous board, per owner — lets
+   *  the effect below notice when the reveal owner's pair is gone without resetting the reveal on
+   *  ordinary turn changes or when only the OPPONENT's pair breaks. */
+  const previousSplitMirageIdsByOwnerRef = useRef<Record<Owner, Set<string>> | null>(null);
 
-  // The reveal marks the current player's real Miraggio halves; when a split pair is broken — the
-  // real is captured, the clone is captured (leaving the real alone), or the pair merges back
-  // (riunione clears the marker) — there is nothing left to reveal: turn the toggle off
-  // automatically. Quiet turns (that keep the split pair alive) don't reset it, so each player's
-  // reveal survives the opponent's move and their own ordinary plays.
+  // The reveal marks the current player's real Miraggio halves; when the player who turned it on
+  // loses their split pair — the real is captured, the clone is captured (leaving the real alone),
+  // the pair merges back (riunione clears the marker), or the pair is destroyed by an explosion —
+  // there is nothing left for THEM to reveal: turn the toggle off automatically. Quiet turns and
+  // the opponent's pair breaking (e.g. captured by this player's own clone) don't reset it.
   useEffect(() => {
-    const previousIds = previousSplitMirageIdsRef.current;
-    previousSplitMirageIdsRef.current = gameState ? splitMirageGroupIds(gameState.board) : null;
-    if (!gameState || !revealRealMirage || !previousIds) return;
-    const currentIds = previousSplitMirageIdsRef.current!;
-    if ([...previousIds].some((id) => !currentIds.has(id))) {
+    const previousByOwner = previousSplitMirageIdsByOwnerRef.current;
+    previousSplitMirageIdsByOwnerRef.current = gameState ? splitMirageGroupIds(gameState.board) : null;
+    if (!gameState || !revealRealMirage || !revealOwner || !previousByOwner) return;
+    const currentByOwner = previousSplitMirageIdsByOwnerRef.current!;
+    if ([...previousByOwner[revealOwner]].some((id) => !currentByOwner[revealOwner].has(id))) {
       setRevealRealMirage(false);
+      setRevealOwner(null);
     }
-  }, [gameState, revealRealMirage]);
+  }, [gameState, revealRealMirage, revealOwner]);
 
   // The end-of-match dialog is gone: as soon as the game reaches a terminal status, the match
   // result (with the final position snapshot) is recorded and the dedicated results page opens.
@@ -621,7 +630,14 @@ function GameScreen() {
             {namesToggled ? '🙈 Nascondi i nomi' : '🏷 Mostra i nomi (tieni H)'}
           </Button>
           {currentPlayerHasSplitMirage && (
-            <Button variant="improve" onClick={() => setRevealRealMirage((r) => !r)}>
+            <Button
+              variant="improve"
+              onClick={() => {
+                const next = !revealRealMirage;
+                setRevealRealMirage(next);
+                setRevealOwner(next ? gameState.turn : null);
+              }}
+            >
               {revealRealMirage ? '🙈 Nascondi Miraggi veri' : '👁 Vedi i Miraggi veri (tuo turno)'}
             </Button>
           )}

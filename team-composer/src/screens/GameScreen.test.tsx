@@ -1044,6 +1044,47 @@ describe('GameScreen — Miraggio sdoppiamento', () => {
     expect(document.querySelector('[data-coord="e4"]')?.querySelector('svg')).toBeNull(); // clone dissolved as fallout
   });
 
+  it('keeps the reveal on when the opponent\'s real half is captured by our clone — reset only when OUR pair breaks', () => {
+    // Both players field a split Miraggio, marked directly (createInitialGameState keeps the board).
+    let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
+    board = place(board, 'e8', KING_SIGLA, 'B');
+    board = place(board, 'd4', 'MG', 'A'); // A's real
+    board = place(board, 'e4', 'MG', 'A'); // A's clone
+    board = place(board, 'e6', 'MG', 'B'); // B's real
+    board = place(board, 'e5', 'MG', 'B'); // B's clone
+    board = place(board, 'c4', 'BO', 'A'); // Bomba: the clone explodes on it later
+    board.get('d4')!.mirage = { id: 'mA', isClone: false };
+    board.get('e4')!.mirage = { id: 'mA', isClone: true };
+    board.get('e6')!.mirage = { id: 'mB', isClone: false };
+    board.get('e5')!.mirage = { id: 'mB', isClone: true };
+    renderGame(board);
+
+    // A passes; B reveals the real half of B's own pair.
+    fireEvent.click(document.querySelector('[data-coord="e1"]')!);
+    fireEvent.click(document.querySelector('[data-coord="f1"]')!);
+    fireEvent.click(screen.getByText(/Vedi i Miraggi veri/i));
+    expect(screen.getByText(/I Miraggi veri del giocatore di turno/i)).toBeInTheDocument();
+    expect(document.querySelector('[data-coord="e6"] .board-mirage-real-marker')).not.toBeNull(); // B's real
+    expect(document.querySelector('[data-coord="e5"] .board-mirage-real-marker')).toBeNull(); // B's clone
+
+    // B's clone captures A's real at d4: A's pair breaks (A's clone dissolves), but B's pair is
+    // intact — the reveal must stay on.
+    fireEvent.click(document.querySelector('[data-coord="e5"]')!);
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    expect(screen.getByText(/I Miraggi veri del giocatore di turno/i)).toBeInTheDocument();
+    expect(document.querySelector('[data-coord="d4"]')?.querySelector('svg')?.getAttribute('aria-label')).toBe('MG'); // B's clone now on d4
+    expect(document.querySelector('[data-coord="e4"]')?.querySelector('svg')).toBeNull(); // A's clone dissolved
+    expect(document.querySelector('[data-coord="e6"]')?.querySelector('svg')?.getAttribute('aria-label')).toBe('MG'); // B's real untouched
+
+    // A passes; B's clone (now on d4) captures the Bomba at c4 and explodes — only now that B's
+    // OWN pair is gone does the reveal reset.
+    fireEvent.click(document.querySelector('[data-coord="f1"]')!);
+    fireEvent.click(document.querySelector('[data-coord="g1"]')!);
+    fireEvent.click(document.querySelector('[data-coord="d4"]')!);
+    fireEvent.click(document.querySelector('[data-coord="c4"]')!);
+    expect(screen.queryByText(/I Miraggi veri del giocatore di turno/i)).not.toBeInTheDocument();
+  });
+
   it('turns the reveal off automatically when the real Miraggio is destroyed by a Scoccare', () => {
     let board = place(createEmptyBoard(), 'e1', KING_SIGLA, 'A');
     board = place(board, 'e8', KING_SIGLA, 'B');
