@@ -152,6 +152,11 @@ export interface Piece {
    *  empty squares. When two portals exist for the same player, any piece (except the King) can
    *  traverse them instantly. Drives getPortalCreationSquares / applyCreatePortal. */
   creaPortali?: boolean;
+  /** True only for Smeraldo (SM): in addition to a Bishop-style move, may crystallize empty squares
+   * within range 2. Crystallized squares become inaccessible to both players for 3 full turns, then
+   * dissolve. Maximum 2 active crystallizations per owner. Drives getCrystallizationSquares /
+   * applyCrystallization. */
+  cristallizzaCaselle?: boolean;
 }
 
 export interface MirageMarker {

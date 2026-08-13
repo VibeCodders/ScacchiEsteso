@@ -813,5 +813,23 @@
       { "type": "creazione_portale", "modalita": "alternativa", "params": { "target": "casella_adiacente_vuota", "raggio": 1, "maxPortali": 2, "reEscluso": true } }
     ],
     "creaPortali": true
+  },
+  {
+    "sigla": "SM",
+    "descrizione": "Smeraldo",
+    "punti": 24,
+    "categoria": "base",
+    "classico": false,
+    "regole": "Si muove come un Alfiere (diagonale illimitata). Cattura a distanza. In alternativa al movimento, può cristallizzare una casella vuota fino a 2 passi di distanza (in qualsiasi direzione). Una casella cristallizzata diventa inaccessibile per entrambi i giocatori per 3 turni completi, dopodiché la cristallizzazione svanisce. Massimo 2 caselle cristallizzate attive contemporaneamente. Il Re non può entrare in una casella cristallizzata.",
+    "moves": [
+      { "directions": ["ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 8, "capture": true, "captureMode": "ranged", "movementType": "slide" }
+    ],
+    "movimentoTipo": "slide",
+    "resistance": 0,
+    "immunityTypes": [],
+    "alternativeActions": [
+      { "type": "cristallizzazione", "modalita": "alternativa", "params": { "raggio": 2, "target": "casella_vuota_distanza_massima_2", "direzioni": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "durataTurni": 3, "maxCristallizzazioni": 2, "reEscluso": true, "senzaCattura": true } }
+    ],
+    "cristallizzaCaselle": true
   }
 ]
