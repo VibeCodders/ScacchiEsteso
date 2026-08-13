@@ -357,6 +357,14 @@ const PIECE_SHAPES: Record<string, ReactElement> = {
       <circle cx="60" cy="33" r="1.6" fill="var(--piece-label-color, #fff)" />
     </g>
   ),
+  PT: (
+    <g>
+      <rect x="30" y="68" width="40" height="12" rx="3" />
+      <ellipse cx="35" cy="50" rx="12" ry="16" fill="none" stroke="currentColor" strokeWidth="5" />
+      <ellipse cx="65" cy="50" rx="12" ry="16" fill="none" stroke="currentColor" strokeWidth="5" />
+      <path d="M47 50 L53 50" stroke="currentColor" strokeWidth="4" />
+    </g>
+  ),
 };
 
 export interface PieceIconProps extends SVGProps<SVGSVGElement> {

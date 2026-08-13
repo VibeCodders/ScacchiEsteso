@@ -208,7 +208,7 @@ const STAGE1_NON_NEGATIVE_FEATURES: ReadonlySet<number> = new Set([PROMOTABLE_FE
  * implement IRLS without duplicating the normal-equations assembly. No external dependency — the
  * matrices here are tiny (k ≤ 12).
  */
-function solveLeastSquares(X: number[][], y: number[], lambda = 0, weights?: number[], nonNegativeIndices: ReadonlySet<number> = new Set()): number[] {
+function solveLeastSquares(X: number[][], y: number[], lambda = 0, weights?: number[], nonNegativeIndices: ReadonlySet<number> = new Set(), nonPositiveIndices: ReadonlySet<number> = new Set()): number[] {
   const k = X[0].length;
   const XtX: number[][] = Array.from({ length: k }, () => new Array(k).fill(0));
   const Xty: number[] = new Array(k).fill(0);
@@ -228,9 +228,17 @@ function solveLeastSquares(X: number[][], y: number[], lambda = 0, weights?: num
   // Non-negativity (active set): if a constrained coefficient comes out negative, re-solve with
   // those features pinned at exactly 0 (identity rows/cols) and the rest re-fit on the reduced
   // model. This guarantees structural invariants like "promotion never lowers a piece's price".
-  const violated = [...nonNegativeIndices].filter((i) => beta[i] < 0);
-  if (violated.length > 0) {
-    for (const i of violated) {
+  const negativeViolated = [...nonNegativeIndices].filter((i) => beta[i] < 0);
+  const positiveViolated = [...nonPositiveIndices].filter((i) => beta[i] > 0);
+  if (negativeViolated.length > 0 || positiveViolated.length > 0) {
+    for (const i of negativeViolated) {
+      for (let j = 0; j < k; j++) {
+        XtX[i][j] = i === j ? 1 : 0;
+        XtX[j][i] = i === j ? 1 : 0;
+      }
+      Xty[i] = 0;
+    }
+    for (const i of positiveViolated) {
       for (let j = 0; j < k; j++) {
         XtX[i][j] = i === j ? 1 : 0;
         XtX[j][i] = i === j ? 1 : 0;
@@ -290,12 +298,12 @@ function huberWeight(residual: number, delta: number): number {
  * stops once the coefficients stop moving (`IRLS_CONVERGENCE_TOL`) or after `IRLS_MAX_ITERATIONS`.
  * No external dependency, same spirit as `solveLeastSquares` itself.
  */
-function solveRobustLeastSquares(X: number[][], y: number[], lambda: number, nonNegativeIndices: ReadonlySet<number> = new Set()): number[] {
-  let beta = solveLeastSquares(X, y, lambda, undefined, nonNegativeIndices);
+function solveRobustLeastSquares(X: number[][], y: number[], lambda: number, nonNegativeIndices: ReadonlySet<number> = new Set(), nonPositiveIndices: ReadonlySet<number> = new Set()): number[] {
+  let beta = solveLeastSquares(X, y, lambda, undefined, nonNegativeIndices, nonPositiveIndices);
   for (let iter = 0; iter < IRLS_MAX_ITERATIONS; iter++) {
     const residuals = X.map((row, i) => dotProduct(beta, row) - y[i]);
     const weights = residuals.map((r) => huberWeight(r, HUBER_DELTA));
-    const newBeta = solveLeastSquares(X, y, lambda, weights, nonNegativeIndices);
+    const newBeta = solveLeastSquares(X, y, lambda, weights, nonNegativeIndices, nonPositiveIndices);
     const shift = Math.sqrt(newBeta.reduce((sum, v, i) => sum + (v - beta[i]) ** 2, 0));
     beta = newBeta;
     if (shift < IRLS_CONVERGENCE_TOL) break;
@@ -328,12 +336,12 @@ const RIDGE_LAMBDA_CANDIDATES = [0, 0.5, 1, 2, 4, 8];
  *  actually deployed) on every (n-1)-piece subset and score the held-out piece, which is what
  *  actually predicts how the model behaves on a piece it wasn't tuned against — unlike in-sample
  *  error, which the ridge penalty could otherwise be picked to minimize trivially by overfitting. */
-function looMeanAbsoluteError(X: number[][], y: number[], lambda: number, nonNegativeIndices: ReadonlySet<number> = new Set()): number {
+function looMeanAbsoluteError(X: number[][], y: number[], lambda: number, nonNegativeIndices: ReadonlySet<number> = new Set(), nonPositiveIndices: ReadonlySet<number> = new Set()): number {
   let totalAbsError = 0;
   for (let holdout = 0; holdout < X.length; holdout++) {
     const trainX = X.filter((_, i) => i !== holdout);
     const trainY = y.filter((_, i) => i !== holdout);
-    const beta = solveRobustLeastSquares(trainX, trainY, lambda, nonNegativeIndices);
+    const beta = solveRobustLeastSquares(trainX, trainY, lambda, nonNegativeIndices, nonPositiveIndices);
     const predicted = dotProduct(beta, X[holdout]);
     totalAbsError += Math.abs(predicted - y[holdout]);
   }
@@ -363,7 +371,7 @@ function fitStage1(): Stage1Fit {
   let bestLambda = RIDGE_LAMBDA_CANDIDATES[0];
   let bestLoo = Infinity;
   for (const lambda of RIDGE_LAMBDA_CANDIDATES) {
-    const loo = looMeanAbsoluteError(X, y, lambda, STAGE1_NON_NEGATIVE_FEATURES);
+    const loo = looMeanAbsoluteError(X, y, lambda, STAGE1_NON_NEGATIVE_FEATURES, new Set());
     if (loo < bestLoo) {
       bestLoo = loo;
       bestLambda = lambda;
@@ -371,7 +379,7 @@ function fitStage1(): Stage1Fit {
   }
 
   return {
-    coefficients: solveRobustLeastSquares(X, y, bestLambda, STAGE1_NON_NEGATIVE_FEATURES),
+    coefficients: solveRobustLeastSquares(X, y, bestLambda, STAGE1_NON_NEGATIVE_FEATURES, new Set()),
     lambda: bestLambda,
     looMeanAbsoluteError: bestLoo,
   };
@@ -501,7 +509,13 @@ const MECHANIC_FEATURE_NAMES = [
  *  coefficient is constrained to be non-negative (see `solveLeastSquares`): a defensive mechanic
  *  protects its owner or punishes its captor, so it must never lower a piece's price. */
 const DEFENSIVE_FEATURE_INDEX = MECHANIC_FEATURE_NAMES.indexOf('Difensiva');
+/** Index of the 'Destinazione vincolata' feature in `MECHANIC_FEATURE_NAMES` / `mechanicFeatureVector`.
+ *  Its coefficient is constrained to be non-positive (see `solveLeastSquares`): a destination that
+ *  must be empty is a genuine restriction — the action simply fails on crowded boards — so it must
+ *  never add value. */
+const DESTINATION_CONSTRAINT_FEATURE_INDEX = MECHANIC_FEATURE_NAMES.indexOf('Destinazione vincolata');
 const STAGE2_NON_NEGATIVE_FEATURES: ReadonlySet<number> = new Set([DEFENSIVE_FEATURE_INDEX]);
+const STAGE2_NON_POSITIVE_FEATURES: ReadonlySet<number> = new Set([DESTINATION_CONSTRAINT_FEATURE_INDEX]);
 
 /** Scales a matched "intensity" parameter (e.g. `armaturaMaxCosto`) down to roughly the same order
  *  of magnitude as the other stage-2 features — a raw threshold like "costo ≤ 14" would otherwise
@@ -540,19 +554,18 @@ function firstNumericParamMatching(params: Record<string, unknown>, pattern: Reg
  * feature but the `modalita`-derived ones at 0) rather than crashing or producing NaN — a
  * reasonable floor, not a silently wrong answer.
  */
-/** 1 when the mechanic's params constrain the DESTINATION to be empty/free — either an explicit
- *  `destinazione` value like `"vuota"` (Repulsore's respingi: the landing square must be free) or
- *  a `target` naming a free square (`casella_vuota_a_distanza_3` Teletrasporto,
- *  `casella_adiacente_vuota` sdoppiamento). A destination that must be empty is a genuine
- *  restriction — the action simply fails on crowded boards — so it's priced as a discount.
- *  Deliberately keyed on `destinazione`/`target` only: unrelated "liber*" wording such as
- *  `traiettoriaLibera` (Scocca) means the opposite (a constraint RELAXATION) and must not match.
+/** 1 when the mechanic's params constrain the DESTINATION to be empty/free — only an explicit
+ *  `destinazione` value like `"vuota"` (Repulsore's respingi: the landing square must be free).
+ *  A destination that must be empty is a genuine restriction — the action simply fails on crowded
+ *  boards — so it's priced as a discount. Deliberately NOT keyed on `target`: a `target` like
+ *  `casella_adiacente_vuota` (Portale's creazione_portale) describes what the action does (it
+ *  targets empty squares), not a constraint that makes it fail if the square is occupied.
+ *  Unrelated "liber*" wording such as `traiettoriaLibera` (Scocca) means the opposite (a
+ *  constraint RELAXATION) and must not match.
  */
 function hasEmptyDestinationConstraint(params: Record<string, unknown>): number {
   const dest = params.destinazione;
   if (typeof dest === 'string' && /vuot|liber/i.test(dest)) return 1;
-  const target = params.target;
-  if (typeof target === 'string' && /vuota|libera/.test(target)) return 1;
   return 0;
 }
 
@@ -649,7 +662,7 @@ function chooseShrinkageK(rows: MechanicTrainingRow[], lambda: number): { k: num
     for (let holdout = 0; holdout < rows.length; holdout++) {
       const trainX = X.filter((_, i) => i !== holdout);
       const trainY = y.filter((_, i) => i !== holdout);
-      const beta = solveRobustLeastSquares(trainX, trainY, lambda, STAGE2_NON_NEGATIVE_FEATURES);
+      const beta = solveRobustLeastSquares(trainX, trainY, lambda, STAGE2_NON_NEGATIVE_FEATURES, STAGE2_NON_POSITIVE_FEATURES);
       const predictedValue = dotProduct(beta, X[holdout]);
       const othersOfSameType = rows.filter((r, i) => i !== holdout && r.action.type === rows[holdout].action.type);
       const sampleCount = othersOfSameType.length;
@@ -684,14 +697,14 @@ function fitStage2(): Stage2Fit {
   let bestLambda = RIDGE_LAMBDA_CANDIDATES[0];
   let bestLoo = Infinity;
   for (const lambda of RIDGE_LAMBDA_CANDIDATES) {
-    const loo = looMeanAbsoluteError(X, y, lambda, STAGE2_NON_NEGATIVE_FEATURES);
+    const loo = looMeanAbsoluteError(X, y, lambda, STAGE2_NON_NEGATIVE_FEATURES, STAGE2_NON_POSITIVE_FEATURES);
     if (loo < bestLoo) {
       bestLoo = loo;
       bestLambda = lambda;
     }
   }
 
-  const coefficients = solveRobustLeastSquares(X, y, bestLambda, STAGE2_NON_NEGATIVE_FEATURES);
+  const coefficients = solveRobustLeastSquares(X, y, bestLambda, STAGE2_NON_NEGATIVE_FEATURES, STAGE2_NON_POSITIVE_FEATURES);
   const { k, looMeanAbsoluteError: shrinkageKLoo } = chooseShrinkageK(rows, bestLambda);
 
   return {
