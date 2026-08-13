@@ -148,6 +148,10 @@ export interface Piece {
   /** True only for pieces obtainable only in-game via the Vampiro Lunare's conversion (Ghoul) —
    *  excluded from team-building rosters, like obtainableOnlyViaPromotion pieces. */
   obtainableOnlyViaConversion?: boolean;
+  /** True only for Portale (PT): in addition to a King-style move, may create portals on adjacent
+   *  empty squares. When two portals exist for the same player, any piece (except the King) can
+   *  traverse them instantly. Drives getPortalCreationSquares / applyCreatePortal. */
+  creaPortali?: boolean;
 }
 
 export interface MirageMarker {

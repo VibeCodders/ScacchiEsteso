@@ -25,6 +25,7 @@ import { canSwap, getSwapTargets } from './swap';
 import { canSostituire, getSostituzioneTargets } from './sostituzione';
 import { canSwapperSwap, getSwapperCandidateSquares } from './swapper';
 import { canRevive, getRevivalSquares, getRevivableSiglas } from './necromancy';
+import { canCreatePortals, getPortalCreationSquares, removePortalsByCreator, generatePortalId, type Portal } from './portal';
 import { getAreaDamageVictims, triggersAreaDamage } from './areaDamage';
 import { resolveExplosion } from './bomb';
 import { canMimic, getMimicMoves, getOrphanThreats } from './orphan';
@@ -122,8 +123,9 @@ export interface HistoryEntry {
   /** True when a Vampiro Lunare's capture CONVERTED the enemy instead of eliminating it: the
    *  victim never enters the graveyard, and an allied Ghoul materializes on `ghoulSquare`. */
   isConversion?: boolean;
-  /** Where the converted Ghoul materialized (a free square adjacent to the captured piece). */
   ghoulSquare?: Coord;
+  /** True for a Portale's "creazione_portale": it creates a portal on an adjacent empty square. */
+  isPortalCreation?: boolean;
 }
 
 export interface GameState {
@@ -168,6 +170,8 @@ export interface GameState {
    * literal captures/pawn-pushes). Reaching `ANTI_STALEMATE_TURN_LIMIT` ends the game.
    */
   turnsSinceProgress: number;
+  /** Active portals on the board, created by Portale pieces. */
+  portals: Portal[];
 }
 
 export type ApplyTurnResult =
@@ -216,6 +220,7 @@ export function createInitialGameState(board: BoardState, firstTurn: Owner = 'A'
     pendingExtraMove: null,
     pendingRabbitChain: null,
     turnsSinceProgress: 0,
+    portals: [],
   };
 }
 
@@ -281,6 +286,7 @@ function finishAction(
       pendingExtraMove: null,
       pendingRabbitChain: null,
       turnsSinceProgress,
+      portals: state.portals,
     },
   };
 }
@@ -554,6 +560,7 @@ function finalizeTurn(state: GameState, piece: PieceInstance, move: GeneratedMov
     pendingExtraMove: null,
     pendingRabbitChain: null,
     turnsSinceProgress,
+    portals: state.portals,
   };
 }
 
@@ -572,6 +579,7 @@ function enterExtraMovePhase(state: GameState, piece: PieceInstance, outcome: Mo
     pendingExtraMove: outcome.historyEntry.to,
     pendingRabbitChain: null,
     turnsSinceProgress: state.turnsSinceProgress, // the turn isn't finalized yet — resolved once the bonus move (or a skip) completes it
+    portals: state.portals,
   };
 }
 
@@ -610,6 +618,7 @@ function enterRabbitChainPhase(state: GameState, piece: PieceInstance, chainFrom
     pendingExtraMove: null,
     pendingRabbitChain: { from: chainFrom, at: hop.to, lastHurdle: hurdle, hopCount },
     turnsSinceProgress: state.turnsSinceProgress, // not finalized yet — resolved once the chain stops
+    portals: state.portals,
   };
 }
 
@@ -687,6 +696,7 @@ export function stopRabbitChain(state: GameState): ApplyTurnResult {
       pendingExtraMove: null,
       pendingRabbitChain: null,
       turnsSinceProgress,
+      portals: state.portals,
     },
   };
 }
@@ -1116,6 +1126,71 @@ export function applyTeleport(state: GameState, from: Coord, to: Coord): ApplyTu
   };
 
   return finishAction(state, piece, nextBoard, historyEntry);
+}
+
+/**
+ * Plays a Portale's "creazione_portale" as the turn's action: instead of moving, the piece
+ * creates a portal on an empty adjacent square. When two portals exist for the same player,
+ * any piece (except the King) can traverse them instantly. Maximum 2 portals per player at a time.
+ * Creating new portals removes any existing portals created by this Portale piece.
+ */
+export function applyCreatePortal(state: GameState, from: Coord, portalCoord: Coord): ApplyTurnResult {
+  const begun = beginAction(state, from);
+  if ('error' in begun) return begun.error;
+  const { piece } = begun;
+
+  const pieceDef = getPieceDef(piece.sigla);
+  if (!canCreatePortals(pieceDef)) {
+    return { ok: false, reason: 'Questo pezzo non può creare portali.' };
+  }
+
+  const targets = getPortalCreationSquares(state.board, from, piece.owner, getPieceDef, state.dimensions);
+  if (!targets.includes(portalCoord)) {
+    return { ok: false, reason: `Destinazione non valida per il portale: ${portalCoord}.` };
+  }
+
+  // Remove any existing portals created by this Portale piece
+  const filteredPortals = removePortalsByCreator(state.portals, from);
+
+  // Check if we would exceed the 2-portal limit for this owner
+  const ownerPortals = filteredPortals.filter(p => p.owner === piece.owner);
+  if (ownerPortals.length >= 2) {
+    return { ok: false, reason: 'Massimo 2 portali attivi per giocatore.' };
+  }
+
+  // Create the new portal
+  const newPortal: Portal = {
+    id: generatePortalId(),
+    owner: piece.owner,
+    coord: portalCoord,
+    creatorCoord: from,
+  };
+
+  const nextPortals = [...filteredPortals, newPortal];
+
+  // Check if creating this portal would leave the King in check
+  // (The Portale piece doesn't move, so this is unlikely but we check for consistency)
+  if (isKingInCheck(state.board, piece.owner, state.dimensions)) {
+    return { ok: false, reason: 'Questa azione lascerebbe il tuo Re sotto scacco.' };
+  }
+
+  const historyEntry: HistoryEntry = {
+    turnNumber: state.turnNumber,
+    owner: piece.owner,
+    from,
+    to: portalCoord,
+    sigla: piece.sigla,
+    isCapture: false,
+    isPortalCreation: true,
+  };
+
+  const result = finishAction(state, piece, state.board, historyEntry);
+  if (!result.ok) return result;
+
+  // Update the portals in the resulting state
+  result.state.portals = nextPortals;
+
+  return result;
 }
 
 /**

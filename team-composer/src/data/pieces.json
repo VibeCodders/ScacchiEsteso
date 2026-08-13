@@ -795,5 +795,23 @@
       { "type": "sciacallaggio", "modalita": "alternativa", "params": { "raggio": 1, "target": "cimitero_nemico", "maxLootValue": 20, "destinazione": "vuota", "senzaCattura": true } }
     ],
     "sciacallaggio": true
+  },
+  {
+    "sigla": "PT",
+    "descrizione": "Portale",
+    "punti": 28,
+    "categoria": "base",
+    "classico": false,
+    "regole": "Si muove di una casella in qualsiasi direzione. Cattura in mischia. In alternativa al movimento, può creare un portale su una casella vuota adiacente. Quando esistono due portali dello stesso giocatore sulla scacchiera, qualsiasi pezzo (alleato o nemico, tranne il Re) può attraversarli istantaneamente: muovendosi su un portale, il pezzo emerge dall'altro portale nella stessa direzione di ingresso, continuando il movimento se possibile. I portali persistono finché il Portale che li ha creati non viene catturato o ne crea di nuovi (massimo 2 portali attivi per volta).",
+    "moves": [
+      { "directions": ["n", "s", "e", "w", "ne", "nw", "se", "sw"], "minSteps": 1, "maxSteps": 1, "capture": true, "captureMode": "melee", "movementType": "step" }
+    ],
+    "movimentoTipo": "step",
+    "resistance": 0,
+    "immunityTypes": [],
+    "alternativeActions": [
+      { "type": "creazione_portale", "modalita": "alternativa", "params": { "target": "casella_adiacente_vuota", "raggio": 1, "maxPortali": 2, "reEscluso": true } }
+    ],
+    "creaPortali": true
   }
 ]
